@@ -75,7 +75,7 @@ def make_dist():
     # zip_file.close()
 
     #5 publiceren
-    result = os.system("twine upload {}".format(arc_file_name))
+    result = os.system("twine upload {} -u hvreenen -p GhsvdYu6R6jkl".format(arc_file_name))
 
 
 if __name__ == '__main__':
