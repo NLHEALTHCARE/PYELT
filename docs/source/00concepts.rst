@@ -1,96 +1,102 @@
-Begrippen DWH 2.0 & Pyelt
-=========================
+Concepts of DWH 2.0 & Pyelt
+===========================
 
-Gelaagde opbouw
+Layered composition
 ---------------
 
-DWH2.0 is opgebouwd in lagen. De data verhuist meerdere keren van de ene naar het andere database schema.
-We kennen de volgende lagen:
+DWH2.0 is built in layers. The data moves several times from one database schema to another. We can distinguish the
+following layers:
 
 Sources:
-    Bron systemen; dit kunnen databases zijn maar ook bestanden zoals csv files.
+    Source systems; can comprise of databases, but also files such as for instance csv files.
 
 Sor:
-    Dit is de staging area. Hierin staan temp tabellen en historische staging tabellen.
-    Het wordt aangeraden om per bronsysteem een eigen sor database (schema) aan te maken.
+    This is the staging area. The temp and the historical staging tables are located here. It is strongly advised to
+    create a seperate sor database (schema) for each individual source-system.
 
 Rdv:
-    Raw data Vault. Vanuit de sor laag gaat sommige data eerst naar de rdv. Dit treedt op wanneer er bewerkingen nodig
-    zijn (met name voor keys) om de data op de juiste wijze te kunnen integreren in de volgende laag.
+    Raw data vault. Some data will first move from the sor layer to the rdv. This occurs when modifications are
+    needed (for example certain keys) to correctly integrate the data in the next layer.
+
 
 Dv:
-    Datavault. De eigenlijke datavault met hubs, sat en links.
+    Datavault. The actual datavault with hubs, sats and links.
 
 Datamart:
-    Datamart met rapporten
+    Datamart with reports.
 
 
-Begrippen
+Concepts
 ---------
 
 Pipeline:
-    De pipeline omvat de gehele etl van alle bronsystemen en alle database lagen. Een pipeline bestaat uit 1 of meerdere
-    pipes.
+    The pipeline consists of the entire etl of all source systems and all database layers. A pipeline consists of 1 or
+    more pipes.
+
 
 Pipe:
     #todo: afbeelding toevoegen?
-    In de afbeelding hierboven is een pipe in het oranje omcirkeld.  Per bron is er een eigen pipe. De pipe omvat een
-    bronlaag, een sorlaag, een deel van de rdv tabellen en een deel van de dv tabellen.
+    A pipe exists for each individual source. A pipe consists of a source layer, a sor layer, a part of the rdv
+    and the dv tables, respectively.
+    In the image above a pipe is circled in orange.
 
 
-Datavault begrippen
+
+Datavault concepts
 -------------------
 
 Hub:
-    Een tabel met een betekenisvolle sleutel.
+    A table with a business key (bk), system fields (for example: "insert_date"), and a technical key.
 
 BK:
-    Business key. Het enige veld in de hub tabel naast systeem velden zoals bijvoorbeeld "insert_date" en de technische
-    sleutel.
+    Business key. A business key is unchangeable, is human_readable and is used in each department of a company.
 
 Sat:
-    Een satelite tabel. Deze is gekoppeld aan de hub en bevat voor iedere wijziging in de data een rij. De sleutel is
-    samengesteld uit de technische sleutel van de hub ((en de import runid)).
-
-    #todo: wat bedoel je precies met het deel tussen de dubbele haken aan het eind van bovenstaande regel? wordt de
-    runid uit geimporteerd uit de hub of komt deze toch ergens anders vandaan?
+    A satelite table. This table is linked to a hub and contains every alteration in the data a in a row. The key is
+    composed of the technical key of the hub and the daily runid.
 
 Link:
-    Een link tussen 2 of meer hubs.
+    A link between 2 or more hubs.
 
 Hybrid Sat:
-    Een sat met een extra type-veld in de sleutel (bijvoorbeeld telefoonnummers bij een persoon).
+    A sat with an extra type field in the key (for example: telephonenumbers of a person).
 
 Hybrid links:
-    Een link met extra type veld.
+    A link with an extra type field
+
 
 Hierarchical Links:
-    Een link die een hub met zichzelf verbindt.
+    A link that connects a hub with itself.
+
 
 Entity:
-    De verzameling van 1 hub met bijbehorende sats (dit is geen tabel).
+    Collection of 1 hub with its sats. (This is not a table)
+
 
 Ensemble:
-    Verzameling van meerdere entiteiten met links.
+    Collection of multiple entities with corresponding links.
 
 Domainmodels
 ------------
 
-Representatie van de datavault in python classes. De hubs, sats en links worden in python gedefinieerd en aan de hand
-hiervan worden de datavault tabellen aangemaakt.
+Representation of the datavault in python classes. The hubs, sats and links are first defined in python and then the
+datavault tables a created according to those definitions.
 
 
 Mappings
 --------
 
 TableMapping:
-    Mapping van een brontabel of -file op een doeltabel.
+    Mapping of a source table or sourcer file on a target table.
+
 
 FieldMapping:
-    Mapping van een bronveld of -kolom op een doelkolom.
+    Mapping of a source field or source column on a target column.
+
 
 Transformation:
-    Mapping van een bron- naar doelveld waarbij de bron eerst nog bewerkt wordt.
+    Mapping from a source to a target field where the source first will be modified.
+
 
 BkMapping:
     #todo:
