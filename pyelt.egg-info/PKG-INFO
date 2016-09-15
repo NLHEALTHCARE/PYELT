@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: pyelt
-Version: 0.9.1a0
+Version: 0.9.2a0
 Summary: Pyelt is a DDL and ETL framework for creating and filling data vault datawarehouses on a postgress database.
 Home-page: https://github.com/hvanreenen/PYELT
 Author: NL Healthcare Clinics (NLHC), Henk-Jan van Reenen

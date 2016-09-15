@@ -13,9 +13,9 @@ zie https://packaging.python.org/distributing/
 
 """
 def make_dist():
-    github = 'https://github.com/NLHEALTHCARE/TEST_PACKAGE'
+    github = 'https://github.com/NLHEALTHCARE/PYELT'
     branch = 'master'
-    package_name = 'test_package_make_hj'
+    package_name = 'pyelt'
 
     #0. Eerst voeren we de unittests uit. Mocht er een fout zijn, dan wordt proces van package maken gestopt
     failures = 0
