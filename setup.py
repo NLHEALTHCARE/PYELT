@@ -10,7 +10,7 @@ def readme():
 
 
 setup(name='pyelt',
-      version='0.8.1a.2-dev0',
+      version=current_version[0],
       description='Pyelt is a DDL and ETL framework for creating and filling data vault datawarehouses on a postgress database.',
       long_description=open('README.rst').read(),
       url='https://github.com/NLHEALTHCARE/PYELT',
