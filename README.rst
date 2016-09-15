@@ -53,7 +53,6 @@ not yet:
 - api docs (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/09api.rst)
 
 
-
 Background
 ^^^^^^^^^^
 Pyelt was developed as a framework to support the realisation of datawarehouse 2.0 from NL Healthcare Clinics.
