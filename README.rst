@@ -2,6 +2,25 @@ PYELT
 ====
 
 
+Usage
+^^^^
+
+This example will create and fill the historical staging area::
+
+    pipeline = Pipeline(config)
+    pipe = pipeline.get_or_create_pipe('test_source', source_config)
+
+    source_file = CsvFile(get_root_path() + '/sample_data/patienten1.csv', delimiter=';')
+    source_file.reflect()
+    source_file.set_primary_key(['patientnummer'])
+    mapping = SourceToSorMapping(source_file, 'persoon_hstage', auto_map=True)
+    pipe.mappings.append(mapping)
+
+    pipeline.run()
+    
+More examples in https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
+
+
 Documentation
 ^^^^^^^^^^^^
 
@@ -17,17 +36,17 @@ Pyelt uses SQLAlchemy.core only for connection and reflection. All other SQL sta
 
 **Write your own mappings** to transfer and transform data from sources into staging into the data ware house.
 
-Content:
+Content (further documentation is only in dutch):
 
-- concepts </docs/source/00concepts.rst>
-- config (https://github.com/NLHEALTHCARE/PYELT/docs/source/01config.rst)
-- pipeline(https://github.com/NLHEALTHCARE/PYELT/docs/source/02pipeline.rst)
-- domain (https://github.com/NLHEALTHCARE/PYELTdocs/source/03domain.rst)
-- mappings (https://github.com/NLHEALTHCARE/PYELT/docs/source/03mappings.rst)
-- run proces (https://github.com/NLHEALTHCARE/PYELTdocs/source/04etl_proces.rst)
+- concepts (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/00concepts.rst)
+- config (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/01config.rst)
+- pipeline(https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/02pipeline.rst)
+- domain (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03domain.rst)
+- mappings (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03mappings.rst)
+- run proces (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/04etl_proces.rst)
 
-To do:
-- api docs (https://github.com/NLHEALTHCARE/PYELT/docs/source/09api.rst)
+not yet:
+- api docs (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/09api.rst)
 
 
 Background
