@@ -18,7 +18,7 @@ This example will create and fill the historical staging area::
 
     pipeline.run()
     
-More examples in https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
+More examples can be found in https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
 
 
 Introduction
@@ -32,9 +32,9 @@ Pyelt can import data from several **different source systems** such as fixed le
 
 Pyelt is developed to run on a **postgres database**.
 
-Pyelt uses SQLAlchemy.core only for connection and reflection. All other SQL statements (ddl, copy, insert and update statements) are created by the pyelt framework itself
+Pyelt uses the SQLAlchemy.core only for the connection and for reflection. All other SQL statements (ddl, copy, insert and update statements) are created by the pyelt framework itself.
 
-**Write your own mappings** to transfer and transform data from sources into staging into the data ware house.
+**Write your own mappings** to transfer and transform data from sources via staging into the data ware house.
 
 Content 
 ----------------------------
@@ -58,6 +58,5 @@ Background
 Pyelt was developed as a framework to support the realisation of datawarehouse 2.0 from NL Healthcare Clinics.
 This project is based on:
 
-- Data Vault design pattern (https://hanshultgren.wordpress.com/) of Hans Hultgren
-- Domain design with (inter)national standards, mostly [HL7 RIM](https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf) and Zorginformatiebouwstenen (dutch) (https://zibs.nl)
-
+- the Data Vault design pattern (https://hanshultgren.wordpress.com/) of Hans Hultgren
+- a Domain design according to (inter)national standards. The main part of this design is based on the international "HL7 RIM" standard (https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf) and the natioal  "Zorginformatiebouwstenen" standard(dutch; https://zibs.nl).
