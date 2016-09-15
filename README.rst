@@ -21,7 +21,7 @@ This example will create and fill the historical staging area::
 More examples in https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
 
 
-Documentation
+Introduction
 ^^^^^^^^^^^^
 
 Pyelt is a Python DDL and ETL framework for **creating and filling Data Vault** - Data Ware Houses.
@@ -36,7 +36,10 @@ Pyelt uses SQLAlchemy.core only for connection and reflection. All other SQL sta
 
 **Write your own mappings** to transfer and transform data from sources into staging into the data ware house.
 
-Content (further documentation is only in dutch):
+Content 
+----------------------------
+
+(further documentation is only in dutch):
 
 - concepts (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/00concepts.rst)
 - config (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/01config.rst)
@@ -46,6 +49,7 @@ Content (further documentation is only in dutch):
 - run proces (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/04etl_proces.rst)
 
 not yet:
+
 - api docs (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/09api.rst)
 
 
@@ -55,6 +59,5 @@ Pyelt was developed as a framework to support the realisation of datawarehouse 2
 This project is based on:
 
 - Data Vault design pattern (https://hanshultgren.wordpress.com/) of Hans Hultgren
-- Domain design with (inter)national standards, mostly [HL7 RIM](https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf) en
- and Zorginformatiebouwstenen (dutch) (https://zibs.nl)
+- Domain design with (inter)national standards, mostly [HL7 RIM](https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf) and Zorginformatiebouwstenen (dutch) (https://zibs.nl)
 
