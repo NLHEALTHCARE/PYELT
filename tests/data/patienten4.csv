@@ -1,0 +1,7 @@
+patientnummer;achternaam;tussenvoegsels;voornaam;straat;huisnummer;huisnummertoevoeging;postcode;plaats;geslacht;geboortedatum;inschrijvingsnummer;bsn;inschrijvingsdatum;newfield
+100;Reenen;van;Henk-Jan;Reigersberg;10;;6865NL;Doorwert;m;19-2-1971;1;1234;1-1-2015;test
+101;Neuteboom;;Arlette;Reigersberg;10;;6865NL;Doorwert;v;2-9-1968;4;9876;1-9-2009;test2
+102;Reenen;van;Simea;Milhezerweg;38;;4987BK;Deurne;v;10-2-2004;5;5674;1-2-2015;test3
+103;Reenen;van;Abel;Milhezerweg;38;;4987BK;Deurne;m;12-6-2006;5;2453;1-2-2015;test1
+106;Cavia;;;Milhezerweg;38;;4987BK;Deurne;m;12-6-2006;5;2453;1-2-2015;test5
+106;Cavia;;;Milhezerweg;38;;4987BK;Deurne;m;12-6-2006;5;2453;1-2-2015;test6

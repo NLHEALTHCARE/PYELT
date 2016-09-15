@@ -1,0 +1,6 @@
+patientnummer;achternaam;tussenvoegsels;voornaam;straat;huisnummer;huisnummertoevoeging;postcode;plaats;geslacht;geboortedatum;inschrijvingsnummer;bsn;inschrijvingsdatum;telefoon;mobiel
+100;Reenen;van;Henk-Jan;Reigersberg;10;;6865NL;Doorwerth;m;19-2-1971;1;1234;1-1-2015;026-3334575;06-47169301
+101;Neuteboom;;Arlette;Reigersberg;10;a;6865NL;Doorwerth;v;2-9-1968;4;9876;1-9-2009;026-3334575;06-87654321
+102;Reenen;van;Simea;Milhezerweg;38;;4987BK;Deurne;v;10-2-2004;5;5674;1-2-2015;;
+103;Reenen;van;Abel;Milhezerweg;38;;4987BK;Deurne;man;12-6-2006;5;2453;1-2-2015;;
+105;Poes;;Sammy;Reigersberg;10;;6865NL;Doorwerth;m;12-6-2006;5;2453;1-2-2015;;
