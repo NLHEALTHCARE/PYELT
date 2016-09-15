@@ -1,0 +1,21 @@
+EERSTE KEER PUBLICEREN
+1. push alles naar github vanaf je eigen pc
+2. login op shannon dev
+3. git clone https://user:password@github.com/NLHEALTHCARE/CLINICS-DWH2.0.git
+4. kopieer met winscp de configs uit pipelines/ naar de server. Pas waarden in configs aan
+5. cd naar nieuwe map (hier CLINICS-DWH2.0)
+6. maak hier bash file aan om vanaf nu te runnen
+
+#!/bin/bash
+git pull https://user:password@github.com/NLHEALTHCARE/CLINICS-DWH2.0.git
+python3.4 __main__.py
+
+bewaar als run.sh
+
+7. bash run.sh
+
+VOLGENDE KEREN
+1. push alles naar github vanaf je eigen pc
+2. login op shannon dev
+3. cd naar map CLINICS-DWH2.0
+4. bash run.sh

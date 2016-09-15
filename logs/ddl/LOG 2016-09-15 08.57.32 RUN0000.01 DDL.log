@@ -1,0 +1,751 @@
+
+        --DDL aanpassing aan sor_dummy: None --> 1.0
+        --===========================
+        
+CREATE UNLOGGED TABLE IF NOT EXISTS sor_dummy.persoon_temp (_hash text, _status text, patientnummer text,
+achternaam text,
+tussenvoegsels text,
+voornaam text,
+straat text,
+huisnummer text,
+huisnummertoevoeging text,
+postcode text,
+plaats text,
+geslacht text,
+geboortedatum text,
+inschrijvingsnummer text,
+bsn text,
+inschrijvingsdatum text,
+telefoon text,
+mobiel text);
+
+create persoon_temp_hash
+
+CREATE UNLOGGED TABLE IF NOT EXISTS sor_dummy.persoon_temp (_hash text, _status text, patientnummer text,
+achternaam text,
+tussenvoegsels text,
+voornaam text,
+straat text,
+huisnummer text,
+huisnummertoevoeging text,
+postcode text,
+plaats text,
+geslacht text,
+geboortedatum text,
+inschrijvingsnummer text,
+bsn text,
+inschrijvingsdatum text,
+telefoon text,
+mobiel text);
+
+rows: -1
+--------------------------
+
+CREATE UNLOGGED TABLE IF NOT EXISTS sor_dummy.persoon_temp_hash (patientnummer text, _hash text, _changed boolean);
+
+create persoon_temp_hash
+
+CREATE UNLOGGED TABLE IF NOT EXISTS sor_dummy.persoon_temp_hash (patientnummer text, _hash text, _changed boolean);
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS sor_dummy.persoon_hstage (
+                  
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT true,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer DEFAULT 0,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                  patientnummer text,
+achternaam text,
+tussenvoegsels text,
+voornaam text,
+straat text,
+huisnummer text,
+huisnummertoevoeging text,
+postcode text,
+plaats text,
+geslacht text,
+geboortedatum text,
+inschrijvingsnummer text,
+bsn text,
+inschrijvingsdatum text,
+telefoon text,
+mobiel text,
+                  CONSTRAINT persoon_hstage_pkey PRIMARY KEY (_id)
+            )
+            WITH (
+              OIDS=FALSE,
+              autovacuum_enabled=true
+            );
+
+create persoon_hstage_hash
+
+CREATE TABLE IF NOT EXISTS sor_dummy.persoon_hstage (
+                  
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT true,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer DEFAULT 0,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                  patientnummer text,
+achternaam text,
+tussenvoegsels text,
+voornaam text,
+straat text,
+huisnummer text,
+huisnummertoevoeging text,
+postcode text,
+plaats text,
+geslacht text,
+geboortedatum text,
+inschrijvingsnummer text,
+bsn text,
+inschrijvingsdatum text,
+telefoon text,
+mobiel text,
+                  CONSTRAINT persoon_hstage_pkey PRIMARY KEY (_id)
+            )
+            WITH (
+              OIDS=FALSE,
+              autovacuum_enabled=true
+            );
+
+rows: -1
+--------------------------
+
+
+        --DDL aanpassing aan dv: None --> 1.0
+        --===========================
+        
+CREATE TABLE IF NOT EXISTS dv._ref_valuesets (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      naam text,
+                      oid text,
+                      datum_van text,
+                      datum_tot text,
+                      status text,
+                      versie text,
+                      projecten text,
+                      CONSTRAINT ref_valueset_pkey PRIMARY KEY (_id),
+                      CONSTRAINT ref_valueset_oid_unique UNIQUE (oid)
+                      --CONSTRAINT ref_valueset_naam_unique UNIQUE (naam)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );
+
+
+                CREATE TABLE IF NOT EXISTS dv._ref_values (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      --fk_valueset_type int,
+                      fk_parent int,
+                      valueset_oid text,
+                      valueset_naam text,
+                      niveau text,
+                      code text,
+                      code_hl7 text,
+                      weergave_naam text,
+                      omschrijving text,
+                      omschrijving2 text,
+                      CONSTRAINT ref_values_pkey PRIMARY KEY (_id),
+                      CONSTRAINT ref_values_code_unique UNIQUE (_runid, valueset_naam, code, niveau)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );
+
+create valuesets tables
+
+CREATE TABLE IF NOT EXISTS dv._ref_valuesets (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      naam text,
+                      oid text,
+                      datum_van text,
+                      datum_tot text,
+                      status text,
+                      versie text,
+                      projecten text,
+                      CONSTRAINT ref_valueset_pkey PRIMARY KEY (_id),
+                      CONSTRAINT ref_valueset_oid_unique UNIQUE (oid)
+                      --CONSTRAINT ref_valueset_naam_unique UNIQUE (naam)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );
+
+
+                CREATE TABLE IF NOT EXISTS dv._ref_values (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      --fk_valueset_type int,
+                      fk_parent int,
+                      valueset_oid text,
+                      valueset_naam text,
+                      niveau text,
+                      code text,
+                      code_hl7 text,
+                      weergave_naam text,
+                      omschrijving text,
+                      omschrijving2 text,
+                      CONSTRAINT ref_values_pkey PRIMARY KEY (_id),
+                      CONSTRAINT ref_values_code_unique UNIQUE (_runid, valueset_naam, code, niveau)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv._exceptions (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                      schema text,
+                      table_name text,
+                      message text,
+                      key_fields text,
+                      fields text,
+                      CONSTRAINT _exceptions_pkey PRIMARY KEY (_id)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );
+
+create exception table
+
+CREATE TABLE IF NOT EXISTS dv._exceptions (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                      schema text,
+                      table_name text,
+                      message text,
+                      key_fields text,
+                      fields text,
+                      CONSTRAINT _exceptions_pkey PRIMARY KEY (_id)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );
+
+rows: -1
+--------------------------
+
+
+        --DDL aanpassing aan dv: 1.0 --> 1.01
+        --===========================
+        
+CREATE TABLE IF NOT EXISTS dv.handeling_hub (
+                          
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                          type text,
+                          bk text NOT NULL,
+                          CONSTRAINT handeling_hub_pkey PRIMARY KEY (_id),
+                          CONSTRAINT handeling_hub_bk_unique UNIQUE (bk)
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );
+
+create handeling_hub
+
+CREATE TABLE IF NOT EXISTS dv.handeling_hub (
+                          
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                          type text,
+                          bk text NOT NULL,
+                          CONSTRAINT handeling_hub_pkey PRIMARY KEY (_id),
+                          CONSTRAINT handeling_hub_bk_unique UNIQUE (bk)
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.handeling_sat_financieel (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      kostprijs numeric, vraagprijs numeric, korting numeric, btw numeric,
+                      CONSTRAINT handeling_sat_financieel_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_handeling_sat_financieel_handeling_hub FOREIGN KEY (_id) REFERENCES dv.handeling_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+create handeling_sat_financieel
+
+CREATE TABLE IF NOT EXISTS dv.handeling_sat_financieel (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      kostprijs numeric, vraagprijs numeric, korting numeric, btw numeric,
+                      CONSTRAINT handeling_sat_financieel_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_handeling_sat_financieel_handeling_hub FOREIGN KEY (_id) REFERENCES dv.handeling_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.handeling_sat (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      naam text, datum date, nummer integer, soort text,
+                      CONSTRAINT handeling_sat_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_handeling_sat_handeling_hub FOREIGN KEY (_id) REFERENCES dv.handeling_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+create handeling_sat
+
+CREATE TABLE IF NOT EXISTS dv.handeling_sat (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      naam text, datum date, nummer integer, soort text,
+                      CONSTRAINT handeling_sat_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_handeling_sat_handeling_hub FOREIGN KEY (_id) REFERENCES dv.handeling_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+rows: -1
+--------------------------
+
+--DROP VIEW dv.handeling_view;
+CREATE OR REPLACE VIEW dv.handeling_view AS
+    SELECT hub._id, hub.bk, hub.type, hub._runid, hub._source_system, True as _valid,
+        sat1.kostprijs AS financieel_kostprijs, sat1.vraagprijs AS financieel_vraagprijs, sat1.korting AS financieel_korting, sat1.btw AS financieel_btw, sat2.naam AS default_naam, sat2.datum AS default_datum, sat2.nummer AS default_nummer, sat2.soort AS default_soort, soort_handeling_soorten.weergave_naam AS soort_handeling_soorten_omschr
+    FROM dv.handeling_hub hub
+        LEFT OUTER JOIN dv.handeling_sat_financieel AS sat1 ON sat1._id = hub._id AND sat1._active
+        LEFT OUTER JOIN dv.handeling_sat AS sat2 ON sat2._id = hub._id AND sat2._active
+        LEFT OUTER JOIN dv._ref_values AS soort_handeling_soorten ON sat2.soort::text = soort_handeling_soorten.code AND soort_handeling_soorten.valueset_naam = 'handeling_soorten' AND soort_handeling_soorten._active
+        
+
+create handeling_view
+
+--DROP VIEW dv.handeling_view;
+CREATE OR REPLACE VIEW dv.handeling_view AS
+    SELECT hub._id, hub.bk, hub.type, hub._runid, hub._source_system, True as _valid,
+        sat1.kostprijs AS financieel_kostprijs, sat1.vraagprijs AS financieel_vraagprijs, sat1.korting AS financieel_korting, sat1.btw AS financieel_btw, sat2.naam AS default_naam, sat2.datum AS default_datum, sat2.nummer AS default_nummer, sat2.soort AS default_soort, soort_handeling_soorten.weergave_naam AS soort_handeling_soorten_omschr
+    FROM dv.handeling_hub hub
+        LEFT OUTER JOIN dv.handeling_sat_financieel AS sat1 ON sat1._id = hub._id AND sat1._active
+        LEFT OUTER JOIN dv.handeling_sat AS sat2 ON sat2._id = hub._id AND sat2._active
+        LEFT OUTER JOIN dv._ref_values AS soort_handeling_soorten ON sat2.soort::text = soort_handeling_soorten.code AND soort_handeling_soorten.valueset_naam = 'handeling_soorten' AND soort_handeling_soorten._active
+        
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_hub (
+                          
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                          type text,
+                          bk text NOT NULL,
+                          CONSTRAINT organisatie_hub_pkey PRIMARY KEY (_id),
+                          CONSTRAINT organisatie_hub_bk_unique UNIQUE (bk)
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );
+
+create organisatie_hub
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_hub (
+                          
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                          type text,
+                          bk text NOT NULL,
+                          CONSTRAINT organisatie_hub_pkey PRIMARY KEY (_id),
+                          CONSTRAINT organisatie_hub_bk_unique UNIQUE (bk)
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_sat_adres (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying,
+        type text NOT NULL
+        ,
+                      postcode text, huisnummer integer, huisnummer_toevoeging text, plaats text, land text,
+                      CONSTRAINT organisatie_sat_adres_pkey PRIMARY KEY (_id, _runid, type),
+                      CONSTRAINT fk_organisatie_sat_adres_organisatie_hub FOREIGN KEY (_id) REFERENCES dv.organisatie_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+create organisatie_sat_adres
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_sat_adres (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying,
+        type text NOT NULL
+        ,
+                      postcode text, huisnummer integer, huisnummer_toevoeging text, plaats text, land text,
+                      CONSTRAINT organisatie_sat_adres_pkey PRIMARY KEY (_id, _runid, type),
+                      CONSTRAINT fk_organisatie_sat_adres_organisatie_hub FOREIGN KEY (_id) REFERENCES dv.organisatie_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_sat (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      naam text, specialisatie text,
+                      CONSTRAINT organisatie_sat_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_organisatie_sat_organisatie_hub FOREIGN KEY (_id) REFERENCES dv.organisatie_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+create organisatie_sat
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_sat (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      naam text, specialisatie text,
+                      CONSTRAINT organisatie_sat_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_organisatie_sat_organisatie_hub FOREIGN KEY (_id) REFERENCES dv.organisatie_hub (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+rows: -1
+--------------------------
+
+--DROP VIEW dv.organisatie_view;
+CREATE OR REPLACE VIEW dv.organisatie_view AS
+    SELECT hub._id, hub.bk, hub.type, hub._runid, hub._source_system, True as _valid,
+        sat1.postcode AS adres_bezoek_postcode, sat1.huisnummer AS adres_bezoek_huisnummer, sat1.huisnummer_toevoeging AS adres_bezoek_huisnummer_toevoeging, sat1.plaats AS adres_bezoek_plaats, sat1.land AS adres_bezoek_land, sat2.postcode AS adres_post_postcode, sat2.huisnummer AS adres_post_huisnummer, sat2.huisnummer_toevoeging AS adres_post_huisnummer_toevoeging, sat2.plaats AS adres_post_plaats, sat2.land AS adres_post_land, sat3.postcode AS adres_factuur_postcode, sat3.huisnummer AS adres_factuur_huisnummer, sat3.huisnummer_toevoeging AS adres_factuur_huisnummer_toevoeging, sat3.plaats AS adres_factuur_plaats, sat3.land AS adres_factuur_land, sat4.naam AS default_naam, sat4.specialisatie AS default_specialisatie, specialisatie_specialisaties.weergave_naam AS specialisatie_specialisaties_omschr
+    FROM dv.organisatie_hub hub
+        LEFT OUTER JOIN dv.organisatie_sat_adres AS sat1 ON sat1._id = hub._id AND sat1._active AND (sat1.type = 'bezoek' OR sat1.type IS NULL)
+        LEFT OUTER JOIN dv.organisatie_sat_adres AS sat2 ON sat2._id = hub._id AND sat2._active AND (sat2.type = 'post' OR sat2.type IS NULL)
+        LEFT OUTER JOIN dv.organisatie_sat_adres AS sat3 ON sat3._id = hub._id AND sat3._active AND (sat3.type = 'factuur' OR sat3.type IS NULL)
+        LEFT OUTER JOIN dv.organisatie_sat AS sat4 ON sat4._id = hub._id AND sat4._active
+        LEFT OUTER JOIN dv._ref_values AS specialisatie_specialisaties ON sat4.specialisatie::text = specialisatie_specialisaties.code AND specialisatie_specialisaties.valueset_naam = 'specialisaties' AND specialisatie_specialisaties._active
+        
+
+create organisatie_view
+
+--DROP VIEW dv.organisatie_view;
+CREATE OR REPLACE VIEW dv.organisatie_view AS
+    SELECT hub._id, hub.bk, hub.type, hub._runid, hub._source_system, True as _valid,
+        sat1.postcode AS adres_bezoek_postcode, sat1.huisnummer AS adres_bezoek_huisnummer, sat1.huisnummer_toevoeging AS adres_bezoek_huisnummer_toevoeging, sat1.plaats AS adres_bezoek_plaats, sat1.land AS adres_bezoek_land, sat2.postcode AS adres_post_postcode, sat2.huisnummer AS adres_post_huisnummer, sat2.huisnummer_toevoeging AS adres_post_huisnummer_toevoeging, sat2.plaats AS adres_post_plaats, sat2.land AS adres_post_land, sat3.postcode AS adres_factuur_postcode, sat3.huisnummer AS adres_factuur_huisnummer, sat3.huisnummer_toevoeging AS adres_factuur_huisnummer_toevoeging, sat3.plaats AS adres_factuur_plaats, sat3.land AS adres_factuur_land, sat4.naam AS default_naam, sat4.specialisatie AS default_specialisatie, specialisatie_specialisaties.weergave_naam AS specialisatie_specialisaties_omschr
+    FROM dv.organisatie_hub hub
+        LEFT OUTER JOIN dv.organisatie_sat_adres AS sat1 ON sat1._id = hub._id AND sat1._active AND (sat1.type = 'bezoek' OR sat1.type IS NULL)
+        LEFT OUTER JOIN dv.organisatie_sat_adres AS sat2 ON sat2._id = hub._id AND sat2._active AND (sat2.type = 'post' OR sat2.type IS NULL)
+        LEFT OUTER JOIN dv.organisatie_sat_adres AS sat3 ON sat3._id = hub._id AND sat3._active AND (sat3.type = 'factuur' OR sat3.type IS NULL)
+        LEFT OUTER JOIN dv.organisatie_sat AS sat4 ON sat4._id = hub._id AND sat4._active
+        LEFT OUTER JOIN dv._ref_values AS specialisatie_specialisaties ON sat4.specialisatie::text = specialisatie_specialisaties.code AND specialisatie_specialisaties.valueset_naam = 'specialisaties' AND specialisatie_specialisaties._active
+        
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_handeling_link (
+                          
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                          type text,
+                          fk_handeling_hub integer,
+fk_organisatie_hub integer,
+                          CONSTRAINT organisatie_handeling_link_pkey PRIMARY KEY (_id),
+                          CONSTRAINT fk_handeling_hub_constraint FOREIGN KEY (fk_handeling_hub) REFERENCES dv.handeling_hub (_id) MATCH SIMPLE,
+CONSTRAINT fk_organisatie_hub_constraint FOREIGN KEY (fk_organisatie_hub) REFERENCES dv.organisatie_hub (_id) MATCH SIMPLE
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );
+
+                    CREATE INDEX ix_organisatie_handeling_linkfk_handeling_hub ON dv.organisatie_handeling_link USING btree (fk_handeling_hub);
+CREATE INDEX ix_organisatie_handeling_linkfk_organisatie_hub ON dv.organisatie_handeling_link USING btree (fk_organisatie_hub)
+
+create organisatie_handeling_link
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_handeling_link (
+                          
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _valid boolean DEFAULT TRUE,
+        _validation_msg character varying
+        ,
+                          type text,
+                          fk_handeling_hub integer,
+fk_organisatie_hub integer,
+                          CONSTRAINT organisatie_handeling_link_pkey PRIMARY KEY (_id),
+                          CONSTRAINT fk_handeling_hub_constraint FOREIGN KEY (fk_handeling_hub) REFERENCES dv.handeling_hub (_id) MATCH SIMPLE,
+CONSTRAINT fk_organisatie_hub_constraint FOREIGN KEY (fk_organisatie_hub) REFERENCES dv.organisatie_hub (_id) MATCH SIMPLE
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );
+
+                    CREATE INDEX ix_organisatie_handeling_linkfk_handeling_hub ON dv.organisatie_handeling_link USING btree (fk_handeling_hub);
+CREATE INDEX ix_organisatie_handeling_linkfk_organisatie_hub ON dv.organisatie_handeling_link USING btree (fk_organisatie_hub)
+
+rows: -1
+--------------------------
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_handeling_link_sat_details (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      datum date, plek text,
+                      CONSTRAINT organisatie_handeling_link_sat_details_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_organisatie_handeling_link_sat_details_organisatie_handeling_link FOREIGN KEY (_id) REFERENCES dv.organisatie_handeling_link (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+create organisatie_handeling_link_sat_details
+
+CREATE TABLE IF NOT EXISTS dv.organisatie_handeling_link_sat_details (
+                      
+        _id serial NOT NULL,
+        _runid numeric(8,2) NOT NULL,
+        _active boolean DEFAULT TRUE,
+        _source_system character varying,
+        _insert_date timestamp without time zone,
+        _finish_date timestamp without time zone,
+        _revision integer,
+        _valid boolean NOT NULL DEFAULT TRUE,
+        _validation_msg character varying,
+        _hash character varying
+        ,
+                      datum date, plek text,
+                      CONSTRAINT organisatie_handeling_link_sat_details_pkey PRIMARY KEY (_id, _runid),
+                      CONSTRAINT fk_organisatie_handeling_link_sat_details_organisatie_handeling_link FOREIGN KEY (_id) REFERENCES dv.organisatie_handeling_link (_id) MATCH SIMPLE
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                ); 
+
+rows: -1
+--------------------------
+

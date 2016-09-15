@@ -1,0 +1,16 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+data/
+docs/build/
+pipelines/clinics/clinics_configs.py
+etl_mappings/configs.py
+etl_mappings/**/*configs.py
+etl_mappings/**/*config*
+research_tryouts/
+sql/
+.idea/
+**/*.pyc
+

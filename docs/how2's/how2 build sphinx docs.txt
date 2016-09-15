@@ -1,0 +1,24 @@
+1. maak een nieuwe .rst file aan zoals  in het voorbeeld  hieronder :
+"""
+Pipeline
+========
+
+    .. automodule:: pyelt.pipeline
+    :members:
+"""
+Let op! Er moet een enter gegeven worden na ":members:"; anders werkt het niet. Te herkennen aan het feit of dit stukje code in zwart of blauw wordt weergegeven
+
+2. Voeg de naam van je nieuwe .rst file toe aan de "toctree" in de file "index.rst" ([docs][build][source]).
+
+3. open terminal
+
+4. cd naar CLINICS-DWH2.0/docs
+
+5. type:
+   make htlm
+
+6. Controleer eventueel het resultaat door na de nieuw aan gemaakte html file in docs/build/html/_static te openen en rechts bovenaan op je browser te klikken
+
+
+7. Restructured Text (reST) and Sphinx CheatSheet link:
+'http://openalea.gforge.inria.fr/doc/openalea/doc/_build/html/source/sphinx/rest_syntax.html'

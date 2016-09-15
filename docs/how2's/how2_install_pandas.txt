@@ -1,0 +1,11 @@
+Om de bug te voorkomen bij error-microsoft-visual-c-10-0-is-required-unable-to-find-vcvarsall-bat
+Terwijl er een nieuwere versie van C++ op het systeem staat:
+
+
+Download wheel bestand van pandas site
+
+set VS100COMNTOOLS=%VS140COMNTOOLS%
+
+daarna pip install pandas-0.16.2-cp34-none-win32.whl
+
+extra regel van Rob

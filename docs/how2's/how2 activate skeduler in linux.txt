@@ -1,0 +1,8 @@
+1.	inloggen op shannon-dev
+2.	EDITOR=nano crontab -e
+3.	45 10 * * * bash /opt/CLINICS-DWH2.0/pyelt.sh >/dev/null 2>&1
+4.	Oplaan en als het goed is zegt de commandline vervolgens dat er een nieuwe crontab is geinstalleerd
+5.	Met crontab -l kun je je huidige crontab bekijken
+
+Wat je met bovenstaande entry gedaan hebt,
+is dat om 10.45u iedere dag van de maand, iedere maand en iedere dag van de week (kortom: dagelijks) je script (pyelt.sh op /opt/CLINICS-DWH2.0/) wordt afgetrapt.

@@ -1,0 +1,4 @@
+include README.md
+include versions.py
+exclude tests/*
+exclude doc/*

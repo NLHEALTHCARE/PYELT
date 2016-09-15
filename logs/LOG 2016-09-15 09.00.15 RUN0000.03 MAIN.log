@@ -1,0 +1,112 @@
+2016-09-15 09:00:15,027 - PRE-RUN VALIDATE DOMAINS                                     executed in 0.000 seconds (0.000 seconds since start) 
+2016-09-15 09:00:15,027 -  Domains zijn OK.                                            executed in 0.001 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,027 - 
+2016-09-15 09:00:15,027 - VALIDATE MAPPINGS BEFORE DDL                                 executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,028 -   Mappings zijn OK.                                          executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,028 - 
+2016-09-15 09:00:15,028 - START RUN 0.03                                               executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,028 - START DDL                                                    executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,028 -  DDL PIPE test_source                                        executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,029 -   START CREATE SOR                                           executed in 0.001 seconds (0.002 seconds since start) 
+2016-09-15 09:00:15,071 -   FINISH CREATE SOR                                          executed in 0.042 seconds (0.044 seconds since start) 
+2016-09-15 09:00:15,071 -   START CREATE DV                                            executed in 0.000 seconds (0.044 seconds since start) 
+2016-09-15 09:00:15,162 -   FINISH CREATE DV                                           executed in 0.091 seconds (0.135 seconds since start) 
+2016-09-15 09:00:15,162 -  FINISH DDL PIPE test_source                                 executed in 0.001 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,162 - FINISH DDL                                                   executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,162 - 
+2016-09-15 09:00:15,162 - VALIDATE MAPPINGS                                            executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,162 -   Mappings zijn OK.                                          executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,163 - 
+2016-09-15 09:00:15,163 - START ETL                                                    executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,163 - =====================================                        executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,163 - ===== START PIPE test_source                                 executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,163 - =====================================                        executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,163 -  START FROM SOURCE TO SOR                                    executed in 0.000 seconds (0.136 seconds since start) 
+2016-09-15 09:00:15,163 -    START patienten1.csv -> persoon_hstage                    executed in 0.001 seconds (0.137 seconds since start) 
+2016-09-15 09:00:15,180 -      -truncate persoon_temp                                  executed in 0.016 seconds (0.153 seconds since start) 
+2016-09-15 09:00:15,181 -      -copy into persoon_temp                                 executed on 4 rows in 0.001 seconds (0.154 seconds since start) 
+2016-09-15 09:00:15,183 -      -insert new into persoon_hstage                         executed on 0 rows in 0.002 seconds (0.156 seconds since start) 
+2016-09-15 09:00:15,183 -      -update revision                                        executed on 0 rows in 0.001 seconds (0.156 seconds since start) 
+2016-09-15 09:00:15,184 -      -update set old ones inactive                           executed on 0 rows in 0.001 seconds (0.157 seconds since start) 
+2016-09-15 09:00:15,184 -      -validate sor: mark duplicate keys                      executed on 0 rows in 0.001 seconds (0.157 seconds since start) 
+2016-09-15 09:00:15,185 -      -validate sor: mark first items of duplicate keys       executed on 0 rows in 0.001 seconds (0.158 seconds since start) 
+2016-09-15 09:00:15,185 -    FINISH patienten1.csv -> persoon_hstage                   executed in 0.000 seconds (0.158 seconds since start) 
+2016-09-15 09:00:15,186 -  FINISH FROM SOURCE TO SOR                                   executed in 0.001 seconds (0.159 seconds since start) 
+
+2016-09-15 09:00:15,186 -  START FROM SOR TO REFS                                      executed in 0.000 seconds (0.159 seconds since start) 
+2016-09-15 09:00:15,186 -  FINISH FROM SOR TO REFS                                     executed in 0.000 seconds (0.159 seconds since start) 
+
+2016-09-15 09:00:15,186 -  START FROM SOR TO HUBS                                      executed in 0.000 seconds (0.159 seconds since start) 
+2016-09-15 09:00:15,186 -  FINISH FROM SOR TO HUBS                                     executed in 0.000 seconds (0.159 seconds since start) 
+
+2016-09-15 09:00:15,186 -  START FROM HUBS TO HUBS                                     executed in 0.000 seconds (0.159 seconds since start) 
+2016-09-15 09:00:15,186 -  FINISH FROM HUBS TO HUBS                                    executed in 0.001 seconds (0.159 seconds since start) 
+
+2016-09-15 09:00:15,186 -  START FROM SOR TO LINKS                                     executed in 0.000 seconds (0.159 seconds since start) 
+2016-09-15 09:00:15,186 -  FINISH FROM SOR TO LINKS                                    executed in 0.000 seconds (0.159 seconds since start) 
+
+2016-09-15 09:00:15,186 -  START FROM HUBS TO LINKS                                    executed in 0.000 seconds (0.159 seconds since start) 
+2016-09-15 09:00:15,186 -  FINISH FROM HUBS TO LINKS                                   executed in 0.000 seconds (0.159 seconds since start) 
+
+2016-09-15 09:00:15,194 -      -copy to exceptions_table persoon_hstage                executed on 0 rows in 0.008 seconds (0.167 seconds since start) 
+2016-09-15 09:00:15,194 - =====================================                        executed in 0.001 seconds (0.167 seconds since start) 
+2016-09-15 09:00:15,194 - ===== FINISH PIPE test_source                                executed in 0.000 seconds (0.167 seconds since start) 
+2016-09-15 09:00:15,194 - =====================================                        executed in 0.000 seconds (0.167 seconds since start) 
+2016-09-15 09:00:15,194 - FINISH ETL                                                   executed in 0.000 seconds (0.167 seconds since start) 
+2016-09-15 09:00:15,194 - 
+2016-09-15 09:00:15,220 - PRE-RUN VALIDATE DOMAINS                                     executed in 0.000 seconds (0.000 seconds since start) 
+2016-09-15 09:00:15,220 -  Domains zijn OK.                                            executed in 0.000 seconds (0.000 seconds since start) 
+2016-09-15 09:00:15,220 - 
+2016-09-15 09:00:15,220 - VALIDATE MAPPINGS BEFORE DDL                                 executed in 0.001 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,220 -   Mappings zijn OK.                                          executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,220 - 
+2016-09-15 09:00:15,220 - START RUN 0.04                                               executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,220 - START DDL                                                    executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,221 -  DDL PIPE test_source                                        executed in 0.000 seconds (0.001 seconds since start) 
+2016-09-15 09:00:15,221 -   START CREATE SOR                                           executed in 0.001 seconds (0.002 seconds since start) 
+2016-09-15 09:00:15,221 -   FINISH CREATE SOR                                          executed in 0.000 seconds (0.002 seconds since start) 
+2016-09-15 09:00:15,222 -   START CREATE DV                                            executed in 0.000 seconds (0.002 seconds since start) 
+2016-09-15 09:00:15,253 -   FINISH CREATE DV                                           executed in 0.032 seconds (0.034 seconds since start) 
+2016-09-15 09:00:15,254 -  FINISH DDL PIPE test_source                                 executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 - FINISH DDL                                                   executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 - 
+2016-09-15 09:00:15,254 - VALIDATE MAPPINGS                                            executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 -   Mappings zijn OK.                                          executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 - 
+2016-09-15 09:00:15,254 - START ETL                                                    executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 - =====================================                        executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 - ===== START PIPE test_source                                 executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 - =====================================                        executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,254 -  START FROM SOURCE TO SOR                                    executed in 0.000 seconds (0.035 seconds since start) 
+2016-09-15 09:00:15,255 -    START patienten1.csv -> persoon_hstage                    executed in 0.001 seconds (0.036 seconds since start) 
+2016-09-15 09:00:15,267 -      -truncate persoon_temp                                  executed in 0.012 seconds (0.048 seconds since start) 
+2016-09-15 09:00:15,268 -      -copy into persoon_temp                                 executed on 4 rows in 0.001 seconds (0.049 seconds since start) 
+2016-09-15 09:00:15,269 -      -insert new into persoon_hstage                         executed on 0 rows in 0.001 seconds (0.050 seconds since start) 
+2016-09-15 09:00:15,269 -      -update revision                                        executed on 0 rows in 0.001 seconds (0.050 seconds since start) 
+2016-09-15 09:00:15,270 -      -update set old ones inactive                           executed on 0 rows in 0.001 seconds (0.051 seconds since start) 
+2016-09-15 09:00:15,270 -      -validate sor: mark duplicate keys                      executed on 0 rows in 0.001 seconds (0.051 seconds since start) 
+2016-09-15 09:00:15,271 -      -validate sor: mark first items of duplicate keys       executed on 0 rows in 0.001 seconds (0.052 seconds since start) 
+2016-09-15 09:00:15,272 -    FINISH patienten1.csv -> persoon_hstage                   executed in 0.000 seconds (0.052 seconds since start) 
+2016-09-15 09:00:15,272 -  FINISH FROM SOURCE TO SOR                                   executed in 0.001 seconds (0.052 seconds since start) 
+
+2016-09-15 09:00:15,272 -  START FROM SOR TO REFS                                      executed in 0.000 seconds (0.052 seconds since start) 
+2016-09-15 09:00:15,272 -  FINISH FROM SOR TO REFS                                     executed in 0.000 seconds (0.052 seconds since start) 
+
+2016-09-15 09:00:15,272 -  START FROM SOR TO HUBS                                      executed in 0.000 seconds (0.052 seconds since start) 
+2016-09-15 09:00:15,272 -  FINISH FROM SOR TO HUBS                                     executed in 0.000 seconds (0.052 seconds since start) 
+
+2016-09-15 09:00:15,272 -  START FROM HUBS TO HUBS                                     executed in 0.001 seconds (0.053 seconds since start) 
+2016-09-15 09:00:15,272 -  FINISH FROM HUBS TO HUBS                                    executed in 0.000 seconds (0.053 seconds since start) 
+
+2016-09-15 09:00:15,272 -  START FROM SOR TO LINKS                                     executed in 0.000 seconds (0.053 seconds since start) 
+2016-09-15 09:00:15,272 -  FINISH FROM SOR TO LINKS                                    executed in 0.000 seconds (0.053 seconds since start) 
+
+2016-09-15 09:00:15,272 -  START FROM HUBS TO LINKS                                    executed in 0.000 seconds (0.053 seconds since start) 
+2016-09-15 09:00:15,272 -  FINISH FROM HUBS TO LINKS                                   executed in 0.000 seconds (0.053 seconds since start) 
+
+2016-09-15 09:00:15,279 -      -copy to exceptions_table persoon_hstage                executed on 0 rows in 0.007 seconds (0.060 seconds since start) 
+2016-09-15 09:00:15,279 - =====================================                        executed in 0.000 seconds (0.060 seconds since start) 
+2016-09-15 09:00:15,279 - ===== FINISH PIPE test_source                                executed in 0.000 seconds (0.060 seconds since start) 
+2016-09-15 09:00:15,279 - =====================================                        executed in 0.000 seconds (0.060 seconds since start) 
+2016-09-15 09:00:15,279 - FINISH ETL                                                   executed in 0.000 seconds (0.060 seconds since start) 
+2016-09-15 09:00:15,279 - 
