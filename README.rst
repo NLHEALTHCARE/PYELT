@@ -19,7 +19,7 @@ Write your own mappings to transfer and transform data from sources into staging
 
 Content:
 
-- 'concepts </docs/source/00concepts.rst>'_
+- `concepts </docs/source/00concepts.rst>`_
 - config](docs/source/01config.rst)
 - [ ] [pipeline](docs/source/02pipeline.rst)
 - [ ] [domein](docs/source/03domain.rst)
@@ -34,7 +34,7 @@ Background
 ^^^^^^^^^^
 Pyelt was developed as a framework to support the realisation of datawarehouse 2.0 from NL Healthcare Clinics.
 This project is based on::
-- 'Data Vault design pattern <https://hanshultgren.wordpress.com/>'_ of Hans Hultgren
+- `Data Vault design pattern <https://hanshultgren.wordpress.com/>`_ of Hans Hultgren
 - [ ] Domain design with (inter)national standards, mostly [HL7 RIM](https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf) en
 [Zorginformatiebouwstenen](https://zibs.nl)
 - [ ] Een op Python 3 en PostgreSQL gebaseerde ETL library (pyelt), waarmee de datavault en het domein model geimplementeerd worden

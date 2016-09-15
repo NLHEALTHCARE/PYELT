@@ -5,14 +5,14 @@ from versions import current_version
 
 
 def readme():
-    with open('../README.md') as f:
+    with open('../README.rst') as f:
         return f.read()
 
 
 setup(name='pyelt',
       version=current_version[0],
       description='Pyelt is a DDL and ETL framework for creating and filling data vault datawarehouses on a postgress database.',
-      long_description=open('README.md').read(),
+      long_description=open('README.rst').read(),
       url='https://github.com/hvanreenen/PYELT',
       author='NL Healthcare Clinics (NLHC), Henk-Jan van Reenen',
       author_email='henk-jan.van.reenen@nlhealthcareclinics.com',
