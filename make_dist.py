@@ -26,11 +26,19 @@ def make_dist():
         return
 
     #1. we maken nieuw auto versie nummer aan
-    version_parts = versions.current_version[0].split('.')
-    version_minor = int(version_parts[2])
-    version_minor += 1
-    version_parts[2] = str(version_minor)
-    new_version = '.'.join(version_parts)
+    version_parts = versions.current_version[0].split('-')
+    version_numbers = version_parts[0].split('.')
+    prereleases = version_parts[1]
+    build_number = int(version_numbers[3])
+    # version_numbers = versions.current_version[0].split('.')
+    # version_minor = version_parts[2]
+    # if 'a' in version_minor:
+    #     build_number = int(version_minor.split('a')[2])
+    # build_number = int(build_number[2])
+    build_number += 1
+    version_numbers[3] = str(build_number)
+    new_version = '.'.join(version_numbers) + '-' + prereleases
+
     current_version_number = new_version
 
     #2. voordat package kan worden gemaakt moet eerst alle code zijn gecommit
@@ -64,7 +72,9 @@ def make_dist():
     os.system("python setup.py sdist")
 
     #4. dummy configfiles in zip zetten
+    new_version = new_version.replace('-', '').replace('alpha', 'a0')
     arc_file_name = "dist/{}-{}.{}".format(package_name, new_version, archive_format)
+
     # zip_file = zipfile.ZipFile(arc_file_name, "a" )
     # #lijst met dummy configs
     # extra_files = ['test_package_make_hj/config.py', 'test_package_make_hj/dir2/test3_config.py']
@@ -80,3 +90,7 @@ def make_dist():
 
 if __name__ == '__main__':
     make_dist()
+    # import semantic_version
+    # s = '1.0.2-a123'
+    # v = semantic_version.Version(s)
+    # print(v)
