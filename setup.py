@@ -16,7 +16,7 @@ setup(name='pyelt',
       url='https://github.com/NLHEALTHCARE/PYELT',
       author='NL Healthcare Clinics (NLHC), Henk-Jan van Reenen',
       author_email='henk-jan.van.reenen@nlhealthcareclinics.com',
-      license='MIT',
+      license='LGPL3',
       packages=['pyelt', 'pyelt.datalayers', 'pyelt.helpers', 'pyelt.mappings', 'pyelt.process', 'pyelt.sources'],
       install_requires=[
           'sqlalchemy', 'typing'
