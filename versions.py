@@ -1,4 +1,4 @@
-current_version = ('0.9.4.5-alpha','hjvreenen','package-build V0.9.4.5-alpha', '4480cf43caa01df1fd0f55728de4880034ce97b0', '2016-09-15 15:06:26.763478')
+current_version = ('0.9.4.6-alpha','hjvreenen','package-build V0.9.4.6-alpha', 'd6663a8624a1715044eb6ff01906925f71d303df', '2016-09-16 09:41:07.492213')
 version_archive = [
     ('0.9.1.a0', 'hjvreenen', 'package-build V0.9.0.a0', '', '2016-09-15 11:08:42.594143')
 ,     ('0.9.2.a0', 'hjvreenen', 'package-build V0.9.2.a0', '976e8402c57c075435f5663a638604194ca2ba70', '2016-09-15 11:10:51.613949')
@@ -7,5 +7,6 @@ version_archive = [
 ,     ('0.9.4.2-alpha', 'hjvreenen', 'package-build V0.9.4.2-alpha', '21cada33d4a6e6bc4da50f6900e0e8c1c07a57ee', '2016-09-15 15:01:50.184715')
 ,     ('0.9.4.3-alpha', 'hjvreenen', 'package-build V0.9.4.3-alpha', '98a7854dae184f6440dd4e813675033fa6111f40', '2016-09-15 15:03:31.851003')
 ,     ('0.9.4.4-alpha', 'hjvreenen', 'package-build V0.9.4.4-alpha', '39099783199288381e15cea7d1a178977e331b5e', '2016-09-15 15:05:33.405106')
-,     ('0.9.4.5-alpha','hjvreenen','package-build V0.9.4.5-alpha', '4480cf43caa01df1fd0f55728de4880034ce97b0', '2016-09-15 15:06:26.763478')
+,     ('0.9.4.5-alpha', 'hjvreenen', 'package-build V0.9.4.5-alpha', '4480cf43caa01df1fd0f55728de4880034ce97b0', '2016-09-15 15:06:26.763478')
+,     ('0.9.4.6-alpha','hjvreenen','package-build V0.9.4.6-alpha', 'd6663a8624a1715044eb6ff01906925f71d303df', '2016-09-16 09:41:07.492213')
 , ]

@@ -54,8 +54,8 @@ if __name__ == '__main__':
         else:
             print('usage: encrypt.py [encode|decode] "[key]" "[string]"')
 
-
-s = SimpleEncrypt.encode('pwd', 'spectrumjurkblokjesbloes')
-print(s)
-# d = SimpleEncrypt.decode('pwd', s)
-# print(d)
+if __name__ == '__main__':
+    s = SimpleEncrypt.encode('key', 'password')
+    print(s)
+    # d = SimpleEncrypt.decode('key', s)
+    # print(d)
