@@ -1,0 +1,10 @@
+open project
+open twee project vink aan add to curently opened project
+open derde project ...
+
+open settings, project, project dependencies, vink de juiste afhankelijkheden aan.
+
+CLINICAL_DATAVAULT_CLINICS -> CLINICAL_DATAVAULT & PYELT
+CLINICAL_DATAVAULT -> PYELT
+
+

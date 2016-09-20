@@ -191,7 +191,7 @@ class EtlSourceToSor(BaseEtl):
             sql = "TRUNCATE TABLE {sor}.{temp_table}_hash;".format(**params)
             self.execute(sql, 'truncate temp')
 
-            # STAP 3 Bron data naar temp
+            # STAP 3 Bron data naar temp_hash
             sql = "COPY {sor}.{temp_table}_hash ({key_fields}, _hash) FROM  '{file_name}' DELIMITER ';' CSV HEADER;".format(
                     **params)
             self.execute(sql, 'copy into temp hash')
@@ -200,6 +200,10 @@ class EtlSourceToSor(BaseEtl):
             sql = "SELECT COUNT(*) FROM {sor}.{sor_table};".format(**params)
             result = self.execute_read(sql, 'get rowcount')
             rowcount = result[0][0]
+
+            # STAP 6
+            sql = "TRUNCATE TABLE {sor}.{temp_table};".format(**params)
+            self.execute(sql, 'truncate temp')
 
             filter = ''
             if rowcount > 0:
@@ -215,9 +219,30 @@ class EtlSourceToSor(BaseEtl):
                 sql = """SELECT {key_fields} FROM {sor}.{temp_table}_hash WHERE _changed;""".format(**params)
                 # changed_keys = []
                 changed_keys_str = ''
-                for row in self.dwh.engine.execute(sql):
+                rows = self.dwh.engine.execute(sql)
+                # if len(rows) > 1000:
+                #     debug = True
+                i = 0
+                for row in rows:
+                    i += 1
                     keys_concat = ''.join(list(row))
                     changed_keys_str += "'{}',".format(keys_concat)
+                    if i % 1000 == 0:
+
+                        changed_keys_str = changed_keys_str[:-1]
+                        key_concat = params['key_fields'].replace(',', '||')
+                        filter = 'WHERE {} IN ({})'.format(key_concat, changed_keys_str)
+                        print(filter)
+                        file_name = mappings.source.to_csv(md5_only=False, filter=filter,  ignore_fields=mappings.ignore_fields, debug=debug)
+                        params['file_name'] = file_name
+
+                        sql = "COPY {sor}.{temp_table} ({fields}) FROM  '{file_name}' DELIMITER ';' CSV HEADER;".format(
+                            **params)
+
+                        self.execute(sql, 'copy into temp row {} - {}'.format(i, i+ 1000))
+
+                        changed_keys_str = ''
+
                 changed_keys_str = changed_keys_str[:-1]
                 if changed_keys_str.strip():
                 # changed_keys_str = ','.join(changed_keys)
@@ -236,13 +261,11 @@ class EtlSourceToSor(BaseEtl):
                 params['file_name'] = file_name
             # self.logger.log_simple('    source complete to csv'.format(mappings))
 
-            # STAP 6
-            sql = "TRUNCATE TABLE {sor}.{temp_table};".format(**params)
-            self.execute(sql, 'truncate temp')
+
 
             # STAP 7 Bron data naar temp
             sql = "COPY {sor}.{temp_table} ({fields}) FROM  '{file_name}' DELIMITER ';' CSV HEADER;".format(**params)
-            self.execute(sql, 'truncate temp')
+            self.execute(sql, 'copy into temp row {} - end'.format(i))
 
             # STAP 7a Update _hash
             params['tmp_fields'] = mappings.get_fields(alias='tmp')
