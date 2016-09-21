@@ -802,6 +802,7 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                       valueset_oid text,
                       valueset_naam text,
                       niveau text,
+                      niveau_type text,
                       code text,
                       code_hl7 text,
                       weergave_naam text,
