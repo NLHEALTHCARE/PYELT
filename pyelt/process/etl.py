@@ -206,6 +206,7 @@ class EtlSourceToSor(BaseEtl):
             self.execute(sql, 'truncate temp')
 
             filter = ''
+            i = 0
             if rowcount > 0:
                 # STAP 4 bepaal wijzigingen van temp tov laatste sor data
                 # CM : Vergelijk alleen met actieve records.
@@ -222,7 +223,6 @@ class EtlSourceToSor(BaseEtl):
                 rows = self.dwh.engine.execute(sql)
                 # if len(rows) > 1000:
                 #     debug = True
-                i = 0
                 for row in rows:
                     i += 1
                     keys_concat = ''.join(list(row))
