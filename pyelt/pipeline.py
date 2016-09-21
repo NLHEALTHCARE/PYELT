@@ -268,13 +268,25 @@ Voorbeeld::
             self.runid = round(max_runid + 0.01, 2)
         else:
             self.runid = math.floor(max_runid) + 1
-        import subprocess, os
-        os.chdir(get_root_path() + '/PYELT')
-        git_commit_number = subprocess.check_output(["git", "rev-parse", 'HEAD']).decode('ascii')
-        #todo: git versie nummers van andere repos toevoegen
-        sql = """INSERT INTO sys.runs (runid, rundate, pyelt_version) VALUES ({}, now(), '{}')""".format(self.runid, git_commit_number)
+
+        git_hashes = self.__get_git_hashes()
+        sql = """INSERT INTO sys.runs (runid, rundate, pyelt_version) VALUES ({}, now(), '{}')""".format(self.runid, git_hashes)
         self.dwh.execute(sql, 'insert new run id')
         return self.runid
+
+    def __get_git_hashes(self):
+        git_hashes = {}
+        import subprocess, os
+        for name in os.listdir(get_root_path()):
+            if os.path.isdir(name):
+                subdirs = os.listdir(name)
+                if '.git' in subdirs:
+                    os.chdir(get_root_path() + '/' + name)
+                    git_commit_number = subprocess.check_output(["git", "rev-parse", 'HEAD']).decode('ascii')
+                    git_hashes[name] = git_commit_number
+        return str(git_hashes).replace("'", '"')
+
+
 
     def end_run(self):
         """
