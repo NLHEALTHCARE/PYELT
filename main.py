@@ -7,6 +7,7 @@ def get_root_path():
     import os
     path = os.path.dirname(__file__)
     path = path.replace('\\', '/')
+    path = path[0: path.rfind('/')]
     return path
 
 

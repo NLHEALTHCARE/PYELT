@@ -269,8 +269,9 @@ Voorbeeld::
         else:
             self.runid = math.floor(max_runid) + 1
         import subprocess, os
-        os.chdir(get_root_path())
+        os.chdir(get_root_path() + '/PYELT')
         git_commit_number = subprocess.check_output(["git", "rev-parse", 'HEAD']).decode('ascii')
+        #todo: git versie nummers van andere repos toevoegen
         sql = """INSERT INTO sys.runs (runid, rundate, pyelt_version) VALUES ({}, now(), '{}')""".format(self.runid, git_commit_number)
         self.dwh.execute(sql, 'insert new run id')
         return self.runid
@@ -351,6 +352,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         """
         self.source_system = source_system
         self.pipeline = pipeline
+        self.config = config
         self.mappings = []
         self.validations = []
         self.source_db = None
