@@ -947,6 +947,19 @@ class SorToRefMapping(BaseTableMapping):
 
         self.map_field(source_leveltype_field, target)
         self.source_leveltype_field = source_leveltype_field
+
+    def map_tempid_field(self, source_tempid_field: str) -> None:
+        target = 'temp_id'
+
+        self.map_field(source_tempid_field, target)
+        self.source_mapid_field = source_tempid_field
+
+    def map_tempfk_field(self, source_tempfk_field: str) -> None:
+        target = 'temp_fk'
+
+        self.map_field(source_tempfk_field, target)
+        self.source_mapfk_field = source_tempfk_field
+
     ###
 
     # def map_type_field(self, source_type_field: str) -> None:

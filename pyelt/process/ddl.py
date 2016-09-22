@@ -799,6 +799,8 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                       {fixed_columns_def},
                       --fk_valueset_type int,
                       fk_parent int,
+                      temp_id text,
+                      temp_fk text,
                       valueset_oid text,
                       valueset_naam text,
                       niveau text,
