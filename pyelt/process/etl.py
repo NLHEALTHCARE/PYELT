@@ -756,7 +756,7 @@ AND hstg._valid AND {filter};""".format(
                       AND hstg._valid AND hstg._active
                       AND NOT EXISTS (SELECT 1 FROM {dv}._ref_valuesets sets WHERE sets.naam = hstg.{source_type_field});
 
-                    INSERT INTO {dv}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_oid, valueset_naam, code, weergave_naam, niveau, niveau_type
+                    INSERT INTO {dv}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_oid, valueset_naam, code, weergave_naam, niveau, niveau_type)
                     SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, {source_oid_field}, {source_type_field}, {source_code_field}, {source_descr_field}, {source_level_field}, {source_leveltype_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
