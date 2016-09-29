@@ -61,4 +61,4 @@ The pyelt framework is presently under development at NL Healthcare, with the ai
 Architectural cornerstones of this project are:
 
 - the Data Vault (DV) design pattern of `Hans Hultgren <https://hanshultgren.wordpress.com/>`_ 
-- Domain-specific modelling of the DV, following `HL7 v3 Reference Information Model <https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf/>`_.and the Dutch implementation of Detailed Clinical Model `Zorginformatiebouwstenen <https://zibs.nl/>`_ (in Dutch).
+- Domain-specific modelling of the DV, following `HL7 v3 Reference Information Model <https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf/>`_ and the Dutch Detailed Clinical Model `Zorginformatiebouwstenen <https://zibs.nl/>`_ (in Dutch).
