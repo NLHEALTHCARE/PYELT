@@ -18,7 +18,7 @@ This example will create and fill the historical staging area::
 
     pipeline.run()
     
-More examples can be found on https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
+More examples can be found on `the GitHub repository of NL Healthcare <https://github.com/NLHEALTHCARE/PYELT/tree/master/samples//>`_.
 
 
 Introduction
@@ -39,18 +39,18 @@ Pyelt uses the SQLAlchemy.core only for the connection and for reflection. All o
 Content 
 ----------------------------
 
-(further documentation is only in dutch):
+(`current documentation on pythonhosted <http://pythonhosted.org/pyelt//>`_ is only in dutch):
 
-- concepts (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/00concepts.rst)
-- config (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/01config.rst)
-- pipeline(https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/02pipeline.rst)
-- domain (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03domain.rst)
-- mappings (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03mappings.rst)
-- run proces (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/04etl_proces.rst)
+- `concepts <https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/00concepts.rst/>`_
+- `config <https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/01config.rst/>`_
+- `pipeline <https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/02pipeline.rst/>`_
+- `domain <https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03domain.rst/>`_
+- `mappings <https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03mappings.rst/>`_
+- `run proces <https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/04etl_proces.rst/>`_
 
 work in progress:
 
-- api docs (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/09api.rst)
+- api docs (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/09api.rst/>_
 
 
 
