@@ -18,19 +18,19 @@ This example will create and fill the historical staging area::
 
     pipeline.run()
     
-More examples can be found in https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
+More examples can be found on https://github.com/NLHEALTHCARE/PYELT/tree/master/samples/
 
 
 Introduction
 ^^^^^^^^^^^^
 
-Pyelt is a Python DDL and ETL framework for **creating and filling Data Vault** - Data Ware Houses.
+Pyelt is a Python DDL and ETL framework for **creating and loading Data Vaults** for datawarehousing.
 
-Pyelt supports **more data-layers** (sor (staging), raw datavault, business datavault, datamart) 
+Pyelt supports **several data-layers**, including Source-of-Record (SOR), Raw datavault (RDV), Business datavault (BDV) and Datamarts (DM) 
 
 Pyelt can import data from several **different source systems** such as fixed length files, csv-files, and different databases.
 
-Pyelt is developed to run on a **postgres database**.
+Pyelt is developed to run on a **postgreSQL database**.
 
 Pyelt uses the SQLAlchemy.core only for the connection and for reflection. All other SQL statements (ddl, copy, insert and update statements) are created by the pyelt framework itself.
 
@@ -48,7 +48,7 @@ Content
 - mappings (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/03mappings.rst)
 - run proces (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/04etl_proces.rst)
 
-not yet:
+work in progress:
 
 - api docs (https://github.com/NLHEALTHCARE/PYELT/tree/master/docs/source/09api.rst)
 
@@ -56,8 +56,9 @@ not yet:
 
 Background
 ^^^^^^^^^^
-Pyelt was developed as a framework to support the realisation of datawarehouse 2.0 from NL Healthcare Clinics.
-This project is based on:
+The pyelt framework is presently under development at NL Healthcare, with the aim to implement our next-generation datawarehouse (DWH2.0). It serves as the foundation for our work in the area of clinical business intelligence (CBI) and machine-learning.
 
-- the Data Vault design pattern (https://hanshultgren.wordpress.com/) of Hans Hultgren
-- a Domain design according to (inter)national standards. The main part of this design is based on the international "HL7 RIM" standard (https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf) and the natioal  "Zorginformatiebouwstenen" standard(dutch; https://zibs.nl).
+Architectural cornerstones of this project are:
+
+- the Data Vault (DV) design pattern of `Hans Hultgren <https://hanshultgren.wordpress.com/>`_ 
+- Domain-specific modelling of the DV, following `HL7 v3 Reference Information Model <https://www.hl7.org/documentcenter/public_temp_0BB49CB1-1C23-BA17-0C2E211163D07382/calendarofevents/himss/2009/presentations/Reference%20Information%20Model_Tue.pdf/>`_.and the Dutch implementation of Detailed Clinical Model `Zorginformatiebouwstenen <https://zibs.nl/>`_ (in Dutch).
