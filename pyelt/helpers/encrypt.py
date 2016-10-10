@@ -1,5 +1,7 @@
 import base64
 
+
+
 """simple Vigenere cipher encryption"""
 
 
@@ -18,7 +20,7 @@ class SimpleEncrypt():
         return b64.decode("utf-8")
         return "".join(enc).encode('utf-8').decode('cp1251')
 
-        return str(base64.urlsafe_b64encode("".join(enc)))
+        # return str(base64.urlsafe_b64encode("".join(enc)))
 
     @staticmethod
     def decode(key, enc):
@@ -57,6 +59,20 @@ if __name__ == '__main__':
 if __name__ == '__main__':
     s = SimpleEncrypt.encode('key', 'spectrumjurkblokjesbloes')
     print(s)
+    print(type(s))
+    s = SimpleEncrypt.encode('key', 'spectrumjurkblokjesbloes')
+    print(s)
+
+    print(type(s))
+    d = SimpleEncrypt.decode('key', s)
+    print(d)
+    print(type(s))
+    a = SimpleEncrypt.decode(u'key', u'wrfCtcK4wq7DiMOBw4XCmsKfw4TCusK1wpXCs8OEw5bDj8OewrfCp8K_wrrCucOC')
+    print(type(u'wrfCtcK4wq7DiMOBw4XCmsKfw4TCusK1wpXCs8OEw5bDj8OewrfCp8K_wrrCucOC'))
+    print(a)
+
+
+
     # d = SimpleEncrypt.decode('key', s)
     # print(d)
 
