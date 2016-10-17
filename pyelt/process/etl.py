@@ -599,7 +599,7 @@ class EtlSorToDv(BaseEtl):
             SELECT DISTINCT {runid}, '{source_system}', now(), '{link_type}', {source_fks}
             FROM {sor}.{sor_table} hstg {join}
             WHERE floor(hstg._runid) = floor({runid})
-            AND {source_fks_is_not_null}
+            --AND {source_fks_is_not_null}
             AND NOT EXISTS (SELECT 1 FROM {dv}.{link} link WHERE {fks_compare} AND link.type='{link_type}') AND {filter};""".format(**params)
             self.execute(sql,  'insert new links')
 
@@ -694,7 +694,7 @@ AND hstg._valid AND {filter};""".format(
             elif bk:
                 join_tbl = field_mapping.get_source_table()
                 join_alias = self.__get_link_alias_of_source_tbl(field_mapping, join_sql)
-                join_sql += ' INNER JOIN dv.{0} AS {1} ON {1}.bk = {2} \r\n'.format(join_tbl, join_alias, bk)
+                join_sql += ' LEFT JOIN dv.{0} AS {1} ON {1}.bk = {2} \r\n'.format(join_tbl, join_alias, bk)
         return join_sql
 
     def __get_link_alias_of_source_tbl(self, field_mapping, total_sql, default_alias='hstg'):
