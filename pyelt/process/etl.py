@@ -589,6 +589,7 @@ class EtlSorToDv(BaseEtl):
             params['sor_table'] = mappings.source.name
             params['source_fks'] = self.__get_link_source_fks(mappings)
             params['source_fks_is_not_null'] = self.__get_link_source_fks_is_not_null(mappings)
+            params['source_fks_is_null'] = params['source_fks_is_not_null'].replace('NOT ', '')
             params['target_fks'] = self.__get_link_target_fks(mappings)
 
             params['join'] = self.__get_link_join(mappings, schema_name=self.pipe.sor.name)
@@ -599,7 +600,7 @@ class EtlSorToDv(BaseEtl):
             SELECT DISTINCT {runid}, '{source_system}', now(), '{link_type}', {source_fks}
             FROM {sor}.{sor_table} hstg {join}
             WHERE floor(hstg._runid) = floor({runid})
-            --AND {source_fks_is_not_null}
+            AND NOT ({source_fks_is_null})
             AND NOT EXISTS (SELECT 1 FROM {dv}.{link} link WHERE {fks_compare} AND link.type='{link_type}') AND {filter};""".format(**params)
             self.execute(sql,  'insert new links')
 
