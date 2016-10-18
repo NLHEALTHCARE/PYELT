@@ -20,7 +20,8 @@ class TestCase_RunProces(unittest.TestCase):
         # hj: onderstaande regel toegevoegd. Bij elke initiatie dient mappings met lege lijst te beginnen
         self.pipe.mappings = []
         self.pipe.mappings.extend(init_source_to_sor_mappings())
-        self.pipe.mappings.extend(init_sor_to_dv_mappings())
+        pipe = self.pipe
+        self.pipe.mappings.extend(init_sor_to_dv_mappings(pipe))
 
     def test01_pipeline_run(self):
 

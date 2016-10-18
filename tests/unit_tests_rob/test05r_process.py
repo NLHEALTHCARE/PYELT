@@ -88,24 +88,25 @@ class TestCase_RunProces(unittest.TestCase):
 
         self.assertIsNotNone(expected_error,'ik verwachte een error')
 
-    def test07_value_to_null(self):
-        result = get_field_value_from_dv_table('datum', 'zorgverlener', 'contactgegevens', '567', ["""type ='mobiel2'""", """_active = True"""])
-
-        result = result[0][0]
-
-
-        expected_error = ''
-        if result == None:
-            expected_error = 'Null Value'
-
-
-        self.assertEqual(expected_error,'Null Value', 'ik verwachte een null waarde')
+# todo: unittest maken voor testen van een update van een gevuld veld dat na de update een " Null" value bevat
+#     def test07_value_to_null(self):
+#         result = get_field_value_from_dv_table('datum', 'zorgverlener', 'contactgegevens', '567', ["""type ='mobiel2'""", """_active = True"""])
+#
+#         result2 = result[0][0]
+#         print(result2)
+#
+#         expected_error = ''
+#         if result2 == None:
+#             expected_error = 'Null Value'
+#
+#
+#         self.assertEqual(expected_error,'Null Value', 'ik verwachte een null waarde')
 
 
 
     def test08_postcode_correct(self):
         print("test_run4a:\n")
-        self.pipe.mappings[0].file_name = get_root_path() + '/tests/data/zorgverleners4_rob.csv'
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners4_rob.csv'
         self.pipeline.run()
         result = get_field_value_from_table('postcode','pyelt_unittests.dv.adres_sat', """char_length(postcode) >7""")
 # detecteer dat er geen strings zijn met een te lange postcode
@@ -115,7 +116,7 @@ class TestCase_RunProces(unittest.TestCase):
     def test09_null_and_hybridsat_update(self):
 # deze unittest test 2 dingen: wordt een Null veld geupdate en wordt een hybride_sat geupdate
         print("test_run5:\n")
-        self.pipe.mappings[0].file_name = get_root_path() + '/tests/data/zorgverleners4_rob.csv'
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners4_rob.csv'
         self.pipeline.run()
 
         result = get_field_value_from_dv_table('telnummer', 'zorgverlener', 'contactgegevens', '448', ["""type = 'mobiel2'""", """_active = True"""])

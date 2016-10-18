@@ -1,5 +1,5 @@
 zorgverlenernummer;achternaam;tussenvoegsels;voorletters;voornaam;postcode;huisnummer;huisnummer_toevoeging;straat;plaats;land;aanvangsdatum;einddatum;zorginstellings_nummer;telefoon;telefoon_landcode;telefoon_datum;mobiel;mobiel_landcode;mobiel_datum;mobiel2;mobiel2_landcode;mobiel2_datum
-567;Paulusma;;P;Piet;8847 TE;1;;Buys Balotlaan;Franeker;Nederland;15-11-1998;3-3-2003;456;0744-472924;+31;1-1-2001;06-12345678;+31;1-1-1999;06-12345679;+31;
+567;Paulusma;;P;Piet;8847 TE;1;;Buys Balotlaan;Franeker;Nederland;15-11-1998;3-3-2003;456;0744-472924;+31;1-1-2001;06-12345678;+31;1-1-1999;06-12345679;+31;Null
 448;Bergsma;;H;Hans;7891 VB;A;23;Dalstraat;Ede;Nederland;2-2-2002;;456;;;;06-23456789;+31;11-11-2011;;;
 449;Ploeg;Van der;LM;Lydie;4555 GA;10;1.1;Akkerstraat;Zaandam;Nederland;1-6-1978;31-12-2005;789;0397-987654;+31;1-1-1968;06-98765432;+31;10-10-2003;06-98765431;+31;7-12-2015
 455;Standish;;G;Geoff;1234AB;1;;Outback laan;Amsterdam;Australia;1-8-1983;2-9-1993;123;;;;06-77777777;+61;9-10-2007;;;

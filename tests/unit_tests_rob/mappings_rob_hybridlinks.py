@@ -10,13 +10,13 @@ from pyelt.sources.files import CsvFile
 
 def init_source_to_sor_mappings():
     mappings = []
-    source_file = CsvFile(get_root_path() + '/tests/data/zorgverlenersA_rob.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/zorgverlenersA_rob.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['zorgverlenernummer'])
     sor_mapping = SourceToSorMapping(source_file, 'zorgverlener_hstage', auto_map=True)
     mappings.append(sor_mapping)
 
-    source_file = CsvFile(get_root_path() + '/tests/data/zorginstelling_rob.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/zorginstelling_rob.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['zorginstellings_nummer'])
     sor_mapping = SourceToSorMapping(source_file, 'zorginstelling_hstage', auto_map=True)
@@ -25,9 +25,9 @@ def init_source_to_sor_mappings():
     return mappings
 
 
-def init_sor_to_dv_mappings():
+def init_sor_to_dv_mappings(pipe):
     mappings = []
-
+    sor = pipe.sor
     mapping = SorToEntityMapping('zorgverlener_hstage', Zorgverlener)
     mapping.map_field("zorgverlenernummer", Zorgverlener.bk)
     mapping.map_field('achternaam', Zorgverlener.Personalia.achternaam)
@@ -60,7 +60,7 @@ def init_sor_to_dv_mappings():
     mapping.map_field('w_land', Adres.Default.land)
     mappings.append(mapping)
 
-    link_mapping = SorToLinkMapping('zorgverlener_hstage',Zorgverlener_Adres_Link, type='woon')
+    link_mapping = SorToLinkMapping('zorgverlener_hstage',Zorgverlener_Adres_Link, sor, type='woon')
     link_mapping.map_entity(Zorgverlener_Adres_Link.zorgverlener)
     link_mapping.map_entity(Zorgverlener_Adres_Link.adres, type='woon')
     mappings.append(link_mapping)
@@ -76,7 +76,7 @@ def init_sor_to_dv_mappings():
     mapping.map_field('b_straat', Adres.Default.straat)
     mappings.append(mapping)
 
-    link_mapping = SorToLinkMapping('zorgverlener_hstage',Zorgverlener_Adres_Link, type='bezoek')
+    link_mapping = SorToLinkMapping('zorgverlener_hstage',Zorgverlener_Adres_Link, sor, type='bezoek')
     link_mapping.map_entity(Zorgverlener_Adres_Link.zorgverlener)
     link_mapping.map_entity(Zorgverlener_Adres_Link.adres, type='bezoek')
     mappings.append(link_mapping)
@@ -91,7 +91,7 @@ def init_sor_to_dv_mappings():
     mapping.map_field('p_land', Adres.Default.land)
     mappings.append(mapping)
 
-    link_mapping = SorToLinkMapping('zorgverlener_hstage',Zorgverlener_Adres_Link, type='post')
+    link_mapping = SorToLinkMapping('zorgverlener_hstage',Zorgverlener_Adres_Link, sor, type='post')
     link_mapping.map_entity(Zorgverlener_Adres_Link.zorgverlener)
     link_mapping.map_entity(Zorgverlener_Adres_Link.adres, type='post')
     mappings.append(link_mapping)
@@ -111,7 +111,7 @@ def init_sor_to_dv_mappings():
     mapping.map_field('land', Adres.Default.land)
     mappings.append(mapping)
 
-    link_mapping = SorToLinkMapping('zorginstelling_hstage', Zorginstelling_Adres_Link, type='hoofd')
+    link_mapping = SorToLinkMapping('zorginstelling_hstage', Zorginstelling_Adres_Link, sor, type='hoofd')
     link_mapping.map_entity(Zorginstelling_Adres_Link.zorginstelling)
     link_mapping.map_entity(Zorginstelling_Adres_Link.adres, type='hoofd')
     mappings.append(link_mapping)
