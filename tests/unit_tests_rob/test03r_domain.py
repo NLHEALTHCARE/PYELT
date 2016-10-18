@@ -18,13 +18,13 @@ class TestCase_Domain(unittest.TestCase):
         self.pipeline.run()
         self.assertNotEquals(len(self.pipe.domain_modules), 0)
 
-    def test02_domain_number_of_attributes_correct(self):
-        sql = """SELECT COUNT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS
-                 WHERE TABLE_CATALOG = 'pyelt_unittests' AND TABLE_SCHEMA = 'dv'
-                 AND TABLE_NAME = 'zorgverlener_sat_personalia'"""
-        result = execute_sql(sql)
-        result = result[0][0]
-        self.assertEqual(result, 14, 'Ik verwachte 14 kolommen; is domain_rob misschien recent veranderd?')
+    # def test02_domain_number_of_attributes_correct(self):
+    #     sql = """SELECT COUNT(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS
+    #              WHERE TABLE_CATALOG = 'pyelt_unittests' AND TABLE_SCHEMA = 'dv'
+    #              AND TABLE_NAME = 'zorgverlener_sat_personalia'"""
+    #     result = execute_sql(sql)
+    #     result = result[0][0]
+    #     self.assertEqual(result, 14, 'Ik verwachte 14 kolommen; is domain_rob misschien recent veranderd?')
 
         # nieuw attribute toegevoegd aan zorgverlener_sat_personalia:
 
@@ -38,8 +38,7 @@ class TestCase_Domain(unittest.TestCase):
         result = execute_sql(sql)
         result = result[0][0]
         self.assertEqual(result,15, 'Ik verwachte 15 kolommen; is domain_rob_unittest misschien recent veranderd?')
-    #
-    # # #
+
     # # #
 
 

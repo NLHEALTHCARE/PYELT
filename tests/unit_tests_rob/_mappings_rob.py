@@ -13,13 +13,13 @@ def init_source_to_sor_mappings():
 
 
 
-    source_file = CsvFile(get_root_path() + '/tests/data/zorgverleners_rob.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/zorgverleners_rob.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['zorgverlenernummer'])
     sor_mapping = SourceToSorMapping(source_file, 'zorgverlener_hstage', auto_map=True)
     mappings.append(sor_mapping)
 
-    source_file = CsvFile(get_root_path() + '/tests/data/zorginstelling_rob.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/zorginstelling_rob.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['zorginstellings_nummer'])
     sor_mapping = SourceToSorMapping(source_file, 'zorginstelling_hstage', auto_map=True)

@@ -45,7 +45,10 @@ class TestCase_RunProces(unittest.TestCase):
     def test03_dv_update(self):
         # return
         print("test_run2:\n")
-        self.pipe.mappings[0].file_name = get_root_path() + '/tests/data/zorgverleners2_rob.csv'
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners2_rob.csv'
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners2_rob.csv'
+
+
         self.pipeline.run()
 
         test_row_count(self, 'sor_test_system.zorgverlener_hstage', 8)

@@ -394,6 +394,10 @@ class Columns():
         def __init__(self, name:str = '' , default_value=''):
             super().__init__(name, 'bool', default_value=default_value)
 
+    class JsonColumn(Column):
+        def __init__(self, name:str = '' , default_value={}):
+            super().__init__(name, 'jsonb', default_value=default_value)
+
 
 ####################################
 class Condition():
