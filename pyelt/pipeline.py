@@ -7,6 +7,7 @@ from typing import List
 from main import get_root_path
 # from sample_domains import _ensemble_views
 from pyelt.datalayers.database import Schema, DbFunction
+from pyelt.datalayers.dm import Dim, Fact
 from pyelt.datalayers.dv import DvEntity, Link, Ensemble_view
 from pyelt.datalayers.dwh import Dwh
 
@@ -15,7 +16,7 @@ from pyelt.helpers.validations import DomainValidator, MappingsValidator
 from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping, EntityViewToEntityMapping, EntityViewToLinkMapping, SorToEntityMapping, SorToLinkMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.mappings.validations import SorValidation, DvValidation, Validation
-from pyelt.process.ddl import DdlSor, DdlDv, Ddl
+from pyelt.process.ddl import DdlSor, DdlDv, Ddl, DdlDatamart
 from pyelt.process.etl import EtlSourceToSor, EtlSorToDv
 from pyelt.sources.databases import SourceDatabase
 
@@ -85,6 +86,7 @@ Voorbeeld::
             cls._instance.pipes = OrderedDict()  # type: Dict[str, Pipe]
             cls._instance.logger = None  # type: Logger
             cls._instance.sql_logger = None  # type: Logger
+            cls._instance.datamart_modules = {}
         return cls._instance
 
 
@@ -144,6 +146,10 @@ Voorbeeld::
             pipe.create_db_functions()
 
             self.logger.log('FINISH DDL PIPE ' + pipe.source_system, indent_level=1)
+
+        for name, module in self.datamart_modules.items():
+            self.dwh.create_schemas_if_not_exists(name)
+        self.create_datamarts()
 
         self.logger.log('FINISH DDL')
         self.logger.log('')
@@ -324,6 +330,41 @@ Voorbeeld::
                 linux_cmd = """echo -e "{msg}" | mail {attachments_command} -s "{subject}" -r "{from}" "{to}" """.format(**params)
                 import os
                 os.system(linux_cmd)
+
+    def register_datamart(self, module, name = ''):
+        if not name:
+            name = module.__name__
+        self.datamart_modules[name] = module
+        # init module
+        for name, cls in inspect.getmembers(module, inspect.isclass):
+            if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
+                cls.init_cls()
+
+    def create_datamarts(self):
+        """
+        Voert ddl uit van de datamart laag. Maakt eventuele nieuwe tabellen aan (dims, facts) gebaseerd op geregistreerde model(len).
+
+        """
+        self.logger.log('START CREATE DATAMARTS', indent_level=2)
+
+        for name, module in self.datamart_modules.items():
+            ddl = DdlDatamart(self, self.dwh.get_or_create_datamart_schema(name))
+
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                # if hasattr(cls, 'init_cls') and cls != DvEntity:
+                #     cls.init_cls()
+                if cls.__base__ == Dim:
+                    ddl.create_or_alter_dim(cls)
+
+            # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle dims zijn aangemaakt voordat de facts aangemaakt kunnen worden met ref. integriteit op de database
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if cls.__base__ == Fact:
+                    # if hasattr(cls, 'init_cls'):
+                    #     cls.init_cls()
+                    ddl.create_or_alter_fact(cls)
+
+
+        self.logger.log('FINISH CREATE DATAMARTS', indent_level=2)
 
 
 

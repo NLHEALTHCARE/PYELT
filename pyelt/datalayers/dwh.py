@@ -30,6 +30,8 @@ class Dwh(Database):
         self.rdv = Schema('rdv', self) #type: Schema
         self.dv = Schema('dv', self) #type: Schema
         self.sys = Schema('sys', self) #type: Schema
+        self.datamarts = {}  # [Schema('dm', self)] #type: Dict[str, Schema]
+        # self.default_sor = None #self.sors[0] #type: Schema
 
     def get_or_create_sor_schema(self, config: Dict[str,str] = {}) -> 'Schema':
         if not 'sor_schema' in config:
@@ -48,6 +50,11 @@ class Dwh(Database):
         elif len(self.sors) > 1:
             found = self.sors[name]
         return found
+
+    def get_or_create_datamart_schema(self, dm_name: str) -> 'Schema':
+        dm = Schema(dm_name, self)
+        self.datamarts[dm_name] = dm
+        return dm
 
 
     def execute(self, sql: str, log_message: str=''):

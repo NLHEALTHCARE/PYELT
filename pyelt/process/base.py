@@ -3,17 +3,26 @@ from typing import Dict, List, Any
 
 from pyelt.datalayers.dwh import Dwh
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
-
+# from pyelt.pipeline import Pipe, Pipeline
 
 
 class BaseProcess():
-    def __init__(self, pipe: 'Pipe'):
-        self.pipe = pipe
-        self.dwh = pipe.pipeline.dwh
-        self.runid = pipe.pipeline.runid
-        self.source_system = pipe.source_system
-        self.logger = pipe.pipeline.logger
-        self.sql_logger = pipe.pipeline.sql_logger  # Logger.create_logger('SQL log', pipe.runid, logger_type=LoggerTypes.SQL)
+    def __init__(self, owner: 'Pipe'):
+        import pyelt.pipeline
+        if isinstance(owner, pyelt.pipeline.Pipe):
+            self.pipe = owner
+            self.pipeline = self.pipe.pipeline
+            # self.dwh = self.pipe.pipeline.dwh
+            # self.runid = self.pipe.pipeline.runid
+            # self.source_system = self.pipe.source_system
+            # self.logger = self.pipe.pipeline.logger
+            # self.sql_logger = self.pipe.pipeline.sql_logger  # Logger.create_logger('SQL log', pipe.runid, logger_type=LoggerTypes.SQL)
+        elif isinstance(owner, pyelt.pipeline.Pipeline):
+            self.pipeline = owner
+        self.dwh = self.pipeline.dwh
+        self.runid = self.pipeline.runid
+        self.logger = self.pipeline.logger
+        self.sql_logger = self.pipeline.sql_logger
         self.steps = OrderedDict()
 
 
@@ -62,7 +71,7 @@ class BaseProcess():
     def _get_fixed_params(self) -> Dict[str, Any]:
         params = {}
         params['runid'] = self.runid
-        params['source_system'] = self.source_system
+        params['source_system'] = self.pipe.source_system
         params['sor'] = self.pipe.sor.name
         params['rdv'] = self.dwh.rdv.name
         params['dv'] = self.dwh.dv.name

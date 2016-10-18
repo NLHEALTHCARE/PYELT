@@ -483,7 +483,7 @@ from pyelt.mappings.transformations import FieldTransformation
 # backup gemaakt op 21062016: "sor_to_dv_mappings_old21062016.py"
 
 class SorToEntityMapping(BaseTableMapping):
-    def __init__(self, source: str, target: DvEntity, sor: Schema = None, filter: str = '', type: str = '') -> None:
+    def __init__(self, source: str, target: DvEntity, sor: Schema, filter: str = '', type: str = '') -> None:
         target.init_sats()
 
         # if not sor:

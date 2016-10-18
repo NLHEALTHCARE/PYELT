@@ -28,7 +28,7 @@ def init_source_to_sor_mappings():
 def init_sor_to_dv_mappings(pipe):
     mappings = []
     sor = pipe.sor
-    mapping = SorToEntityMapping('zorgverlener_hstage', Zorgverlener)
+    mapping = SorToEntityMapping('zorgverlener_hstage', Zorgverlener, pipe.sor)
     mapping.map_field("zorgverlenernummer", Zorgverlener.bk)
     mapping.map_field('achternaam', Zorgverlener.Personalia.achternaam)
     mapping.map_field('tussenvoegsels', Zorgverlener.Personalia.tussenvoegsels)
@@ -50,7 +50,7 @@ def init_sor_to_dv_mappings(pipe):
     mapping.map_field('mobiel2_datum::date', Zorgverlener.ContactGegevens.datum, type=Zorgverlener.ContactGegevens.Types.mobiel2)
     mappings.append(mapping)
 
-    mapping = SorToEntityMapping('zorgverlener_hstage', Adres, type = 'woon')
+    mapping = SorToEntityMapping('zorgverlener_hstage', Adres, pipe.sor, type = 'woon')
     mapping.map_bk(["w_postcode||w_huisnummer||COALESCE(w_huisnummer_toevoeging, '')"])
     mapping.map_field('w_straat', Adres.Default.straat)
     mapping.map_field('w_huisnummer::integer', Adres.Default.huisnummer)
@@ -65,7 +65,7 @@ def init_sor_to_dv_mappings(pipe):
     link_mapping.map_entity(Zorgverlener_Adres_Link.adres, type='woon')
     mappings.append(link_mapping)
 
-    mapping = SorToEntityMapping('zorgverlener_hstage', Adres, type=Zorgverlener_Adres_Link.Types.bezoek)
+    mapping = SorToEntityMapping('zorgverlener_hstage', Adres, sor, type=Zorgverlener_Adres_Link.Types.bezoek)
     # mapping = SorToEntityMapping('zorgverlener_hstage', Adres, type='bezoek')
     mapping.map_bk(["b_postcode||b_huisnummer||COALESCE(b_huisnummer_toevoeging, '')"])
     mapping.map_field('b_huisnummer::integer', Adres.Default.huisnummer)
@@ -81,7 +81,7 @@ def init_sor_to_dv_mappings(pipe):
     link_mapping.map_entity(Zorgverlener_Adres_Link.adres, type='bezoek')
     mappings.append(link_mapping)
 
-    mapping = SorToEntityMapping('zorgverlener_hstage', Adres, type = 'post')
+    mapping = SorToEntityMapping('zorgverlener_hstage', Adres, sor, type = 'post')
     mapping.map_bk(["p_postcode||p_huisnummer||COALESCE(p_huisnummer_toevoeging, '')"])
     mapping.map_field('p_straat', Adres.Default.straat)
     mapping.map_field('p_huisnummer::integer', Adres.Default.huisnummer)
@@ -96,12 +96,12 @@ def init_sor_to_dv_mappings(pipe):
     link_mapping.map_entity(Zorgverlener_Adres_Link.adres, type='post')
     mappings.append(link_mapping)
 
-    mapping = SorToEntityMapping('zorginstelling_hstage', Zorginstelling)
+    mapping = SorToEntityMapping('zorginstelling_hstage', Zorginstelling, sor)
     mapping.map_field("zorginstellings_nummer", Zorginstelling.bk)
     mapping.map_field('zorginstellings_naam', Zorginstelling.Default.zorginstellings_naam)
     mappings.append(mapping)
 
-    mapping = SorToEntityMapping('zorginstelling_hstage', Adres, type='hoofd')
+    mapping = SorToEntityMapping('zorginstelling_hstage', Adres, sor, type='hoofd')
     mapping.map_field("postcode||huisnummer||COALESCE(huisnummer_toevoeging,'')", Adres.bk)
     mapping.map_field('straat', Adres.Default.straat)
     mapping.map_field('huisnummer::integer', Adres.Default.huisnummer)

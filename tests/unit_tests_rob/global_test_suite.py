@@ -20,7 +20,7 @@ testmodules = [
 #     }
 
 test_system_config = {
-    'source_path': '/!ontwikkel/DWH2/PYELT/',
+    'source_path': 'c:/!ontwikkel/DWH2/PYELT/',
     'sor_schema': 'sor_test_system',
     'on_errors': 'throw'
     }

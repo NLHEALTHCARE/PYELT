@@ -5,6 +5,7 @@ from sqlalchemy.engine import reflection
 # from sample_domains._ensemble_views import get_ensemble
 
 from pyelt.datalayers.database import Column, Columns, Schema, Table, DbFunction
+from pyelt.datalayers.dm import DmReference
 from pyelt.datalayers.dv import DvEntity, HybridSat, LinkReference, Link, DynamicLinkReference
 from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
 from pyelt.datalayers.sor import Sor, SorTable
@@ -33,7 +34,7 @@ class Ddl(BaseProcess):
 
     def increase_version(self):
         layer_name = self.layer.name
-        dwh = self.pipe.pipeline.dwh
+        dwh = self.pipeline.dwh
         old_version_number = dwh.get_layer_version(layer_name)  # Type: float
         new_version_number = dwh.increase_layer_version(layer_name)
         self.sql_logger.log_simple("""
@@ -68,7 +69,7 @@ class Ddl(BaseProcess):
 
 
     def init_logger(self) -> None:
-        self.sql_logger = Logger.create_logger(LoggerTypes.DDL, self.pipe.runid, self.pipe.pipeline.config, to_console=False)
+        self.sql_logger = Logger.create_logger(LoggerTypes.DDL, self.pipeline.runid, self.pipeline.config, to_console=False)
 
     def __log_sql(self, log_message, sql, rowcount):
         msg = """{}
@@ -102,9 +103,9 @@ rows: {}
             self.init()
         self.sql_logger.log_simple(sql + '\r\n')
         try:
-            rowcount = self.dwh.confirm_execute(sql, log_message)
-            self.logger.log(log_message, rowcount=rowcount, indent_level=4)
-            self.__log_sql(log_message, sql, rowcount)
+            self.dwh.confirm_execute(sql, log_message)
+            self.logger.log(log_message, indent_level=4)
+            self.__log_sql(log_message, sql)
             self.layer.is_reflected = False
         except Exception as err:
             self.logger.log_error(log_message, sql, err.args[0])
@@ -841,3 +842,76 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                   autovacuum_enabled=true
                 );""".format(**params)
             self.execute(sql, 'create exception table')
+
+
+class DdlDatamart(Ddl):
+    def __init__(self, pipeline, schema) -> None:
+        super().__init__(pipeline, schema)
+
+    def create_or_alter_dim(self, cls):
+        dm = self.layer
+        if not dm.is_reflected:
+            dm.reflect()
+        dim_name = cls.get_name()
+        params = {}
+        params['dim'] = dim_name
+        params['dm'] = self.layer.name
+        params['dim_columns_def'] = self.__get_dim_column_names_with_types(cls)
+        if not dim_name in dm:
+            sql = """CREATE TABLE IF NOT EXISTS {dm}.{dim} (
+                          id serial,
+                          {dim_columns_def},
+                          CONSTRAINT {dim}_pkey PRIMARY KEY (id)
+                    )
+                    WITH (
+                      OIDS=FALSE,
+                      autovacuum_enabled=true
+                    );""".format(**params)
+            self.execute(sql, 'create <blue>{}</>'.format(dim_name))
+            #todo alter
+
+    def __get_dim_column_names_with_types(self, dim_cls):
+        fields = ''
+        for col_name, col in dim_cls.__ordereddict__.items():
+            if isinstance(col, Column):
+                if not col.name:
+                    col.name = col_name
+                fields += '{} {}, '.format(col.name, col.type)
+        fields = fields[:-2]
+        return fields
+
+    def create_or_alter_fact(self, cls):
+        dm = self.layer
+        if not dm.is_reflected:
+            dm.reflect()
+        facttable_name = cls.get_name()
+        params = {}
+        params['facttable'] = facttable_name
+        params['dm'] = self.layer.name
+        params['fact_columns_def'] = self.__get_fact_column_names_with_types(cls)
+        if not facttable_name in dm:
+            sql = """CREATE TABLE IF NOT EXISTS {dm}.{facttable} (
+                                  id serial,
+                                  {fact_columns_def}
+                            )
+                            WITH (
+                              OIDS=FALSE,
+                              autovacuum_enabled=true
+                            );""".format(**params)
+            self.execute(sql, 'create <blue>{}</>'.format(facttable_name))
+            #todo fk constraints en indexes
+            #todo alter table
+
+    def __get_fact_column_names_with_types(self, fact_cls):
+        fields = ''
+        for name, field in fact_cls.__ordereddict__.items():
+            if isinstance(field, DmReference):
+                fields += '{} integer, '.format(field.get_fk_field_name())
+        for col_name, col in fact_cls.__ordereddict__.items():
+            if isinstance(col, Column):
+                if not col.name:
+                    col.name = col_name
+                fields += '{} {}, '.format(col.name, col.type)
+        fields = fields[:-2]
+        return fields
+
