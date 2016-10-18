@@ -2,7 +2,7 @@
 
 general_config = {
     'log_path': '/logs/',
-    'conn_dwh': 'postgresql://postgres:pgsuadmin2016@localhost:5432/pyelt_unittests',
+    'conn_dwh': 'postgresql://postgres:Welkomnlhc2016@localhost:5432/pyelt_unittests',
     'debug': False,
     'on_errors': 'throw'
 }

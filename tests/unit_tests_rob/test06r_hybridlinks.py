@@ -32,7 +32,7 @@ class TestCase_RunProces(unittest.TestCase):
         test_row_count(self, 'dv.zorgverlener_hub', 4)
         test_row_count(self, 'dv.zorgverlener_sat', 4)
         test_row_count(self, 'dv.zorgverlener_sat_personalia', 4)
-        test_row_count(self, 'dv.zorgverlener_adres_link', 11)
+        test_row_count(self, 'dv.zorgverlener_adres_link', 12)
         test_row_count(self, 'dv.adres_sat', 12)
 
     def test02_pipeline_rerun(self):
@@ -43,19 +43,19 @@ class TestCase_RunProces(unittest.TestCase):
         test_row_count(self, 'dv.zorgverlener_hub', 4)
         test_row_count(self, 'dv.zorgverlener_sat', 4)
         test_row_count(self, 'dv.zorgverlener_sat_personalia', 4)
-        test_row_count(self, 'dv.zorgverlener_adres_link', 11)
+        test_row_count(self, 'dv.zorgverlener_adres_link', 12)
         test_row_count(self, 'dv.adres_sat', 12)
 
     def test03_dv_updates(self):
 
-        self.pipe.mappings[0].file_name = get_root_path() + '/tests/data/zorgverlenersB_rob.csv'
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverlenersB_rob.csv'
         self.pipeline.run()
 
         test_row_count(self, 'sor_test_system.zorgverlener_hstage', 7)
         test_row_count(self, 'dv.zorgverlener_hub', 4)
         test_row_count(self, 'dv.zorgverlener_sat', 4)
         test_row_count(self, 'dv.zorgverlener_sat_personalia', 4)
-        test_row_count(self, 'dv.zorgverlener_adres_link', 12)
+        test_row_count(self, 'dv.zorgverlener_adres_link', 13)
         test_row_count(self, 'dv.adres_sat', 15)
 
     def test04_update_Null_date(self):
