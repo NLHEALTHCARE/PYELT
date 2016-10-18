@@ -31,7 +31,7 @@ class Zorgverlener(DvEntity, Role):
         # wordt niet gebruikt in dwh2.0; hier gebruikt voor testen uitgevoerd in test03r_domain.py
 
     class ContactGegevens(HybridSat):
-        class Types():
+        class Types(HybridSat.Types):
             telefoon = 'telefoon'
             mobiel = 'mobiel'
             mobiel2 = 'mobiel2'
