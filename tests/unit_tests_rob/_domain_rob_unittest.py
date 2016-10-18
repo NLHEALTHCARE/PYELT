@@ -43,6 +43,7 @@ class Zorgverlener(DvEntity, Role):
     personalia = Personalia()
     contactgegevens = ContactGegevens()
 
+
 class Adres(DvEntity, Role):
 
     class Default(Sat):
