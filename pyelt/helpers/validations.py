@@ -205,7 +205,7 @@ class MappingsValidator:
             # testen op uniek
             if len(fld_mappings_names) != len(set(fld_mappings_names)):
                 validation_msg += 'Mapping <red>{}</> is niet geldig. Mappings zijn niet uniek.\r\n'.format(sat_mappings.name)
-            fld_mappings_target_names = [fld_mapping.target.name for fld_mapping in sat_mappings.field_mappings]
+            fld_mappings_target_names = [fld_mapping.target.name for fld_mapping in sat_mappings.field_mappings if fld_mapping.target.type != 'jsonb']
             if len(fld_mappings_target_names) != len(set(fld_mappings_target_names)):
                 validation_msg += 'Mapping <red>{}</> is niet geldig. Doelvelden zijn niet uniek.\r\n'.format(sat_mappings.name)
             # testen of doel veld bestaat
