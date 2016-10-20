@@ -69,21 +69,21 @@ class TestCase_RunProces(unittest.TestCase):
         test_row_count(self, 'dv.patient_sat', 1)
 
 
-def test02_dv_update(self):
+    def test02_dv_update(self):
         # return
         print("test_run2:\n")
-        path = self.pipe.jsontest_config['data_path']
-        self.pipe.mappings[0].file_name = path + '/test2.csv'
+        # path = self.pipe.test_config['data_path']
+        self.pipe.mappings[0].file_name = 'C:/!OntwikkelDATA/jsontest/test2.csv'
 
 
         self.pipeline.run()
 
         test_row_count(self, 'sor_test.patient_hstage', 2)
-        test_row_count(self, 'dv.patient_hub', 2)
+        test_row_count(self, 'dv.patient_hub', 1)
         test_row_count(self, 'dv.patient_sat', 2)
 
 
-
+############################################################
 
 def test_row_count(unittest, table_name, count):
     test_sql = "SELECT * FROM " + table_name

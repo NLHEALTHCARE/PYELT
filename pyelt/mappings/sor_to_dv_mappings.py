@@ -1,4 +1,5 @@
 import inspect
+from collections import OrderedDict
 from typing import Union, List, Dict
 
 from pyelt.datalayers.database import Column, Table, Database, View, Schema, DbFunction
@@ -119,7 +120,7 @@ class SorSatMapping(BaseTableMapping):
         if not alias: alias = 'hstg'
         # return super().get_source_fields(alias)
         fields = ''  # type: str
-        target_json_dict = {}
+        target_json_dict = OrderedDict()
         for field_map in self.field_mappings:
             if field_map.target.type == 'jsonb':
                 if field_map.target.name not in target_json_dict:
