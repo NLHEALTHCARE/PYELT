@@ -1,11 +1,25 @@
 # from domainmodel_fhir import test_domain
 # from domainmodel_fhir.test_mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
+import unittest
 
 from pyelt.pipeline import Pipeline
 from tests.unit_tests_rob import test_domain
+from tests.unit_tests_rob.test05r_process import test_row_count
 from tests.unit_tests_rob.test_mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
 
 """ voor testen van jsonb"""
+
+
+def test01_pipeline_run(self):
+    print("test_run1:\n")
+    test_main()
+    self.pipeline.run()
+
+
+    test_row_count(self, 'sor_test_patient_hstage', 2)
+
+
+
 
 
 def define_test_pipe(pipeline, test_config):
@@ -20,7 +34,6 @@ def define_test_pipe(pipeline, test_config):
 
 
 def test_main(*args):
-    # from pipelines.general_clinical_configs import general_config, test_config
     from tests.unit_tests_rob.test_configs import test_config, jsontest_config
     pipeline = Pipeline(test_config)
 
