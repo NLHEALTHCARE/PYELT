@@ -35,16 +35,16 @@ class TestCase_RunProces(unittest.TestCase):
         test_row_count(self, 'dv.zorgverlener_adres_link', 12)
         test_row_count(self, 'dv.adres_sat', 12)
 
-    # def test02_pipeline_rerun(self):
-    #     print("test_run1_her:\n")
-    #     self.pipeline.run()
-    #
-    #     test_row_count(self, 'sor_test_system.zorgverlener_hstage', 4)
-    #     test_row_count(self, 'dv.zorgverlener_hub', 4)
-    #     test_row_count(self, 'dv.zorgverlener_sat', 4)
-    #     test_row_count(self, 'dv.zorgverlener_sat_personalia', 4)
-    #     test_row_count(self, 'dv.zorgverlener_adres_link', 12)
-    #     test_row_count(self, 'dv.adres_sat', 12)
+    def test02_pipeline_rerun(self):
+        print("test_run1_her:\n")
+        self.pipeline.run()
+
+        test_row_count(self, 'sor_test_system.zorgverlener_hstage', 4)
+        test_row_count(self, 'dv.zorgverlener_hub', 4)
+        test_row_count(self, 'dv.zorgverlener_sat', 4)
+        test_row_count(self, 'dv.zorgverlener_sat_personalia', 4)
+        test_row_count(self, 'dv.zorgverlener_adres_link', 12)
+        test_row_count(self, 'dv.adres_sat', 12)
 
     def test03_dv_updates(self):
 
