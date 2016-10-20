@@ -1,7 +1,7 @@
 import unittest
 
 from psycopg2.extras import DictCursor
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from pyelt.pipeline import Pipeline
 from tests.unit_tests_rob.global_test_suite import test_system_config, get_global_test_pipeline, init_db
@@ -13,7 +13,21 @@ from tests.unit_tests_rob.test_configs import test_config, jsontest_config
 
 class TestCase_RunProces(unittest.TestCase):
     print('init_db:\n')
-    init_db()
+    # init_db()
+    engine = create_engine(test_config['conn_dwh'])
+
+    sql = """
+    DROP SCHEMA IF EXISTS sor CASCADE;
+    DROP SCHEMA IF EXISTS sor_test CASCADE;
+    DROP SCHEMA IF EXISTS rdv CASCADE;
+    DROP SCHEMA IF EXISTS dv CASCADE;
+    DROP SCHEMA IF EXISTS sys CASCADE;
+
+    """
+
+    query = text(sql)
+    engine.execute(query)
+
 
     def setUp(self):
         print("setup:")
@@ -31,6 +45,24 @@ class TestCase_RunProces(unittest.TestCase):
 
         print("test_run1:\n")
         self.pipeline.run()
+
+        test_row_count(self, 'sor_test.patient_hstage', 1)
+        test_row_count(self, 'dv.patient_hub', 1)
+        test_row_count(self, 'dv.patient_sat', 1)
+
+    def test01b_pipeline_run(self):
+
+        print("test_run1_her:\n")
+        self.pipeline.run()
+        self.pipeline.run()
+        self.pipeline.run()
+        self.pipeline.run()
+        self.pipeline.run()
+        self.pipeline.run()
+        self.pipeline.run()
+
+        """ meerdere malen de pipeline gerund, want het leek erop dat de jsonb velden "extra" en "extra" random
+            gevuld werden met de twee gedefineerde jsonb objecten, dat wordt opgemerkt door vaker te runnen"""
 
         test_row_count(self, 'sor_test.patient_hstage', 1)
         test_row_count(self, 'dv.patient_hub', 1)
@@ -71,7 +103,7 @@ def get_field_value_from_dv_table(fieldname, entity_name, sat_name, bk, sql_cond
 
 def execute_sql(sql):
     # conn = psycopg2.connect("""host='localhost' dbname='pyelt_unittests' user='postgres' password='{}'""".format(get_your_password()))
-    engine = create_engine(test_config['conn_dwh'])
+    engine = create_engine(test_config['conn_dwh'])  # je hebt hier een andere config nodig dan die in de global_test_suite staat!
     conn = engine.raw_connection()
     cursor = conn.cursor(cursor_factory=DictCursor)
     cursor.execute(sql)
@@ -80,6 +112,27 @@ def execute_sql(sql):
     cursor.close()
 
     return result
+
+
+def init_db():
+    engine = create_engine(test_config['conn_dwh'])
+
+    sql = """
+    DROP SCHEMA IF EXISTS sor CASCADE;
+    DROP SCHEMA IF EXISTS sor_test_system CASCADE;
+    DROP SCHEMA IF EXISTS rdv CASCADE;
+    DROP SCHEMA IF EXISTS dv CASCADE;
+    DROP SCHEMA IF EXISTS sys CASCADE;
+
+    --CREATE SCHEMA hoeft niet!! Want wordt gedaan bij aanmaken van pipeline, als schema nog niet bestaat
+    --CREATE SCHEMA sor;
+    --CREATE SCHEMA rdv;
+    --CREATE SCHEMA dv;
+    """
+
+    query = text(sql)
+    engine.execute(query)
+
 
 if __name__ == '__main__':
     unittest.main()
