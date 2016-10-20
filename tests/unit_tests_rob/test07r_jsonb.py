@@ -1,11 +1,14 @@
 import unittest
 
-from tests.unit_tests_rob import _domain_rob
-from tests.unit_tests_rob._domain_rob import Zorgverlener
-from tests.unit_tests_rob.global_test_suite import test_system_config, get_global_test_pipeline, execute_sql, init_db
+from psycopg2.extras import DictCursor
+from sqlalchemy import create_engine
+
+from pyelt.pipeline import Pipeline
+from tests.unit_tests_rob.global_test_suite import test_system_config, get_global_test_pipeline, init_db
 from tests.unit_tests_rob.test_mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
 from main import get_root_path
 from tests.unit_tests_rob import test_domain
+from tests.unit_tests_rob.test_configs import test_config, jsontest_config
 
 
 class TestCase_RunProces(unittest.TestCase):
@@ -14,12 +17,14 @@ class TestCase_RunProces(unittest.TestCase):
 
     def setUp(self):
         print("setup:")
-        self.pipeline = get_global_test_pipeline()
-        self.pipe = self.pipeline.get_or_create_pipe('test_system', config=test_system_config)
+
+        from tests.unit_tests_rob.test_configs import test_config, jsontest_config
+        self.pipeline = Pipeline(test_config)
+        self.pipe = self.pipeline.get_or_create_pipe('sor_test', config=jsontest_config)
         self.pipe.register_domain(test_domain)
         # hj: onderstaande regel toegevoegd. Bij elke initiatie dient mappings met lege lijst te beginnen
         self.pipe.mappings = []
-        self.pipe.mappings.extend(init_source_to_sor_mappings())
+        self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
         self.pipe.mappings.extend(init_sor_to_dv_mappings(self.pipe))
 
     def test01_pipeline_run(self):
@@ -27,11 +32,9 @@ class TestCase_RunProces(unittest.TestCase):
         print("test_run1:\n")
         self.pipeline.run()
 
-        test_row_count(self, 'sor_test_system.patient_hstage', 1)
-        # test_row_count(self, 'dv.zorgverlener_hub', 4)
-        # test_row_count(self, 'dv.zorgverlener_sat', 4)
-        # test_row_count(self, 'dv.zorgverlener_sat_personalia', 4)
-        # test_row_count(self, 'dv.zorgverlener_adres_link', 4)
+        test_row_count(self, 'sor_test.patient_hstage', 1)
+        test_row_count(self, 'dv.patient_hub', 1)
+        test_row_count(self, 'dv.patient_sat', 1)
 
 
 
@@ -66,7 +69,17 @@ def get_field_value_from_dv_table(fieldname, entity_name, sat_name, bk, sql_cond
 
     return result
 
+def execute_sql(sql):
+    # conn = psycopg2.connect("""host='localhost' dbname='pyelt_unittests' user='postgres' password='{}'""".format(get_your_password()))
+    engine = create_engine(test_config['conn_dwh'])
+    conn = engine.raw_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    conn.commit()
+    cursor.close()
 
+    return result
 
 if __name__ == '__main__':
     unittest.main()
