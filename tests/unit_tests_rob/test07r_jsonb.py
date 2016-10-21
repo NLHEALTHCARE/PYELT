@@ -58,8 +58,7 @@ class TestCase_RunProces(unittest.TestCase):
         self.pipeline.run()
         self.pipeline.run()
         self.pipeline.run()
-        self.pipeline.run()
-        self.pipeline.run()
+
 
         """ meerdere malen de pipeline gerund, want het leek erop dat de jsonb velden "extra" en "extra" random
             gevuld werden met de twee gedefineerde jsonb objecten, dat wordt opgemerkt door vaker te runnen"""
@@ -70,7 +69,7 @@ class TestCase_RunProces(unittest.TestCase):
 
 
     def test02_dv_update(self):
-        # return
+
         print("test_run2:\n")
 
         path = jsontest_config['data_path']
@@ -81,6 +80,24 @@ class TestCase_RunProces(unittest.TestCase):
         test_row_count(self, 'sor_test.patient_hstage', 2)
         test_row_count(self, 'dv.patient_hub', 1)
         test_row_count(self, 'dv.patient_sat', 2)
+
+    def test02b_dv_update(self):
+
+        print("test_run2:\n")
+
+        path = jsontest_config['data_path']
+        self.pipe.mappings[0].file_name = path + 'test3.csv'  # JSONB veld aangepast
+
+        self.pipeline.run()
+
+        test_row_count(self, 'sor_test.patient_hstage', 3)
+        test_row_count(self, 'dv.patient_hub', 1)
+        test_row_count(self, 'dv.patient_sat', 3)
+
+        result = get_field_value_from_table("""extra->'extra::jsonb' ->> 'contactpersoon'""", 'dwh2a.dv.patient_sat', """_runid = 0.08""")
+        result = result[0][0]
+        self.assertEqual(result,'Janny Jansen','ik verwachtte dat deze JSONB object onderdeel aangepast zou worden naar Janny Jansen')
+
 
 
 ############################################################
