@@ -116,6 +116,25 @@ class TestCase_RunProces(unittest.TestCase):
         result = result[0][0]
         self.assertEqual(result,'voornaam','ik verwachtte de eerste key "voornaam" zou zijn')
 
+    def test04_extra_pair(self):
+        """ toevoegen van extra key/value pair; """
+
+        print("test_run4:\n")
+
+        path = jsontest_config['data_path']
+        self.pipe.mappings[0].file_name = path + 'test5.csv'  # JSONB extra key/value pair; kennelijk wordt een nieuw pair voor de reeds aanwezige pairs geplaatst.
+
+        self.pipeline.run()
+
+        test_row_count(self, 'sor_test.patient_hstage',5)
+        test_row_count(self, 'dv.patient_hub', 1)
+        test_row_count(self, 'dv.patient_sat', 4)
+
+        result = get_field_value_from_table("""jsonb_object_keys(extra->'extra::jsonb') """, 'dwh2a.dv.patient_sat', """_runid = 0.10 """)
+        result = len(result) # het aantal keys in de dictionary
+        print(result)
+        self.assertEqual(result,4,'ik verwachtte er 4 keys zouden worden gevonden')
+
 
 
 
