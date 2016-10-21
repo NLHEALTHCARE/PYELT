@@ -96,7 +96,7 @@ class TestCase_RunProces(unittest.TestCase):
 
         result = get_field_value_from_table("""extra->'extra::jsonb' ->> 'contactpersoon'""", 'dwh2a.dv.patient_sat', """_runid = 0.08""")
         result = result[0][0]
-        self.assertEqual(result,'Janny Jansen','ik verwachtte dat deze JSONB object onderdeel aangepast zou worden naar Janny Jansen')
+        self.assertEqual(result,'Janny Jansen','ik verwachtte dat dit JSONB object onderdeel aangepast zou worden naar Janny Jansen')
 
     def test03_order_changed(self):
         """ de volgorde van de key in een json-object is veranderd (nu eerst achternaam daarna pas voornaam)"""
@@ -114,7 +114,7 @@ class TestCase_RunProces(unittest.TestCase):
 
         result = get_field_value_from_table("""jsonb_object_keys(extra->'extra::jsonb') """, 'dwh2a.dv.patient_sat', """_runid = 0.08 limit 1""")
         result = result[0][0]
-        self.assertEqual(result,'voornaam','ik verwachtte de eerste key "voornaam" zou zijn')
+        self.assertEqual(result,'voornaam','ik verwachtte dat de eerste key "voornaam" zou zijn')
 
     def test04_extra_pair(self):
         """ toevoegen van extra key/value pair; """
@@ -132,9 +132,27 @@ class TestCase_RunProces(unittest.TestCase):
 
         result = get_field_value_from_table("""jsonb_object_keys(extra->'extra::jsonb') """, 'dwh2a.dv.patient_sat', """_runid = 0.10 """)
         result = len(result) # het aantal keys in de dictionary
-        print(result)
-        self.assertEqual(result,4,'ik verwachtte er 4 keys zouden worden gevonden')
 
+        self.assertEqual(result,4,'ik verwachtte dat er 4 keys zouden worden gevonden')
+
+    def test05_remove_pair(self):
+        """ verwijderen van ('origineel') key/value pair; """
+
+        print("test_run5:\n")
+
+        path = jsontest_config['data_path']
+        self.pipe.mappings[0].file_name = path + 'test6.csv'  # JSONB extra key/value pair; kennelijk wordt een nieuw pair voor de reeds aanwezige pairs geplaatst.
+
+        self.pipeline.run()
+
+        test_row_count(self, 'sor_test.patient_hstage',6)
+        test_row_count(self, 'dv.patient_hub', 1)
+        test_row_count(self, 'dv.patient_sat', 5)
+
+        result = get_field_value_from_table("""jsonb_object_keys(extra->'extra::jsonb') """, 'dwh2a.dv.patient_sat', """_runid = 0.11 """)
+        result = len(result) # het aantal keys in de dictionary
+        print(result)
+        self.assertEqual(result,3,'ik verwachtte dat er 3 keys zouden worden gevonden')
 
 
 
