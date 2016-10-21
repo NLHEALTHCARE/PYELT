@@ -98,6 +98,28 @@ class TestCase_RunProces(unittest.TestCase):
         result = result[0][0]
         self.assertEqual(result,'Janny Jansen','ik verwachtte dat deze JSONB object onderdeel aangepast zou worden naar Janny Jansen')
 
+    def test03_order_changed(self):
+        """ de volgorde van de key in een json-object is veranderd (nu eerst achternaam daarna pas voornaam)"""
+
+        print("test_run3:\n")
+
+        path = jsontest_config['data_path']
+        self.pipe.mappings[0].file_name = path + 'test4.csv'  # JSONB keys volgorde gewijzigd
+
+        self.pipeline.run()
+
+        test_row_count(self, 'sor_test.patient_hstage',4)
+        test_row_count(self, 'dv.patient_hub', 1)
+        test_row_count(self, 'dv.patient_sat', 3)
+
+        result = get_field_value_from_table("""jsonb_object_keys(extra->'extra::jsonb') """, 'dwh2a.dv.patient_sat', """_runid = 0.08 limit 1""")
+        result = result[0][0]
+        self.assertEqual(result,'voornaam','ik verwachtte de eerste key "voornaam" zou zijn')
+
+
+
+
+
 
 
 ############################################################
