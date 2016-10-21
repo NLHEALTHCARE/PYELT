@@ -72,9 +72,9 @@ class TestCase_RunProces(unittest.TestCase):
     def test02_dv_update(self):
         # return
         print("test_run2:\n")
-        # path = self.pipe.test_config['data_path']
-        self.pipe.mappings[0].file_name = 'C:/!OntwikkelDATA/jsontest/test2.csv'
 
+        path = jsontest_config['data_path']
+        self.pipe.mappings[0].file_name = path + 'test2.csv'  # deceased boolean van True naar False en bijhorende datum verwijderd
 
         self.pipeline.run()
 
