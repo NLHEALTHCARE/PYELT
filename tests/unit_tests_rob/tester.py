@@ -12,18 +12,6 @@ from tests.unit_tests_rob.test_mappings import init_source_to_sor_mappings, init
 """ voor testen van jsonb"""
 
 
-def test01_pipeline_run(self):
-    print("test_run1:\n")
-    test_main()
-    self.pipeline.run()
-
-
-    test_row_count(self, 'sor_test_patient_hstage', 2)
-
-
-
-
-
 def define_test_pipe(pipeline, test_config):
     pipe = pipeline.get_or_create_pipe('sor_test', test_config)
     pipe.register_domain(test_domain)
@@ -42,25 +30,6 @@ def test_main(*args):
     define_test_pipe(pipeline, jsontest_config)
 
     pipeline.run()
-
-    def init2_db():
-        engine = create_engine(test_config['conn_dwh'])
-
-        sql = """
-        DROP SCHEMA IF EXISTS sor CASCADE;
-        DROP SCHEMA IF EXISTS sor_test_system CASCADE;
-        DROP SCHEMA IF EXISTS rdv CASCADE;
-        DROP SCHEMA IF EXISTS dv CASCADE;
-        DROP SCHEMA IF EXISTS sys CASCADE;
-
-        --CREATE SCHEMA hoeft niet!! Want wordt gedaan bij aanmaken van pipeline, als schema nog niet bestaat
-        --CREATE SCHEMA sor;
-        --CREATE SCHEMA rdv;
-        --CREATE SCHEMA dv;
-        """
-
-        query = text(sql)
-        engine.execute(query)
 
 
 if __name__ == '__main__':
