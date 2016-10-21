@@ -79,7 +79,8 @@ class TestCase_RunProces(unittest.TestCase):
         print("test_run2:\n")
 
         path = jsontest_config['data_path']
-        self.pipe.mappings[0].file_name = path + 'test3.csv'  # JSONB veld aangepast
+        # respectievelijk leegmaken + aanpassing van 2 kolommen die in DV laag aan JSONB veld "extra2" toegewezen worden
+        self.pipe.mappings[0].file_name = path + 'test3.csv'
 
         self.pipeline.run()
 
@@ -95,7 +96,8 @@ class TestCase_RunProces(unittest.TestCase):
                          'ik verwachtte dat dit JSONB object onderdeel aangepast zou worden naar Janny Jansen')
 
     def test03_order_changed(self):
-        """ de volgorde van de key in een json-object is veranderd (nu eerst achternaam daarna pas voornaam)"""
+        """ de volgorde van de key in een bron-json-object (extra) is veranderd (nu eerst achternaam
+        daarna pas voornaam)"""
 
         print("test_run3:\n")
 
