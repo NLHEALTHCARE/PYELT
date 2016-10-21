@@ -89,48 +89,48 @@ class TestCase_RunProces(unittest.TestCase):
         self.assertIsNotNone(expected_error,'ik verwachte een error')
 
 # todo: unittest maken voor testen van een update van een gevuld veld dat na de update een " Null" value bevat
-    def test07_value_to_null(self):
-        result = get_field_value_from_dv_table('datum', 'zorgverlener', 'contactgegevens', '567', ["""type ='mobiel2'""", """_active = True"""])
+#     def test07_value_to_null(self):
+#         result = get_field_value_from_dv_table('datum', 'zorgverlener', 'contactgegevens', '567', ["""type ='mobiel2'""", """_active = True"""])
+#
+#         result2 = result[0][0]
+#         print("result2: " + str(result2))
+#
+#         expected_error = ''
+#         if result2 == None:
+#             expected_error = 'Null Value'
+#
+#
+#         self.assertEqual(expected_error,'Null Value', 'ik verwachte een null waarde')
 
-        result2 = result[0][0]
-        print("result2: " + str(result2))
-
-        expected_error = ''
-        if result2 == None:
-            expected_error = 'Null Value'
 
 
-        self.assertEqual(expected_error,'Null Value', 'ik verwachte een null waarde')
+    def test08_postcode_correct(self):
+        print("test_run4a:\n")
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners4_rob.csv'
+        self.pipeline.run()
+        result = get_field_value_from_table('postcode','pyelt_unittests.dv.adres_sat', """char_length(postcode) >7""")
+        # detecteer dat er geen strings zijn met een te lange postcode
+        self.assertTrue(len(result) == 0)
+        # gewenst postcode format: "1111AA" of "1111 AA?
+
+    def test09_null_and_hybridsat_update(self):
+        # deze unittest test 2 dingen: wordt een Null veld geupdate en wordt een hybride_sat geupdate
+        print("test_run5:\n")
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners4_rob.csv'
+        self.pipeline.run()
+
+        result = get_field_value_from_dv_table('telnummer', 'zorgverlener', 'contactgegevens', '448', ["""type = 'mobiel2'""", """_active = True"""])
+
+        if len(result)>0:
+            result= result[0][0]
+        else:
+            result = None
+        self.assertIsNotNone(result,'Ik verwacht dat een verandering in een oorspronkelijk Null veld wel in de DV laag terecht zou komen; bestaat de gebruikte bk wel?')
 
 
 
-    # def test08_postcode_correct(self):
-    #     print("test_run4a:\n")
-    #     self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners4_rob.csv'
-    #     self.pipeline.run()
-    #     result = get_field_value_from_table('postcode','pyelt_unittests.dv.adres_sat', """char_length(postcode) >7""")
-    #     # detecteer dat er geen strings zijn met een te lange postcode
-    #     self.assertTrue(len(result) == 0)
-    #     # gewenst postcode format: "1111AA" of "1111 AA?
-    #
-    # def test09_null_and_hybridsat_update(self):
-    #     # deze unittest test 2 dingen: wordt een Null veld geupdate en wordt een hybride_sat geupdate
-    #     print("test_run5:\n")
-    #     self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/zorgverleners4_rob.csv'
-    #     self.pipeline.run()
-    #
-    #     result = get_field_value_from_dv_table('telnummer', 'zorgverlener', 'contactgegevens', '448', ["""type = 'mobiel2'""", """_active = True"""])
-    #
-    #     if len(result)>0:
-    #         result= result[0][0]
-    #     else:
-    #         result = None
-    #     self.assertIsNotNone(result,'Ik verwacht dat een verandering in een oorspronkelijk Null veld wel in de DV laag terecht zou komen; bestaat de gebruikte bk wel?')
-    #
-    #
-    #
-    # def test10_dv_view_updated(self):
-    #     pass
+    def test10_dv_view_updated(self):
+        pass
 
 #todo[rob]: test de hybrid-links
 
