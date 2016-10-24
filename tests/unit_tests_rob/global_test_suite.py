@@ -6,6 +6,7 @@ from pyelt.pipeline import Pipeline
 
 __author__ = 'hvreenen'
 
+# test07r_jsonb gebruikt andere domain model en gaat naar ander schema toe!
 testmodules = [
     'tests.unit_tests_rob.test01r_pipeline',
     'tests.unit_tests_rob.test02r_runid',
