@@ -325,7 +325,7 @@ Voorbeeld::
             params['msg'] = 'De pyelt run is gestart.'
             from sys import platform
             if platform == "linux" or platform == "linux2":
-                linux_cmd = """echo -e "{msg}" | mail {attachments_command} -s "{subject}" -r "{from}" "{to}" """.format(**params)
+                linux_cmd = """echo -e "{msg}" | mail -s "{subject}" -r "{from}" "{to}" """.format(**params)
                 import os
                 os.system(linux_cmd)
 
