@@ -880,26 +880,32 @@ class DdlDatamart(Ddl):
         fields = fields[:-2]
         return fields
 
-    def create_or_alter_fact(self, cls):
+    def create_or_alter_fact(self, fact_cls):
         dm = self.layer
         if not dm.is_reflected:
             dm.reflect()
-        facttable_name = cls.get_name()
+        facttable_name = fact_cls.get_name()
         params = {}
         params['facttable'] = facttable_name
         params['dm'] = self.layer.name
-        params['fact_columns_def'] = self.__get_fact_column_names_with_types(cls)
+        params['fact_columns_def'] = self.__get_fact_column_names_with_types(fact_cls)
+        params['indexes'] = self.__get_indexes(fact_cls,params)
+        params['constraints'] = self.__get_constraints(fact_cls,params)
+
+
         if not facttable_name in dm:
             sql = """CREATE TABLE IF NOT EXISTS {dm}.{facttable} (
                                   id serial,
-                                  {fact_columns_def}
+                                  {fact_columns_def},
+                                  {constraints}
                             )
                             WITH (
                               OIDS=FALSE,
                               autovacuum_enabled=true
-                            );""".format(**params)
+                            );{indexes}""".format(**params)
             self.execute(sql, 'create <blue>{}</>'.format(facttable_name))
-            #todo fk constraints en indexes
+            print(sql)
+
             #todo alter table
 
     def __get_fact_column_names_with_types(self, fact_cls):
@@ -913,5 +919,24 @@ class DdlDatamart(Ddl):
                     col.name = col_name
                 fields += '{} {}, '.format(col.name, col.type)
         fields = fields[:-2]
+        return fields
+
+
+    def __get_indexes(self, fact_cls,params):
+        fields = ''
+        for name, field in fact_cls.__ordereddict__.items():
+            if isinstance(field, DmReference):
+                params['fk_fieldname'] = field.get_fk_field_name()
+                fields += 'CREATE INDEX ix_{fk_fieldname} ON {dm}.{facttable}({fk_fieldname});\n'.format(**params)
+        return fields
+
+    def __get_constraints(self,fact_cls,params):
+        fields = ''
+        for name, field in fact_cls.__ordereddict__.items():
+            if isinstance(field, DmReference):
+                params['fk_fieldname'] = field.get_fk_field_name()
+                params['dim_tabel'] = field.dim_cls.get_name()
+                fields += 'FOREIGN KEY ({fk_fieldname}) REFERENCES {dm}.{dim_tabel}(ID),\n'.format(**params)
+        fields = fields.rstrip(',\n')
         return fields
 
