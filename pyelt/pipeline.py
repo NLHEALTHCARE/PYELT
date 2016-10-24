@@ -41,25 +41,16 @@ from pyelt.sources.databases import SourceDatabase
 class Pipeline():
     """
 De *pipeline* omvat alle lagen en alle bronnen. De pipeline bevat de databaseverbinding naar de datavault-datawarehouse, die bestaat uit de verschillende lagen:
-
 - sor(s)
 - rdv
 - dv
 - datamart(s)
-
 Voorbeeld::
-
-
     pipeline = Pipeline()
     datawarehouse = pipeline.dwh
     rdv = datawarehouse.rdv
     dv = datawarehouse.dv
-
 .. Note:: Een pipeline is een singleton implementatie; er is altijd maar 1 pipeline object voor alle processen. Elke nieuwe pipeline, die wordt aangemaakt, zal dezelfde waardes bevatten.
-
-
-
-
    """
 
     _instance = None
