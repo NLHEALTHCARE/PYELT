@@ -321,11 +321,10 @@ Voorbeeld::
         elif 'send_mail_before_run' in self.config['email_settings'] and self.config['email_settings']['send_mail_before_run']:
             params = self.config['email_settings']
             params['to'] = params['to'].replace(';', ',')
-            params['subject'] = 'De pyelt run is gestart'
-            params['msg'] = 'De pyelt run is gestart.'
+
             from sys import platform
             if platform == "linux" or platform == "linux2":
-                linux_cmd = """echo -e "{msg}" | mail -s "{subject}" -r "{from}" "{to}" """.format(**params)
+                linux_cmd = """echo -e "De pyelt run is gestart" | mail -s "De pyelt run is gestart" -r "{from}" "{to}" """.format(**params)
                 import os
                 os.system(linux_cmd)
 
