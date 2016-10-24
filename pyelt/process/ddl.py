@@ -868,7 +868,23 @@ class DdlDatamart(Ddl):
                       autovacuum_enabled=true
                     );""".format(**params)
             self.execute(sql, 'create <blue>{}</>'.format(dim_name))
-            #todo alter
+        else:
+            dim_table = Table(dim_name, dm)
+            dim_table.reflect()
+            add_fields = ''
+            refected_column_names = [col.name for col in dim_table.columns]
+
+            for col_name, col in cls.__ordereddict__.items():
+                if isinstance(col, Column):
+                    if not col_name in refected_column_names:
+                        add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
+                        print(add_fields,'testestes')
+            add_fields = add_fields.rstrip(', ')
+            params['add_fields'] = add_fields
+
+            if add_fields:
+                sql = """ALTER TABLE {dm}.{dim} {add_fields};""".format(**params)
+                self.execute(sql, 'alter <blue>{}</>'.format(dim_name))
 
     def __get_dim_column_names_with_types(self, dim_cls):
         fields = ''
@@ -905,8 +921,27 @@ class DdlDatamart(Ddl):
                             );{indexes}""".format(**params)
             self.execute(sql, 'create <blue>{}</>'.format(facttable_name))
             print(sql)
+        else:
+            fact_table = Table(facttable_name,dm)
+            fact_table.reflect()
+            add_fields = ''
+            refected_column_names = [col.name for col in fact_table.columns]
 
-            #todo alter table
+            for col_name, col in fact_cls.__ordereddict__.items():
+                if isinstance(col, Column):
+                    if not col_name in refected_column_names:
+                        add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
+                if isinstance(col, DmReference):
+                    if not col_name in refected_column_names:
+                        add_fields += 'ADD COLUMN {} {}, '.format(col.get_fk_field_name(),'integer')
+            add_fields = add_fields.rstrip(', ')
+            params['add_fields'] = add_fields
+
+            if add_fields:
+                sql = """ALTER TABLE {dm}.{facttable} {add_fields};""".format(**params)
+                self.execute(sql, 'alter <blue>{}</>'.format(facttable_name))
+
+
 
     def __get_fact_column_names_with_types(self, fact_cls):
         fields = ''

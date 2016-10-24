@@ -141,6 +141,8 @@ Voorbeeld::
 
         for name, module in self.datamart_modules.items():
             self.dwh.create_schemas_if_not_exists(name)
+
+
         self.create_datamarts()
 
         self.logger.log('FINISH DDL')
