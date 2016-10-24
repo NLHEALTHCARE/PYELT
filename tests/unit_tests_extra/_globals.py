@@ -3,7 +3,7 @@ import unittest
 from sqlalchemy import create_engine, text
 
 # import _domainmodel
-from tests.unit_test_extra._configs import general_config
+from tests.unit_tests_extra._configs import general_config
 from pyelt.pipeline import Pipeline
 
 __author__ = 'hvreenen'

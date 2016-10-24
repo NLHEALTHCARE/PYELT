@@ -1,8 +1,8 @@
 import unittest
 
-from tests.global_test_suite import *
+from tests.unit_tests_basic.global_test_suite import *
 from main import get_root_path
-from domainmodels.test_domain import Patient
+from tests.unit_tests_basic._domainmodel import Patient
 from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.mappings.transformations import FieldTransformation
@@ -17,7 +17,7 @@ class TestCase_mappings2(unittest.TestCase):
 
     def test_source_to_sor_mappings(self):
 
-        source_file = CsvFile(get_root_path() + '/tests/data/patienten1.csv', delimiter=';')
+        source_file = CsvFile(get_root_path() + '/PYELT/tests/data/patienten1.csv', delimiter=';')
         source_file.reflect()
         l = len(source_file.columns)
         self.assertEqual(len(source_file.columns), 16)
@@ -56,7 +56,7 @@ class TestCase_mappings2(unittest.TestCase):
         bk = mapping.bk_mapping
         self.assertEqual(num_sats, 6)
         self.assertEqual(bk, "patientnummer || '_test'")
-        sat_mapping = mapping.sat_mappings['patient_hstage -> persoon_sat_adres']
+        sat_mapping = mapping.sat_mappings['patient_hstage -> patient_sat_adres']
         num_field_mappings = len(sat_mapping.field_mappings)
         self.assertEqual(num_field_mappings, 5)
         self.assertIsInstance(sat_mapping.field_mappings[3].source, FieldTransformation)

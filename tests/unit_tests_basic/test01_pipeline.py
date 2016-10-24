@@ -1,5 +1,5 @@
 from pyelt.pipeline import Pipeline
-from tests.global_test_suite import *
+from tests.unit_tests_basic.global_test_suite import *
 __author__ = 'hvreenen'
 
 import unittest

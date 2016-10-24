@@ -1,7 +1,7 @@
-from tests import _domainmodel
-from tests.global_test_suite import get_global_test_pipeline, exec_sql, test_system_config, init_db
-from tests._mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
-from tests.test02_ref_mappings import init_test_ref_mappings
+from tests.unit_tests_basic import _domainmodel
+from tests.unit_tests_basic.global_test_suite import get_global_test_pipeline, exec_sql, test_system_config, init_db
+from tests.unit_tests_basic._mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
+from tests.unit_tests_basic.test02_ref_mappings import init_test_ref_mappings
 from main import get_root_path
 
 __author__ = 'hvreenen'
@@ -29,7 +29,8 @@ class TestCase_RunProces(unittest.TestCase):
         self.pipe.mappings = []
         self.pipe.mappings.extend(init_source_to_sor_mappings())
         self.pipe.mappings.extend(init_sor_to_dv_mappings(self.pipe.sor))
-        self.pipe.mappings.extend(init_test_ref_mappings())
+        #todo: onstaande rgel in unittests weer aanzetten
+        # self.pipe.mappings.extend(init_test_ref_mappings())
 
     def test_run1(self):
         self.pipeline.run()
@@ -58,7 +59,7 @@ class TestCase_RunProces(unittest.TestCase):
         get_row_count(self, 'dv.patient_handeling_link', 9)
 
     def test_run2_from_source_to_sor(self):
-        self.pipe.mappings[0].file_name = get_root_path() + '/tests/data/patienten2.csv'
+        self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/patienten2.csv'
         self.pipeline.run()
         get_row_count(self, 'sor_test_system.patient_hstage', 7)
         get_row_count(self, 'dv.patient_hub', 5)

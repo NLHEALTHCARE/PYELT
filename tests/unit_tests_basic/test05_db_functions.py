@@ -1,18 +1,9 @@
-from tests import _domainmodel, _db_functions, _db_functions2
-from tests._db_functions import CreateAgb
-from tests._domainmodel import Patient
-from tests._mappings import init_source_to_sor_mappings
-from tests.global_test_suite import get_global_test_pipeline, init_db
-
-from tests.unit_tests_rob._domain_rob import Zorgverlener
-from main import get_root_path
-from etl_mappings.timeff.timeff_db_functions import DbFunction
-from pyelt.datalayers.database import Columns, DbFunction, DbFunctionParameter
 from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping
-from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
-from pyelt.mappings.transformations import FieldTransformation
-from pyelt.mappings.validations import Validation
-from pyelt.sources.files import CsvFile
+from tests.unit_tests_basic import _domainmodel, _db_functions, _db_functions2
+from tests.unit_tests_basic._db_functions import CreateAgb
+from tests.unit_tests_basic._domainmodel import Patient
+from tests.unit_tests_basic._mappings import init_source_to_sor_mappings
+from tests.unit_tests_basic.global_test_suite import get_global_test_pipeline, init_db
 
 __author__ = 'hvreenen'
 

@@ -1,12 +1,9 @@
-from tests.global_test_suite import *
 import unittest
-from main import get_root_path
-from pyelt.helpers.mappingcreator import MappingWriter
-from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping, SorToLinkMapping, SorToRefMapping
-from pyelt.mappings.transformations import FieldTransformation
 
-from pyelt.sources.files import CsvFile
-from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
+from tests.unit_tests_basic.global_test_suite import *
+
+from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping
+
 
 def init_test_ref_mappings():
         mappings = []
