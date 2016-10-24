@@ -124,6 +124,7 @@ Voorbeeld::
         Nu wordt alleen de sor laag gerunt en de referentie tabel in de dv gevuld.
 
         """
+        self.send_start_mail()
         self.dwh.create_schemas_if_not_exists()
         self.runid = self.create_new_runid()
         self.logger = Logger.create_logger(LoggerTypes.MAIN, self.runid, self.config)
@@ -312,6 +313,21 @@ Voorbeeld::
         sql = """UPDATE sys.runs SET finish_date = now(), exceptions = '{1}', dv_version = {2}, sor_versions = '{3}' WHERE runid={0}""".format(self.runid,
                                                                                                                                                exceptions, dv_version, sor_versions)
         self.dwh.execute(sql, 'update run set finish date')
+
+
+    def send_start_mail(self):
+        if not 'email_settings' in self.config:
+            return
+        elif 'send_mail_before_run' in self.config['email_settings'] and self.config['email_settings']['send_mail_before_run']:
+            params = self.config['email_settings']
+            params['to'] = params['to'].replace(';', ',')
+            params['subject'] = 'De pyelt run is gestart'
+            params['msg'] = 'De pyelt run is gestart.'
+            from sys import platform
+            if platform == "linux" or platform == "linux2":
+                linux_cmd = """echo -e "{msg}" | mail {attachments_command} -s "{subject}" -r "{from}" "{to}" """.format(**params)
+                import os
+                os.system(linux_cmd)
 
     def send_log_mail(self):
         if not 'email_settings' in self.config:
