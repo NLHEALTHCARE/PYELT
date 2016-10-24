@@ -1,4 +1,4 @@
-from tests.unit_test_extra._domeinmodel import *
+from tests.unit_tests_extra._domeinmodel import *
 from pyelt.datalayers.database import Columns, Column
 from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference
 

@@ -1,9 +1,9 @@
 import unittest
 
-from tests.unit_test_extra import _domeinmodel
-from tests.unit_test_extra._configs import test_system_config
-from tests.unit_test_extra._globals import *
-from tests.unit_test_extra._domeinmodel import *
+from tests.unit_tests_extra import _domeinmodel
+from tests.unit_tests_extra._configs import test_system_config
+from tests.unit_tests_extra._globals import *
+from tests.unit_tests_extra._domeinmodel import *
 from pyelt.datalayers.database import Table
 from pyelt.helpers.mappingcreator import MappingWriter
 from pyelt.mappings.base import ConstantValue

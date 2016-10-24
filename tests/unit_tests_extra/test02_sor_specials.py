@@ -1,7 +1,7 @@
 import unittest
 
-from tests.unit_test_extra._configs import test_system_config
-from tests.unit_test_extra._globals import *
+from tests.unit_tests_extra._configs import test_system_config
+from tests.unit_tests_extra._globals import *
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.sources.databases import SourceQuery, SourceTable
 
@@ -149,39 +149,39 @@ FROM
         self.pipeline.run()
         self.assertEqual(get_row_count('sor_extra.handeling_hstage'), 9)
 
-    def test_run6(self):
-        print('======================================================')
-        print('===        R U N  6 twee tabellen mappen opzelfde sor                ===')
-        print('======================================================')
-
-        self.pipe.mappings = []
-        # bron uitbreiden met nieuw veld, mappen op dezelfde sor tabel
-        source_db = self.pipe.source_db
-        source_qry = SourceQuery(source_db, """
-SELECT
-  *,  NULL as extra_veld
-FROM
-  public.handelingen
-""", 'view_1')
-        source_qry.set_primary_key(['id'])
-        sor_mapping = SourceToSorMapping(source_qry, 'handeling_hstage', auto_map=True)
-        self.pipe.mappings.append(sor_mapping)
-
-        source_qry = SourceQuery(source_db, """
-        SELECT
-          *
-        FROM
-          public.organisaties
-        """, 'view_1')
-        source_qry.set_primary_key(['id'])
-        sor_mapping = SourceToSorMapping(source_qry, 'handeling_hstage', auto_map=True)
-        self.pipe.mappings.append(sor_mapping)
-        # run
-        self.pipeline.run()
-        for pipe in self.pipeline.pipes.values():
-            validation_msg = pipe.validate_mappings_before_ddl()
-            validation_msg += pipe.validate_mappings_after_ddl()
-        self.assertIn('SorMappings zijn niet geldig. Er wordt meer keer gemapt op dezelfde doel tabel.', validation_msg)
+#     def test_run6(self):
+#         print('======================================================')
+#         print('===        R U N  6 twee tabellen mappen opzelfde sor                ===')
+#         print('======================================================')
+#
+#         self.pipe.mappings = []
+#         # bron uitbreiden met nieuw veld, mappen op dezelfde sor tabel
+#         source_db = self.pipe.source_db
+#         source_qry = SourceQuery(source_db, """
+# SELECT
+#   *,  NULL as extra_veld
+# FROM
+#   public.handelingen
+# """, 'view_1')
+#         source_qry.set_primary_key(['id'])
+#         sor_mapping = SourceToSorMapping(source_qry, 'handeling_hstage', auto_map=True)
+#         self.pipe.mappings.append(sor_mapping)
+#
+#         source_qry = SourceQuery(source_db, """
+#         SELECT
+#           *
+#         FROM
+#           public.organisaties
+#         """, 'view_2')
+#         source_qry.set_primary_key(['id'])
+#         sor_mapping = SourceToSorMapping(source_qry, 'handeling_hstage', auto_map=True)
+#         self.pipe.mappings.append(sor_mapping)
+#         # run
+#         self.pipeline.run()
+#         for pipe in self.pipeline.pipes.values():
+#             validation_msg = pipe.validate_mappings_before_ddl()
+#             validation_msg += pipe.validate_mappings_after_ddl()
+#         self.assertIn('SorMappings zijn niet geldig. Er wordt meer keer gemapt op dezelfde doel tabel.', validation_msg)
 
 
 if __name__ == '__main__':

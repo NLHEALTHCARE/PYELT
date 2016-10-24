@@ -1,8 +1,8 @@
 import unittest
 
-from tests.unit_test_extra import _domeinmodel
-from tests.unit_test_extra._configs import test_system_config
-from tests.unit_test_extra._globals import *
+from tests.unit_tests_extra import _domeinmodel
+from tests.unit_tests_extra._configs import test_system_config
+from tests.unit_tests_extra._globals import *
 from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.sources.databases import SourceQuery, SourceTable

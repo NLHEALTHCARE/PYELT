@@ -42,7 +42,7 @@ class Patient(DvEntity, Role):
         land = Columns.TextColumn()
 
     class ContactGegevens(HybridSat):
-        class Types():
+        class Types(HybridSat.Types):
             telefoon = 'telefoon'
             mobiel = 'mobiel'
             mobiel2 = 'mobiel2'

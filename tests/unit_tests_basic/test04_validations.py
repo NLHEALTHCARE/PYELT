@@ -1,7 +1,7 @@
-from tests import _domainmodel
-from tests._domainmodel import Patient
-from tests._mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
-from tests.global_test_suite import get_global_test_pipeline, exec_sql, test_system_config, init_db
+from tests.unit_tests_basic import _domainmodel
+from tests.unit_tests_basic._domainmodel import Patient
+from tests.unit_tests_basic._mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
+from tests.unit_tests_basic.global_test_suite import get_global_test_pipeline, exec_sql, test_system_config, init_db
 from main import get_root_path
 from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping

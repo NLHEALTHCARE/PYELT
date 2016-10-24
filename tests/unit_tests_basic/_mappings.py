@@ -1,4 +1,4 @@
-from tests._domainmodel import Patient, Traject, Patient_Traject_Link, SubTraject, Handeling, Zorginstelling, Zorgverzekeraar, Locatie, Hulpverlener, PatientHandelingLink
+from tests.unit_tests_basic._domainmodel import Patient, Traject, Patient_Traject_Link, SubTraject, Handeling, Zorginstelling, Zorgverzekeraar, Locatie, Hulpverlener, PatientHandelingLink
 from main import get_root_path
 from pyelt.helpers.mappingcreator import MappingWriter
 from pyelt.mappings.base import ConstantValue
@@ -9,19 +9,19 @@ from pyelt.sources.files import CsvFile
 
 def init_source_to_sor_mappings():
     mappings = []
-    source_file = CsvFile(get_root_path() + '/tests/data/patienten1.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/patienten1.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['patientnummer'])
     sor_mapping = SourceToSorMapping(source_file, 'patient_hstage', auto_map=True)
     mappings.append(sor_mapping)
 
-    source_file = CsvFile(get_root_path() + '/tests/data/zorgtrajecten1.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/zorgtrajecten1.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['patientnummer', 'trajectnummer'])
     sor_mapping = SourceToSorMapping(source_file, 'traject_hstage', auto_map=True)
     mappings.append(sor_mapping)
 
-    source_file = CsvFile(get_root_path() + '/tests/data/zorghandelingen1.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/zorghandelingen1.csv', delimiter=';')
     source_file.reflect()
     source_file.set_primary_key(['patientnummer', 'datum', 'dbc_zorgactiviteit_code', 'hulpverlener_agb'])
     sor_mapping = SourceToSorMapping(source_file, 'handeling_hstage', auto_map=True)
