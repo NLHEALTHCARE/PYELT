@@ -66,6 +66,18 @@ class BaseProcess():
         finally:
             return result
 
+    def execute_without_commit(self, sql: str, log_message: str=''):
+        self.sql_logger.log_simple(sql + '\r\n')
+
+        try:
+            self.dwh.execute_without_commit(sql, log_message)
+
+            self.logger.log(log_message, indent_level=5)
+        except Exception as err:
+            self.logger.log_error(log_message, sql, err.args[0])
+            raise Exception(err)
+
+
 
 
     def _get_fixed_params(self) -> Dict[str, Any]:

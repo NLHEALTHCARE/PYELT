@@ -8,7 +8,7 @@ from main import get_root_path
 # from sample_domains import _ensemble_views
 from pyelt.datalayers.database import Schema, DbFunction
 from pyelt.datalayers.dm import Dim, Fact
-from pyelt.datalayers.dv import DvEntity, Link, Ensemble_view
+from pyelt.datalayers.dv import DvEntity, Link, EnsembleView
 from pyelt.datalayers.dwh import Dwh
 
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
@@ -524,6 +524,9 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
                 if cls.__base__ == DvEntity:
                     ddl.create_or_alter_entity(cls)
 
+                # if DvEntity in cls.__mro__ and cls != DvEntity:
+                #     ddl.create_or_alter_view(cls)
+
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
         for module in self.domain_modules.values():
             for name, cls in inspect.getmembers(module,  inspect.isclass):
@@ -536,7 +539,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden
         for module in self.domain_modules.values():
             for name, cls in inspect.getmembers(module,  inspect.isclass):
-                if cls.__base__ == Ensemble_view:
+                if cls.__base__ == EnsembleView:
                     ddl.create_or_alter_ensemble_view(cls)
 
 

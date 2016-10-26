@@ -73,6 +73,29 @@ class Dwh(Database):
         cursor.close()
         return rowcount
 
+    def execute_without_commit(self, sql: str, log_message: str=''):
+        self.log('-- ' + log_message.upper())
+        self.log( sql)
+
+        start = time.time()
+        if not self.__cursor:
+            self.start_transaction()
+        self.__cursor.execute(sql)
+
+        self.log('-- duur: ' + str(time.time() - start) +  '; aantal rijen:' + str(self.__cursor.rowcount))
+        self.log('-- =============================================================')
+
+    def start_transaction(self):
+        connection = self.engine.raw_connection()
+        self.__conn = connection
+        self.__cursor = connection.cursor()
+
+    def commit(self, log_message: str = ''):
+        # connection = self.engine.raw_connection()
+        self.__conn.commit()
+        self.__conn.close()
+
+
     def execute_returning(self, sql: str, log_message: str = ''):
         self.log('-- ' + log_message.upper())
         self.log(sql)

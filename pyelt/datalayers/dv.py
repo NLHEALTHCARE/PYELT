@@ -179,6 +179,8 @@ class DvEntity(EntityData):
         hub_name = cls.get_hub_name()
         return Hub(hub_name)
 
+
+
     @classmethod
     def get_class_with_dventity_base(cls) -> 'DvEntity':
         for base in cls.__bases__:
@@ -193,6 +195,8 @@ class DvEntity(EntityData):
         hub_name = dventity.__name__.lower().replace('_entity', '').replace('entity', '') + '_hub'
         return hub_name
 
+
+
     @classmethod
     def get_hub_type(cls) -> str:
         """Naam van de (sub)class geldt als type"""
@@ -201,8 +205,8 @@ class DvEntity(EntityData):
 
     @classmethod
     def get_view_name(cls) -> str:
-        dventity = cls.get_class_with_dventity_base()
-        view_name = dventity.__name__.lower().replace('_entity', '').replace('entity', '') + '_view'
+        # dventity = cls.get_class_with_dventity_base()
+        view_name = cls.__name__.lower().replace('_entity', '').replace('entity', '') + '_view'
         return view_name
 
     @classmethod
@@ -429,7 +433,16 @@ class HybridLink(Link):
 #     class Types():
 #         pass
 
-class Ensemble_view():
+class EnsembleView():
+
+    @classmethod
+    def init_cls(cls):
+        name = cls.__name__.lower()
+        entity_dict = {}
+        for key, entity_or_link_cls in cls.__dict__.items():
+            entity_dict[key] = entity_or_link_cls
+
+
     def __init__(self, name='', entity_and_link_list=[]):
         self.name = name
         self.entity_and_link_list = entity_and_link_list

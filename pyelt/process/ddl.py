@@ -10,7 +10,7 @@ from pyelt.datalayers.dv import DvEntity, HybridSat, LinkReference, Link, Dynami
 from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
 from pyelt.datalayers.sor import Sor, SorTable
 
-from pyelt.datalayers.dv import Ensemble_view
+from pyelt.datalayers.dv import EnsembleView
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
 from pyelt.mappings.base import ConstantValue
 from pyelt.mappings.sor_to_dv_mappings import EntityViewToEntityMapping, SorToEntityMapping, SorToLinkMapping
@@ -347,9 +347,9 @@ class DdlDv(Ddl):
         for sat in sats.values():
             self.__create_or_alter_sat(sat, entity)
 
-
-        if entity_is_changed:
-            self.create_or_alter_view(entity)
+        # entity_is_changed = True
+        # if entity_is_changed:
+        #     self.create_or_alter_view(entity)
 
     def __create_or_alter_sat(self, sat, hub_or_link):
         dv = self.dwh.dv
@@ -625,6 +625,7 @@ class DdlDv(Ddl):
         params.update(self._get_fixed_params())
 
         view_name = entity_cls.get_hub_name().replace('_hub', '_view')
+        view_name = entity_cls.get_view_name()
         params['view_name'] = view_name
         params['hub'] = entity_cls.get_hub_name()
 
@@ -636,12 +637,19 @@ class DdlDv(Ddl):
         sql_join = ''
         sql_join_refs = ''
         index = 1
+        all_sats = {}
+        base_class_sats = entity_cls.get_base_class_sats()
+        this_class_sats = entity_cls.get_this_class_sats()
+        all_sats.update(base_class_sats)
+        all_sats.update(this_class_sats)
         # for mapping_name, sat_mapping in entity_mappings.sat_mappings.items():
-        for sat_cls in entity_cls.get_sats().values():
+        # for sat_cls in entity_cls.get_sats().values():
+        for sat_cls in all_sats.values():
             params['sat'] = sat_cls.get_name()
 
             if sat_cls.__base__ == HybridSat:
                 for type in sat_cls.get_types():
+
                     params['sat_alias'] = 'sat' + str(index)
                     params['type'] = type
                     for col in sat_cls.get_columns():
@@ -712,12 +720,14 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
             self.execute(sql, 'create <darkcyan>{}</>'.format(view_name))
         dv.is_reflected = False
 
-    def create_or_alter_ensemble_view(self, ensemble):
+    def create_or_alter_ensemble_view(self, ensemble_cls):
 
         dv = self.dwh.dv
         dv.reflect()
 
-        ensemble = TestEnsemble()  #todo: aanpassen want nu nog hardgecodeerd.
+        # ensemble = TestEnsemble()  #todo: aanpassen want nu nog hardgecodeerd.
+
+        ensemble = ensemble_cls()
         inspector = reflection.Inspector.from_engine(dv.db.engine)
 
         # aanmaken van sub_strings voor sql:
