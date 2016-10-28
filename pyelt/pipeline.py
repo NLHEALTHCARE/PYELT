@@ -521,7 +521,8 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             for name, cls in inspect.getmembers(module,  inspect.isclass):
                 # if hasattr(cls, 'init_cls') and cls != DvEntity:
                 #     cls.init_cls()
-                if cls.__base__ == DvEntity:
+                # if cls.__base__ == DvEntity:
+                if DvEntity in cls.__bases__:
                     ddl.create_or_alter_entity(cls)
 
                 # if DvEntity in cls.__mro__ and cls != DvEntity:
