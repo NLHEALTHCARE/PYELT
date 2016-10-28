@@ -183,11 +183,12 @@ class DvEntity(EntityData):
 
     @classmethod
     def get_class_with_dventity_base(cls) -> 'DvEntity':
-        for base in cls.__bases__:
-            if base == DvEntity:
+            if DvEntity in cls.__bases__:
                 return cls
-            elif hasattr(base,"get_class_with_dventity_base"):
-                return base.get_class_with_dventity_base()
+            else:
+                for base in cls.__bases__:
+                    if hasattr(base, "get_class_with_dventity_base"):
+                        return base.get_class_with_dventity_base()
 
     @classmethod
     def get_hub_name(cls) -> str:
@@ -380,7 +381,7 @@ class Link():
     def get_entities_old(cls):
         entities = {}
         for key, entity_cls in cls.__dict__.items():
-            if isinstance(entity_cls, type) and entity_cls.__base__ == DvEntity:
+            if isinstance(entity_cls, type) and DvEntity in entity_cls.__bases__:
                 # entity_cls.hub.name = entity_cls.__name__.lower() + '_hub'
                 entities[key.lower()] = entity_cls
         return entities

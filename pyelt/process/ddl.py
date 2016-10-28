@@ -355,7 +355,7 @@ class DdlDv(Ddl):
         dv = self.dwh.dv
         params = {}
         params.update(self._get_fixed_params())
-        if hub_or_link.__base__ == DvEntity:
+        if DvEntity in hub_or_link.__bases__ :
             hub_name = hub_or_link.get_hub_name()
             params['hub_or_link'] = hub_name
         elif hub_or_link.__base__ == Link:

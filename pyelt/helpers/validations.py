@@ -72,7 +72,7 @@ class DomainValidator:
         </>""".format(
                 link_cls.__module__, link_cls.__name__)
         for link_ref in link_refs.values():
-            if link_ref.entity_cls_with_dventity_base.__base__ != DvEntity:
+            if DvEntity not in link_ref.entity_cls_with_dventity_base.__bases__:
                 validation_msg += 'Link <red>{}.{}</> is niet geldig. LinkReference <red>{}</> moet verwijzen naar een afgeleide van DvEntity.\r\n'.format(
                     link_cls.__module__, link_cls.__name__, link_ref.name)
         return validation_msg
