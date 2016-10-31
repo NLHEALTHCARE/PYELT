@@ -71,7 +71,7 @@ class Ddl(BaseProcess):
     def init_logger(self) -> None:
         self.sql_logger = Logger.create_logger(LoggerTypes.DDL, self.pipeline.runid, self.pipeline.config, to_console=False)
 
-    def __log_sql(self, log_message, sql, rowcount):
+    def __log_sql(self, log_message, sql, rowcount = 0):
         msg = """{}
 
 {}
