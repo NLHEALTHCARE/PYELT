@@ -1,7 +1,7 @@
 import unittest
 
 from psycopg2.extras import DictCursor
-from sqlalchemy import create_engine, text
+c
 from pyelt.pipeline import Pipeline
 from tests.unit_tests_rob.test_mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
 from tests.unit_tests_rob import test_domain
