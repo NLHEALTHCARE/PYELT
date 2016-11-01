@@ -104,7 +104,7 @@ class SourceToSorMapping(BaseTableMapping):
 
     #TODO delimiter ingevoegd
     def get_delimiter(self):
-        delimier = ';'
+        delimiter = ';'
         if isinstance(self.source, File):
             delimiter = self.source.delimiter.lower() or ';'
         return delimiter

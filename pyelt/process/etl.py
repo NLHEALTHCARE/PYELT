@@ -116,7 +116,7 @@ class EtlSourceToSor(BaseEtl):
 
             # STAP 3 Bron data naar temp
             # we faken de quote voor textvelden opdat json velden (met dubbele quotes) goed worden ingelezen en later eenvoudig zijn te parsen naar jsonb
-            # TODO Testen delimiter!
+            # TODO delimiter toegevoegd!
             sql = "COPY {sor}.{temp_table} ({fields}) FROM  '{file_name}' DELIMITER '{delimiter}' CSV HEADER ENCODING '{encoding}' QUOTE '|';".format(**params)
             self.execute(sql, 'copy into {}'.format(params['temp_table']))
 
