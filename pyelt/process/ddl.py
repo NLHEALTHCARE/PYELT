@@ -919,6 +919,7 @@ class DdlDatamart(Ddl):
         params['constraints'] = self.__get_constraints(fact_cls,params)
 
 
+
         if not facttable_name in dm:
             sql = """CREATE TABLE IF NOT EXISTS {dm}.{facttable} (
                                   id serial,
@@ -952,17 +953,17 @@ class DdlDatamart(Ddl):
                 self.execute(sql, 'alter <blue>{}</>'.format(facttable_name))
 
 
-
+    # hier kun je naam zetten om de goede fK_Startdatum terug te krijgen
     def __get_fact_column_names_with_types(self, fact_cls):
         fields = ''
         for name, field in fact_cls.__ordereddict__.items():
             if isinstance(field, DmReference):
-                fields += '{} integer, '.format(field.get_fk_field_name())
+                fields += '{} integer, '.format(name)          #field.get_fk_field_name())
         for col_name, col in fact_cls.__ordereddict__.items():
             if isinstance(col, Column):
                 if not col.name:
                     col.name = col_name
-                fields += '{} {}, '.format(col.name, col.type)
+                fields += '{} {}, '.format(col_name, col.type)
         fields = fields[:-2]
         return fields
 
@@ -971,7 +972,7 @@ class DdlDatamart(Ddl):
         fields = ''
         for name, field in fact_cls.__ordereddict__.items():
             if isinstance(field, DmReference):
-                params['fk_fieldname'] = field.get_fk_field_name()
+                params['fk_fieldname'] = name
                 fields += 'CREATE INDEX ix_{fk_fieldname} ON {dm}.{facttable}({fk_fieldname});\n'.format(**params)
         return fields
 
@@ -979,7 +980,7 @@ class DdlDatamart(Ddl):
         fields = ''
         for name, field in fact_cls.__ordereddict__.items():
             if isinstance(field, DmReference):
-                params['fk_fieldname'] = field.get_fk_field_name()
+                params['fk_fieldname'] = name
                 params['dim_tabel'] = field.dim_cls.get_name()
                 fields += 'FOREIGN KEY ({fk_fieldname}) REFERENCES {dm}.{dim_tabel}(ID),\n'.format(**params)
         fields = fields.rstrip(',\n')
