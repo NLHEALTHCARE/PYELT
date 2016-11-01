@@ -101,3 +101,10 @@ class SourceToSorMapping(BaseTableMapping):
                 # conversie naar geldige postgres var
                 file_encoding = 'LATIN1'
         return file_encoding
+
+    #TODO Testen delimiter!
+    def get_delimiter(self):
+        delimier = ';'
+        if isinstance(self.source, File):
+            delimiter = self.source.delimiter.lower() or ';'
+        return delimiter
