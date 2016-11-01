@@ -48,6 +48,7 @@ class CsvFile(File):
                 self.encoding = v
             elif k == 'delimiter':
                 self.csv_kwargs[k] = v
+                self.delimiter = v
         self.kwargs = kwargs
 
     def reflect(self):
