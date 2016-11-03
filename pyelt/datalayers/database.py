@@ -1,6 +1,8 @@
 from typing import Dict, List, Union
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.engine import reflection
+from sqlalchemy.sql.sqltypes import NullType
+
 from pyelt.helpers.global_helper_functions import camelcase_to_underscores
 
 
@@ -54,7 +56,11 @@ class Schema():
         for sa_tbl in tmp_meta.sorted_tables:
             tbl = Table(sa_tbl.name, self)
             for sa_col in sa_tbl.columns:
-                col = Column(sa_col.name, str(sa_col.type), tbl)
+                if isinstance(sa_col.type, NullType):
+                    col_type = 'custom'
+                else:
+                    col_type = str(sa_col.type)
+                col = Column(sa_col.name, col_type, tbl)
                 col.is_key = sa_col.primary_key
                 tbl.columns.append(col)
             self.tables[tbl.name] = tbl
@@ -369,6 +375,10 @@ class Columns():
         def __init__(self, name:str = '', default_value=''):
             super().__init__(name, 'text', default_value=default_value)
 
+    class TextArrayColumn(Column):
+        def __init__(self, name:str = '', default_value=None):
+            super().__init__(name, 'text[]', default_value=default_value)
+
     class RefColumn(Column):
         def __init__(self,  ref_type:str,name:str = '', default_value=''):
             super().__init__(name, 'text', default_value=default_value)
@@ -398,6 +408,18 @@ class Columns():
         def __init__(self, name:str = '' , default_value={}):
             super().__init__(name, 'jsonb', default_value=default_value)
 
+    class FHIR():
+        class PeriodColumn(Column):
+            def __init__(self, name: str = '', default_value=None):
+                super().__init__(name, 'fhir.period', default_value=default_value)
+
+        class CodingColumn(Column):
+            def __init__(self, name: str = '', default_value=None):
+                super().__init__(name, 'fhir.coding', default_value=default_value)
+
+        class CodeableConceptColumn(Column):
+            def __init__(self, name: str = '', default_value=None):
+                super().__init__(name, 'fhir.codeable_concept', default_value=default_value)
 
 ####################################
 class Condition():

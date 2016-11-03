@@ -2,7 +2,8 @@ import inspect
 from typing import List
 
 from pyelt.datalayers.database import Columns, Table, DbFunction, Column
-from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference, DynamicLinkReference, OrderedMembersMetaClass
+from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference, DynamicLinkReference, OrderedMembersMetaClass, \
+    HybridLink
 from pyelt.datalayers.sor import SorTable, SorQuery
 from pyelt.mappings.base import BaseTableMapping, ConstantValue
 from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping, SorToEntityMapping, SorToLinkMapping
@@ -18,7 +19,7 @@ class DomainValidator:
         for name, cls in inspect.getmembers(module,  inspect.isclass):
             if DvEntity in cls.__mro__ and cls is not DvEntity:
                 validation_msg += self.validate_entity(cls)
-            elif Link in cls.__mro__ and cls is not Link:
+            elif Link in cls.__mro__ and cls is not Link and cls is not HybridLink:
                 validation_msg += self.validate_link(cls)
         return validation_msg
 
