@@ -888,7 +888,6 @@ class DdlDatamart(Ddl):
                 if isinstance(col, Column):
                     if not col_name in refected_column_names:
                         add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
-                        print(add_fields,'testestes')
             add_fields = add_fields.rstrip(', ')
             params['add_fields'] = add_fields
 
@@ -944,7 +943,7 @@ class DdlDatamart(Ddl):
                         add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
                 if isinstance(col, DmReference):
                     if not col_name in refected_column_names:
-                        add_fields += 'ADD COLUMN {} {}, '.format(col.get_fk_field_name(),'integer')
+                        add_fields += 'ADD COLUMN {} {}, '.format(col_name,'integer')
             add_fields = add_fields.rstrip(', ')
             params['add_fields'] = add_fields
 
@@ -973,7 +972,7 @@ class DdlDatamart(Ddl):
         for name, field in fact_cls.__ordereddict__.items():
             if isinstance(field, DmReference):
                 params['fk_fieldname'] = name
-                fields += 'CREATE INDEX ix_{fk_fieldname} ON {dm}.{facttable}({fk_fieldname});\n'.format(**params)
+                fields += 'CREATE INDEX ix_{fk_fieldname}_{facttable} ON {dm}.{facttable}({fk_fieldname});\n'.format(**params)
         return fields
 
     def __get_constraints(self,fact_cls,params):

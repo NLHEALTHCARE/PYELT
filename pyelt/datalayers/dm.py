@@ -1,4 +1,4 @@
-from pygrametl.tables import Dimension
+from pygrametl.tables import Dimension,FactTable
 
 from pyelt.datalayers.database import Column
 from pyelt.datalayers.dv import OrderedMembersMetaClass, DVTable
@@ -57,49 +57,37 @@ class Fact(DVTable, metaclass=OrderedMembersMetaClass):
         else:
             full_name = cls.__qualname__
             fact_name = full_name.split('.')[0]
-
-            fact_name = fact_name.replace('Fact', '')
+            if not fact_name[:7] == 'Factuur':
+                fact_name = fact_name.replace('Fact', '')
             fact_name = fact_name.lower()
             fact_name = 'fact_' + fact_name
             cls.name = fact_name
             return fact_name
 
-#todo JVL nog afmaken; Creeren van de Fact
-    @classmethod
-    def init_cols(cls):
-        for col_name, col in cls.__ordereddict__.items():
-            # print(col_name,col)
-            if not isinstance(col, DmReference) and isinstance(col,Column):
-                print(col_name, col)
-                # if not col.name:
-                #     col.name = col_name
-
 
     @classmethod
-    def get_column_names(cls):
+    def get_key_names(cls):
         list_col_names = []
         for col_name, col in cls.__ordereddict__.items():
-            if isinstance(col, Column):
-                list_col_names.append(col.name)
+            if not isinstance(col, DmReference) and isinstance(col,Column):
+                list_col_names.append(col_name)
         return list_col_names
 
     @classmethod
-    def to_pygram_dim(cls, schema_name):
-        cls.init_cols()
-        # fct = Fact(
-        #     name=schema_name + '.' + cls.get_name(),
-        #     keyrefs='id',
-        #     measures=cls.get_column_names())
-        # return fct
+    def get_measure_names(cls):
+        list_col_names = []
+        for col_name, col in cls.__ordereddict__.items():
+            if isinstance(col, DmReference):
+                list_col_names.append(col_name)
+        return list_col_names
 
-        # @classmethod
-        # def to_pygram_fact(cls):
-        #     fact_table = FactTable(
-        #         name='dm.fact_patient',
-        #         keyrefs=['fk_patient'],
-        #         measures=['aantal'])
-        #     return fact_table
-
+    @classmethod
+    def to_pygram_fact(cls, schema_name):
+        fct = FactTable(
+            name=schema_name + '.' + cls.get_name(),
+            keyrefs=cls.get_key_names(),
+            measures=cls.get_measure_names())
+        return fct
 
 
 class DmReference():
