@@ -930,7 +930,7 @@ class DdlDatamart(Ddl):
                               autovacuum_enabled=true
                             );{indexes}""".format(**params)
             self.execute(sql, 'create <blue>{}</>'.format(facttable_name))
-            print(sql)
+
         else:
             fact_table = Table(facttable_name,dm)
             fact_table.reflect()
