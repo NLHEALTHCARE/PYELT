@@ -45,6 +45,7 @@ class Dim(DVTable, metaclass=OrderedMembersMetaClass):
             name= schema_name + '.' + cls.get_name(),
             key='id',
             attributes= cls.get_column_names())
+        print(cls.get_column_names())
         return dim
 
 
