@@ -9,7 +9,7 @@ from pyelt.sources.files import CsvFile
 
 def init_source_to_sor_mappings():
     mappings = []
-    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/patienten1.csv', delimiter=';')
+    source_file = CsvFile(get_root_path() + '/PYELT/tests/data/patienten1_tab.csv', delimiter='\t')
     source_file.reflect()
     source_file.set_primary_key(['patientnummer'])
     sor_mapping = SourceToSorMapping(source_file, 'patient_hstage', auto_map=True)

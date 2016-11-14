@@ -236,7 +236,6 @@ class EtlSourceToSor(BaseEtl):
                         changed_keys_str = changed_keys_str[:-1]
                         key_concat = params['key_fields'].replace(',', '||')
                         filter = 'WHERE {} IN ({})'.format(key_concat, changed_keys_str)
-                        print(filter)
                         file_name = mappings.source.to_csv(md5_only=False, filter=filter,  ignore_fields=mappings.ignore_fields, debug=debug)
                         params['file_name'] = file_name
 
