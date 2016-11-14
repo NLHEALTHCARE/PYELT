@@ -40,12 +40,13 @@ class Dim(DVTable, metaclass=OrderedMembersMetaClass):
 
     @classmethod
     def to_pygram_dim(cls,schema_name):
+        print('test')
         cls.init_cols()
         dim = Dimension(
             name= schema_name + '.' + cls.get_name(),
             key='id',
             attributes= cls.get_column_names())
-        print(cls.get_column_names())
+        print(cls.get_column_names(),schema_name,cls.get_name())
         return dim
 
 
@@ -58,8 +59,8 @@ class Fact(DVTable, metaclass=OrderedMembersMetaClass):
         else:
             full_name = cls.__qualname__
             fact_name = full_name.split('.')[0]
-            if not fact_name[:7] == 'Factuur':
-                fact_name = fact_name.replace('Fact', '')
+            if fact_name.endswith('Fact'):
+                fact_name = fact_name[:-4]
             fact_name = fact_name.lower()
             fact_name = 'fact_' + fact_name
             cls.name = fact_name
