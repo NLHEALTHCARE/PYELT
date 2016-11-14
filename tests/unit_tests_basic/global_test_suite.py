@@ -9,10 +9,11 @@ from pyelt.pipeline import Pipeline
 __author__ = 'hvreenen'
 
 testmodules = [
-    'tests.test01_pipeline',
-    'tests.test02_mappings',
-    'tests.test02_ref_mappings',
-    'tests.test03_run_proces',
+    'test01_pipeline',
+    'test01_pipeline',
+    'test02_mappings',
+    # 'tests.unit_tests_basic.test02_ref_mappings',
+    'tests.unit_tests_basic.test03_run_proces',
     # 'tests.test04_validations',
     # 'tests.test05_transformations',
     ]
@@ -52,7 +53,7 @@ def exec_sql(sql):
     result = engine.execute(query)
     return result.fetchall()
 
-def run():
+def run_old():
     suite = unittest.TestSuite()
 
     for module in testmodules:
@@ -67,9 +68,16 @@ def run():
 
     unittest.TextTestRunner().run(suite)
 
+def run_all():
+    for module in testmodules:
+        mod = __import__(module, globals(), locals())
+        mod.run()
+
+
+
 if __name__ == '__main__':
     init_db()
-    run()
+    run_old()
 
 
 

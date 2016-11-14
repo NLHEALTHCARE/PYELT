@@ -48,7 +48,6 @@ class CsvFile(File):
                 self.encoding = v
             elif k == 'delimiter':
                 self.csv_kwargs[k] = v
-                #TODO delimiter toegevoegd
                 self.delimiter = v
         self.kwargs = kwargs
 

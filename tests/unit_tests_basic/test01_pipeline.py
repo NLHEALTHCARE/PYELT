@@ -38,6 +38,8 @@ class TestCase_Pipeline(unittest.TestCase):
         self.assertEqual(len(pipeline.pipes), 2)
         self.assertEqual(len(pipeline.dwh.sors), 2)
 
+def run():
+    unittest.main()
 
 if __name__ == '__main__':
     unittest.main()

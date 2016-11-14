@@ -170,5 +170,5 @@ def get_row_count(unittest, table_name, count):
 
 
 if __name__ == '__main__':
-    init_db()
+    # init_db()
     unittest.main()

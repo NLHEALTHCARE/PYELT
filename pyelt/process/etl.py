@@ -478,7 +478,6 @@ class EtlSorToDv(BaseEtl):
                     SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
                     AND NOT EXISTS (SELECT 1 FROM {dv}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
-
                     AND floor(hstg._runid) = floor({runid})
                     EXCEPT
                     SELECT _id, {runid}, '{source_system}', now(), 0, {sat_fields}

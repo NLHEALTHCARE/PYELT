@@ -525,9 +525,13 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
                 if DvEntity in cls.__bases__:
                     ddl.create_or_alter_entity(cls)
 
-                # if DvEntity in cls.__mro__ and cls != DvEntity:
-                #     ddl.create_or_alter_view(cls)
 
+        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
+        for module in self.domain_modules.values():
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+
+                if DvEntity in cls.__mro__ and cls != DvEntity:
+                    ddl.create_or_alter_view(cls)
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
         for module in self.domain_modules.values():
             for name, cls in inspect.getmembers(module,  inspect.isclass):
