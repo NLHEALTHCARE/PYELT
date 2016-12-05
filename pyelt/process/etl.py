@@ -673,12 +673,12 @@ AND hstg._valid AND {filter};""".format(
         fks_compare = ''
         for field_mapping in mappings.field_mappings:
             if isinstance(field_mapping.source, ConstantValue):
-                fks_compare += '{0} = {1}.{2} AND '.format(field_mapping.source, target_alias, field_mapping.target)
+                fks_compare += 'COALESCE({0}, 0) = COALESCE({1}.{2}, 0) AND '.format(field_mapping.source, target_alias, field_mapping.target)
             elif field_mapping.is_view_mapping:
-                fks_compare += '{0}.{1} = {2}.{3} AND '.format(field_mapping.source.table, field_mapping.source, target_alias, field_mapping.target)
+                fks_compare += 'COALESCE({0}.{1}, 0) = COALESCE({2}.{3}, 0) AND '.format(field_mapping.source.table, field_mapping.source, target_alias, field_mapping.target)
             else:
                 source_alias = self.__get_link_alias_of_source_tbl(field_mapping, fks_compare)
-                fks_compare += '{0}.{2} = {1}.{3} AND '.format(source_alias, target_alias, field_mapping.source, field_mapping.target)
+                fks_compare += 'COALESCE({0}.{2}, 0) = COALESCE({1}.{3}, 0) AND '.format(source_alias, target_alias, field_mapping.source, field_mapping.target)
         fks_compare = fks_compare[:-4]
         return fks_compare
 
