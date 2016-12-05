@@ -376,8 +376,9 @@ class Columns():
             super().__init__(name, 'text', default_value=default_value)
 
     class TextArrayColumn(Column):
+        #voorlopig deze gewoon op type text laten staan. Misschien later aanpassen naar text[]
         def __init__(self, name:str = '', default_value=None):
-            super().__init__(name, 'text[]', default_value=default_value)
+            super().__init__(name, 'text', default_value=default_value)
 
     class RefColumn(Column):
         def __init__(self,  ref_type:str,name:str = '', default_value=''):
@@ -409,17 +410,21 @@ class Columns():
             super().__init__(name, 'jsonb', default_value=default_value)
 
     class FHIR():
+        # voorlopig onderstaande  gewoon op type text laten staan. Misschien later aanpassen naar fhire types
         class PeriodColumn(Column):
             def __init__(self, name: str = '', default_value=None):
-                super().__init__(name, 'fhir.period', default_value=default_value)
+                super().__init__(name, 'text', default_value=default_value)
+                # super().__init__(name, 'fhir.period', default_value=default_value)
 
         class CodingColumn(Column):
             def __init__(self, name: str = '', default_value=None):
-                super().__init__(name, 'fhir.coding', default_value=default_value)
+                super().__init__(name, 'text', default_value=default_value)
+                # super().__init__(name, 'fhir.coding', default_value=default_value)
 
         class CodeableConceptColumn(Column):
             def __init__(self, name: str = '', default_value=None):
-                super().__init__(name, 'fhir.codeable_concept', default_value=default_value)
+                super().__init__(name, 'text', default_value=default_value)
+                # super().__init__(name, 'fhir.codeable_concept', default_value=default_value)
 
 ####################################
 class Condition():
