@@ -138,6 +138,11 @@ class SorSatMapping(BaseTableMapping):
                 field = '{},'.format(field_map.source)
             else:
                 field = '{}.{},'.format(alias, field_map.source)
+            if '[]' in field_map.target.type:
+                #array velden
+                #eerst komma eraf halen
+                field = field[:-1]
+                field = "'{" + field + "}',"
             # voorkom eventuele dubbele veldnamen bij hybrid sats
             if field not in fields:
                 fields += field

@@ -385,7 +385,10 @@ class EtlSorToDv(BaseEtl):
                 params['filter_hub'] += ' AND ' + filter_on_runid
 
             if mappings.bk_mapping and isinstance(mappings.source, SorTable):
-                sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk) SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping} FROM {sor}.{sor_table} hstg WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND ({bk_mapping}) NOT IN (SELECT bk FROM {dv}.{hub}) AND {filter_hub};""".format(
+                sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk)
+SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
+FROM {sor}.{sor_table} hstg
+WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv}.{hub} WHERE bk = ({bk_mapping})) AND {filter_hub};""".format(
                     **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
