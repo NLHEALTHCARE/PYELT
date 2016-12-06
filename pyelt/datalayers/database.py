@@ -289,7 +289,7 @@ class View(Table):
 
 
 class Column():
-    def __init__(self, name: str, type: str = 'text', tbl: 'Table' = None, default_value = '') -> None:
+    def __init__(self, name: str, type: str = 'text', tbl: 'Table' = None, default_value = '', fhir_name = '') -> None:
         name = name.strip()
         # while '  ' in name:
         #     name = name.replace('  ', ' ')
@@ -307,6 +307,7 @@ class Column():
         self.table = tbl
         self.is_key = False
         self.default_value = default_value
+        self.fhir_name = fhir_name
 
     def __str__(self) -> str:
         return self.name.lower()
@@ -372,42 +373,42 @@ class Column():
 
 class Columns():
     class TextColumn(Column):
-        def __init__(self, name:str = '', default_value=''):
-            super().__init__(name, 'text', default_value=default_value)
+        def __init__(self, name:str = '', default_value='', fhir_name=''):
+            super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
 
     class TextArrayColumn(Column):
         #voorlopig deze gewoon op type text laten staan. Misschien later aanpassen naar text[]
-        def __init__(self, name:str = '', default_value=None):
-            super().__init__(name, 'text', default_value=default_value)
+        def __init__(self, name:str = '', default_value=None, fhir_name=''):
+            super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
 
     class RefColumn(Column):
-        def __init__(self,  ref_type:str,name:str = '', default_value=''):
-            super().__init__(name, 'text', default_value=default_value)
+        def __init__(self,  ref_type:str,name:str = '', default_value='', fhir_name=''):
+            super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
             self.ref_type = ref_type
 
     class DateTimeColumn(Column):
         def __init__(self, name:str = '', default_value=''):
-            super().__init__(name, 'timestamp', default_value=default_value)
+            super().__init__(name, 'timestamp', default_value=default_value, fhir_name=fhir_name)
 
     class DateColumn(Column):
-        def __init__(self, name:str = '', default_value=''):
-            super().__init__(name, 'date', default_value=default_value)
+        def __init__(self, name:str = '', default_value='', fhir_name=''):
+            super().__init__(name, 'date', default_value=default_value, fhir_name=fhir_name)
 
     class IntColumn(Column):
-        def __init__(self, name:str = '', default_value=''):
-            super().__init__(name, 'integer', default_value=default_value)
+        def __init__(self, name:str = '', default_value='', fhir_name=''):
+            super().__init__(name, 'integer', default_value=default_value, fhir_name=fhir_name)
 
     class FloatColumn(Column):
-        def __init__(self, name:str = '', default_value=''):
-            super().__init__(name, 'numeric', default_value=default_value)
+        def __init__(self, name:str = '', default_value='', fhir_name=''):
+            super().__init__(name, 'numeric', default_value=default_value, fhir_name=fhir_name)
 
     class BoolColumn(Column):
-        def __init__(self, name:str = '' , default_value=''):
-            super().__init__(name, 'bool', default_value=default_value)
+        def __init__(self, name:str = '' , default_value='', fhir_name=''):
+            super().__init__(name, 'bool', default_value=default_value, fhir_name=fhir_name)
 
     class JsonColumn(Column):
-        def __init__(self, name:str = '' , default_value={}):
-            super().__init__(name, 'jsonb', default_value=default_value)
+        def __init__(self, name:str = '' , default_value={}, fhir_name=''):
+            super().__init__(name, 'jsonb', default_value=default_value, fhir_name=fhir_name)
 
     class FHIR():
         # voorlopig onderstaande  gewoon op type text laten staan. Misschien later aanpassen naar fhire types
@@ -425,6 +426,8 @@ class Columns():
             def __init__(self, name: str = '', default_value=None):
                 super().__init__(name, 'text', default_value=default_value)
                 # super().__init__(name, 'fhir.codeable_concept', default_value=default_value)
+
+
 
 ####################################
 class Condition():
