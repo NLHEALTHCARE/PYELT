@@ -16,6 +16,20 @@ class SorQuery(Table):
     def __init__(self, sql: str, schema: 'Schema' = None, name: str = '') -> None:
         super().__init__(name, schema)
         self.sql = sql
+        self.main_table = ''
+
+    def get_main_table(self):
+        if not self.main_table:
+            #parse. We nemen de eerste tabel in de FROM als de hoofdtabel. Deze hoofdtabel krijgt een fk naar de hub
+            sql = self.sql.upper().replace('  ', ' ')
+            pos_start = sql.index(' FROM ') + len(' FROM ')
+            pos_end = sql.index(' ', pos_start)
+            main_table = sql[pos_start:pos_end].strip().lower()
+            if '.' in main_table:
+                main_table = main_table.split('.')[1]
+            self.main_table = main_table
+            self.name = main_table
+        return self.main_table
 
     def reflect(self):
         self.columns = []
