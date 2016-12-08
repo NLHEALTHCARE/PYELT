@@ -8,7 +8,7 @@ from pyelt.datalayers.database import Column, Columns, Schema, Table, DbFunction
 from pyelt.datalayers.dm import DmReference
 from pyelt.datalayers.dv import DvEntity, HybridSat, LinkReference, Link, DynamicLinkReference
 from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
-from pyelt.datalayers.sor import Sor, SorTable
+from pyelt.datalayers.sor import Sor, SorTable, SorQuery
 
 from pyelt.datalayers.dv import EnsembleView
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
@@ -242,8 +242,15 @@ class DdlSor(Ddl):
         return sql
 
     def try_add_fk_sor_hub(self, mapping: SorToEntityMapping) -> None:
-        if not isinstance(mapping.source, SorTable):
+        if isinstance(mapping.source, SorTable):
+            sor_table = mapping.source.name
+        elif isinstance(mapping.source, SorQuery):
+            sor_table = mapping.source.get_main_table()
+        else:
             return
+
+        # if not isinstance(mapping.source, SorTable):
+        #     return
         sor = self.pipe.sor
         if not sor.is_reflected:
             sor.reflect()
@@ -251,7 +258,7 @@ class DdlSor(Ddl):
         params = {}
         params.update(self._get_fixed_params())
         params['hub'] = mapping.target.get_hub_name()
-        params['sor_table'] = mapping.source.name
+        params['sor_table'] = sor_table
         params['type'] = mapping.type
 
         fk_name = 'fk_{type}{hub}'.format(**params).lower()

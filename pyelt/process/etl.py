@@ -403,8 +403,12 @@ WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {
             elif mappings.bk_mapping and isinstance(mappings.source, SorQuery):
                 params['sql'] = mappings.source.sql
 
-                sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk) SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping} FROM ({sql}) hstg WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND ({bk_mapping}) NOT IN (SELECT bk FROM {dv}.{hub}) AND {filter_hub};""".format(
-                    **params)
+                sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk)
+SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
+FROM ({sql}) hstg
+WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM dv.medewerker_hub hub WHERE hub.bk = {bk_mapping})
+AND {filter_hub};""".format( **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
             elif mappings.key_mappings:
@@ -444,11 +448,14 @@ WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {
         satparams['sor_fields'] = sat_mappings.get_source_fields(alias='hstg')
         satparams['sat_fields'] = sat_mappings.get_sat_fields()
         satparams['fields_compare'] = sat_mappings.get_fields_compare(source_alias='hstg', target_alias='sat')
+        satparams['from'] = "{sor}.{sor_table} AS hstg".format(**params)
+        if isinstance(sat_mappings.source, SorQuery):
+            satparams['from'] = "({}) AS hstg".format(sat_mappings.source.sql)
 
         if sat_cls.__base__ == HybridSat:
             sql = """INSERT INTO {dv}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
                     SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 0, {sor_fields}
-                    FROM {sor}.{sor_table} hstg WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
+                    FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
                     AND NOT EXISTS (SELECT 1 FROM {dv}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
                     AND floor(hstg._runid) = floor({runid})
                     EXCEPT
@@ -471,9 +478,9 @@ WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {
 
             self.logger.log('FINISH {}'.format(sat_mappings), indent_level=4)
         else:
-            satparams['from'] = "{sor}.{sor_table} AS hstg".format(**params)
-            if isinstance(sat_mappings.source, SorQuery):
-                satparams['from'] = "({}) AS hstg".format(sat_mappings.source.sql)
+            # satparams['from'] = "{sor}.{sor_table} AS hstg".format(**params)
+            # if isinstance(sat_mappings.source, SorQuery):
+            #     satparams['from'] = "({}) AS hstg".format(sat_mappings.source.sql)
 
 
             sql = """INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
