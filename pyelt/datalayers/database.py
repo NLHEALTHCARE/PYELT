@@ -387,7 +387,7 @@ class Columns():
             self.ref_type = ref_type
 
     class DateTimeColumn(Column):
-        def __init__(self, name:str = '', default_value=''):
+        def __init__(self, name:str = '', default_value='', fhir_name=''):
             super().__init__(name, 'timestamp', default_value=default_value, fhir_name=fhir_name)
 
     class DateColumn(Column):
