@@ -376,20 +376,21 @@ class DdlDv(Ddl):
             if not params['sat_columns_def']:
                 return
             params['sat_pk_fields'] = '_id, _runid'
+            params['create_indexes'] = self.__get_sat_indexes(sat, params)
+
+
             if sat.__base__ == HybridSat:
                 params['sat_pk_fields'] = '_id, _runid, type'
                 params['fixed_sat_columns_def'] = self.__get_fixed_sat_columns_def(True)
 
             sql = """CREATE TABLE IF NOT EXISTS {dv}.{sat} (
-                      {fixed_sat_columns_def},
-                      {sat_columns_def},
-                      CONSTRAINT {sat}_pkey PRIMARY KEY ({sat_pk_fields}),
-                      CONSTRAINT fk_{sat}_{hub_or_link} FOREIGN KEY (_id) REFERENCES {dv}.{hub_or_link} (_id) MATCH SIMPLE
-                )
-                WITH (
-                  OIDS=FALSE,
-                  autovacuum_enabled=true
-                ); """.format(**params)
+  {fixed_sat_columns_def},
+  {sat_columns_def},
+  CONSTRAINT {sat}_pkey PRIMARY KEY ({sat_pk_fields}),
+  CONSTRAINT fk_{sat}_{hub_or_link} FOREIGN KEY (_id) REFERENCES {dv}.{hub_or_link} (_id) MATCH SIMPLE)
+  WITH (OIDS=FALSE, autovacuum_enabled=true);
+{create_indexes}
+""".format(**params)
             self.execute(sql, 'create <cyan>{}</>'.format(params['sat']))
             entity_is_changed = True
         else:
@@ -435,6 +436,17 @@ class DdlDv(Ddl):
                 fields += '{} {}, '.format(col.name, col.type)
         fields = fields[:-2]
         return fields
+
+    def __get_sat_indexes(self, sat_cls, params):
+        indexes = "CREATE INDEX {sat}_active_idx ON {dv}.{sat}  USING btree (_active);\n".format(**params)
+        if sat_cls.__base__ == HybridSat:
+            indexes += "CREATE INDEX {sat}_type_idx ON {dv}.{sat}  USING btree (type);\n".format(**params)
+
+        for col_name, col in sat_cls.__ordereddict__.items():
+            if isinstance(col, Columns.RefColumn):
+                params['col_name'] = col.name
+                indexes += "CREATE INDEX {sat}_{col_name}_idx ON {dv}.{sat}  USING btree ({col_name});\n".format(**params)
+        return indexes
 
     def create_or_alter_link(self, cls_link: Link) -> None:
         dv = self.dwh.dv
@@ -834,7 +846,8 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                 WITH (
                   OIDS=FALSE,
                   autovacuum_enabled=true
-                );""".format(**params)
+                );
+                CREATE INDEX _ref_values_valueset_naam_index ON {dv}._ref_values USING btree (valueset_naam );""".format(**params)
             self.execute(sql, 'create valuesets tables')
 
     def create_or_alter_table_exceptions(self):

@@ -20,6 +20,7 @@
 # DONE: general_configs: alleen de gekoppelde aan pipeline geldt, harde imports verwijderen
 # todo views voor ensemble
 # todo datamarts
+# todo keys-sat
 # DONE docu transformatie en functies
 
 # todo optioneel formatted columns voor kolommen met altijd vast format nodig, mogelijk ook restictedColumns
