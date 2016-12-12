@@ -374,30 +374,31 @@ class EtlSorToDv(BaseEtl):
                 params['hub_type'] = mappings.type
             params['sor_table'] = mappings.source.name
             params['relation_type'] = mappings.type
-            params['filter_hub'] = params['filter']
+            # params['filter_hub'] = params['filter']
 
             sql = "SELECT COUNT(*) FROM {dv}.{hub};".format(**params)
             result = self.execute_read(sql, 'get rowcount')
-            rowcount = result[0][0]
+            rowcount_hub = result[0][0]
 
-            if rowcount > 0:
-                filter_on_runid = 'floor(hstg._runid) = floor({runid})'.format(**params)
-                params['filter_hub'] += ' AND ' + filter_on_runid
+            if rowcount_hub == 0:
+                params['filter_runid'] = '1=1'
+            else:
+                params['filter_runid'] = 'floor(hstg._runid) = floor({runid})'.format(**params)
 
             if mappings.bk_mapping and isinstance(mappings.source, SorTable):
                 sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk)
 SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
 FROM {sor}.{sor_table} hstg
-WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv}.{hub} WHERE bk = ({bk_mapping})) AND {filter_hub};""".format(
+WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv}.{hub} WHERE bk = ({bk_mapping})) AND {filter} AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
                 # onderstaande regels voor performance
-                sql = """SELECT hub._id FROM {dv}.{hub} hub JOIN {sor}.{sor_table} hstg ON {bk_mapping} = hub.bk WHERE hstg._valid AND {filter_hub};""".format(
+                sql = """SELECT hub._id FROM {dv}.{hub} hub JOIN {sor}.{sor_table} hstg ON {bk_mapping} = hub.bk WHERE hstg._valid AND {filter} AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'load hub_ids in mem (performance)')
 
-                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter_hub};""".format(
+                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
             elif mappings.bk_mapping and isinstance(mappings.source, SorQuery):
@@ -408,7 +409,7 @@ SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
 FROM ({sql}) hstg
 WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL
 AND NOT EXISTS (SELECT 1 FROM dv.medewerker_hub hub WHERE hub.bk = {bk_mapping})
-AND {filter_hub};""".format( **params)
+AND {filter} AND {filter_runid};""".format( **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
             elif mappings.key_mappings:
@@ -445,6 +446,7 @@ AND {filter_hub};""".format( **params)
             satparams['hub_or_link'] = params['link']
             satparams['relation_type'] = ''
         satparams['filter'] = params['filter']
+        satparams['filter_runid'] = params['filter_runid']
         satparams['sor_fields'] = sat_mappings.get_source_fields(alias='hstg')
         satparams['sat_fields'] = sat_mappings.get_sat_fields()
         satparams['fields_compare'] = sat_mappings.get_fields_compare(source_alias='hstg', target_alias='sat')
@@ -457,7 +459,7 @@ AND {filter_hub};""".format( **params)
                     SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
                     AND NOT EXISTS (SELECT 1 FROM {dv}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
-                    AND floor(hstg._runid) = floor({runid})
+                    AND {filter_runid}
                     EXCEPT
                     SELECT _id, {runid}, '{type}', '{source_system}', now(), 0, {sat_fields}
                     FROM {dv}.{sat} sat
@@ -487,7 +489,7 @@ AND {filter_hub};""".format( **params)
                     SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
                     AND NOT EXISTS (SELECT 1 FROM {dv}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
-                    AND floor(hstg._runid) = floor({runid})
+                    AND {filter_runid}
                     EXCEPT
                     SELECT _id, {runid}, '{source_system}', now(), 0, {sat_fields}
                     FROM {dv}.{sat} sat
