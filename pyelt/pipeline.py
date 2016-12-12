@@ -77,6 +77,7 @@ Voorbeeld::
             cls._instance.pipes = OrderedDict()  # type: Dict[str, Pipe]
             cls._instance.logger = None  # type: Logger
             cls._instance.sql_logger = None  # type: Logger
+            cls._instance.domain_modules = {}
             cls._instance.datamart_modules = {}
         return cls._instance
 
@@ -91,8 +92,6 @@ Voorbeeld::
         :returns: Pipe
 
         """
-
-        # self = Pipeline._instance
         source_system = source_system.replace('sor_', '')
         if 'sor_schema' not in config:
             config['sor_schema'] = 'sor_' + source_system
@@ -103,7 +102,7 @@ Voorbeeld::
 
     def run(self, parts=['sor', 'refs', 'hubs', 'links', 'views', 'viewlinks']) -> None:
         """
-        Deze functie start de run van de pipeline. Er wordt per pipe ddl uitgevoerd, een logbestand aangemaakt, een sql_logbestand en de etl wordt uitgevoerd..
+        Deze functie start de run van de pipeline. Er wordt ddl uitgevoerd, een logbestand aangemaakt, een sql_logbestand en de etl per pipe wordt uitgevoerd..
 
 
         :param parts: lijst van te runnen onderdelen, indien leeg gelaten worden alle onderdelen gerund.
@@ -129,11 +128,14 @@ Voorbeeld::
 
         self.logger.log('<b>START RUN {0:.2f}</>'.format(self.runid))
         self.logger.log('<b>START DDL</>')
+        for dv_schema in self.dwh.dvs.values():
+            self.create_dv_from_domain(dv_schema)
+
         for pipe in self.pipes.values():
             self.logger.log('DDL PIPE ' + pipe.source_system, indent_level=1)
             self.dwh.create_schemas_if_not_exists(pipe.sor.name)
             pipe.create_sor_from_mappings()
-            pipe.create_dv_from_domain()
+
             pipe.run_extra_sql()
             pipe.create_db_functions()
 
@@ -195,8 +197,10 @@ Voorbeeld::
 
         self.logger.log('PRE-RUN VALIDATE DOMAINS')
         validation_msg = ''
-        for pipe in self.pipes.values():
-            validation_msg += pipe.validate_domains()
+        validator = DomainValidator()
+        for domain_module in self.domain_modules.values():
+            validation_msg += validator.validate(domain_module)
+
         if validation_msg:
             self.logger.log(validation_msg, indent_level=1)
             return False
@@ -212,7 +216,6 @@ Voorbeeld::
 
         :return: Boolean
         """
-        # self = Pipeline._instance
         self.logger.log('VALIDATE MAPPINGS BEFORE DDL')
         validation_msg = ''
         for pipe in self.pipes.values():
@@ -232,7 +235,6 @@ Voorbeeld::
 
         :return: Boolean
         """
-        # self = Pipeline._instance
         self.logger.log('VALIDATE MAPPINGS')
         validation_msg = ''
         for pipe in self.pipes.values():
@@ -254,7 +256,6 @@ Voorbeeld::
         :return: self.runid
         """
 
-        # self = Pipeline._instance
         sql = 'SELECT max(runid) as max_runid, max(rundate) as max_rundate from sys.runs'
         rows = self.dwh.execute_read(sql, 'get max run id')
         if len(rows) > 0:
@@ -293,8 +294,6 @@ Voorbeeld::
         Beëindigt de run en maakt een update van de database tabel sys.runs met een *finish_date* en eventuele *exceptions*.
 
         """
-        # self = Pipeline._instance
-
         Validation().report_run(self)
 
         exceptions = len(self.logger.errors) > 0
@@ -339,14 +338,80 @@ Voorbeeld::
                 import os
                 os.system(linux_cmd)
 
-    def register_datamart(self, module, name = ''):
-        if not name:
-            name = module.__name__
-        self.datamart_modules[name] = module
+    def register_domain(self, module, schema_name = 'dv'):
+        """
+        Registreert de module met het domein.
+
+        :param module: de module met daarin de domein classes; bijvoorbeeld: "domain_huisartsen"
+
+        Je kunt meerdere modules registreren door de functie vaker aan te roepen::
+
+            pipeline.register_domain(domain_huisartsen)
+            pipeline.register_domain(domain_ziekenhuizen)
+
+        Tijdens de dll zullen alle tabellen uit beide domeinen aangemaakt worden.
+        """
+
+        module_name = "{}.{}".format(schema_name, module.__name__)
+        self.domain_modules[module_name] = module
+        # init module
+        for name, cls in inspect.getmembers(module,  inspect.isclass):
+            if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
+                cls.init_cls()
+                if not cls._schema_name:
+                    cls._schema_name = schema_name
+
+    def register_datamart(self, module, schema_name = ''):
+        if not schema_name:
+            schema_name = module.__name__
+        self.datamart_modules[schema_name] = module
         # init module
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
                 cls.init_cls()
+
+    def create_dv_from_domain(self, schema):
+        """
+        Voert ddl uit van de dv laag. Maakt eventuele nieuwe tabellen aan (hubs, sats en links) gebaseerd op de gedefiniëerde domeinen.
+
+        """
+        self.logger.log('START CREATE DV'.format(self.runid), indent_level=2)
+        ddl = DdlDv(self, schema)
+        if schema.name == 'valset':
+            ddl.create_or_alter_table_valueset(schema)
+        ddl.create_or_alter_table_exceptions(schema)
+        for module_name, module in self.domain_modules.items():
+            if not module_name.startswith(schema.name + '.'):
+                continue
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if DvEntity in cls.__bases__:
+                    ddl.create_or_alter_entity(cls)
+
+        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
+        for module_name,module in self.domain_modules.items():
+            if not module_name == schema.name:
+                continue
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if DvEntity in cls.__mro__ and cls != DvEntity:
+                    ddl.create_or_alter_view(cls)
+
+        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
+        for module_name,module in self.domain_modules.items():
+            if not module_name.startswith(schema.name + '.'):
+                continue
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if cls.__base__ == Link and cls != HybridLink:
+                    ddl.create_or_alter_link(cls)
+
+        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden
+        for module_name,module in self.domain_modules.items():
+            if not module_name.startswith(schema.name + '.'):
+                continue
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if cls.__base__ == EnsembleView:
+                    ddl.create_or_alter_ensemble_view(cls)
+
+        self.logger.log('FINISH CREATE DV'.format(self.runid), indent_level=2)
 
     def create_datamarts(self):
         """
@@ -359,18 +424,13 @@ Voorbeeld::
             ddl = DdlDatamart(self, self.dwh.get_or_create_datamart_schema(name))
 
             for name, cls in inspect.getmembers(module, inspect.isclass):
-                # if hasattr(cls, 'init_cls') and cls != DvEntity:
-                #     cls.init_cls()
                 if cls.__base__ == Dim:
                     ddl.create_or_alter_dim(cls)
 
             # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle dims zijn aangemaakt voordat de facts aangemaakt kunnen worden met ref. integriteit op de database
             for name, cls in inspect.getmembers(module, inspect.isclass):
                 if cls.__base__ == Fact:
-                    # if hasattr(cls, 'init_cls'):
-                    #     cls.init_cls()
                     ddl.create_or_alter_fact(cls)
-
 
         self.logger.log('FINISH CREATE DATAMARTS', indent_level=2)
 
@@ -426,7 +486,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         elif 'source_path' in config:
             self.source_path = config['source_path']
         self.sor = pipeline.dwh.get_or_create_sor_schema(config)
-        self.domain_modules = {}
+
         self.db_functions = {}
         self.extra_sql_statements = []  # type: List[str]
 
@@ -439,25 +499,14 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         """
         return self.pipeline.runid
 
-    def register_domain(self, module):
+    def register_domain(self, module, schema_name = 'dv'):
         """
-        Registreert de module met het domein.
-
+        Registreert de module met het domein. Geeft door aan Pipeline
         :param module: de module met daarin de domein classes; bijvoorbeeld: "domain_huisartsen"
-
-        Je kunt meerdere modules registreren door de functie vaker aan te roepen::
-
-            pipe.register_domain(domain_huisartsen)
-            pipe.register_domain(domain_ziekenhuizen)
-
-        Tijdens de dll zullen alle tabellen uit beide domeinen aangemaakt worden.
+        :param schema_name: Het dv-schema in Postgresql. Bijvoorbeeld dv of rdv
         """
+        self.pipeline.register_domain(module, schema_name)
 
-        self.domain_modules[module.__name__] = module
-        # init module
-        for name, cls in inspect.getmembers(module,  inspect.isclass):
-            if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
-                cls.init_cls()
 
     def register_db_functions(self, module, schema: Schema = None) -> None:
         """
@@ -490,8 +539,6 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         Registreert de database functie.
 
         :param func: de functie die geregistreert wordt
-
-
         """
         self.db_functions[func.name] = func
 
@@ -499,61 +546,16 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         """
         Voert ddl uit van de sor-laag. Maakt eventuele nieuwe sor-tabellen aan aan de hand van de gedefiniëerde mappings zoals bijvoorbeeld in "timeff_mappings_old.py".
 
-
         """
         self.pipeline.logger.log('START CREATE SOR'.format(self.pipeline.runid), indent_level=2)
         ddl = DdlSor(self)
+        ddl.create_or_alter_table_exceptions(self.sor)
         for mapping in self.mappings:
             if isinstance(mapping, SourceToSorMapping):
                 ddl.create_or_alter_sor(mapping)
         self.pipeline.logger.log('FINISH CREATE SOR'.format(self.pipeline.runid), indent_level=2)
 
-    def create_dv_from_domain(self):
-        """
-        Voert ddl uit van de dv laag. Maakt eventuele nieuwe tabellen aan (hubs, sats en links) gebaseerd op de gedefiniëerde domeinen.
-
-        """
-        self.pipeline.logger.log('START CREATE DV'.format(self.pipeline.runid), indent_level=2)
-        ddl = DdlDv(self)
-        ddl.create_or_alter_ref()
-        ddl.create_or_alter_table_exceptions()
-        for module in self.domain_modules.values():
-            for name, cls in inspect.getmembers(module,  inspect.isclass):
-                # if hasattr(cls, 'init_cls') and cls != DvEntity:
-                #     cls.init_cls()
-                # if cls.__base__ == DvEntity:
-                if DvEntity in cls.__bases__:
-                    ddl.create_or_alter_entity(cls)
-
-
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
-        for module in self.domain_modules.values():
-            for name, cls in inspect.getmembers(module, inspect.isclass):
-
-                if DvEntity in cls.__mro__ and cls != DvEntity:
-                    ddl.create_or_alter_view(cls)
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
-        for module in self.domain_modules.values():
-            for name, cls in inspect.getmembers(module,  inspect.isclass):
-                if cls.__base__ == Link and cls != HybridLink:
-                    # if hasattr(cls, 'init_cls'):
-                    #     cls.init_cls()
-                    ddl.create_or_alter_link(cls)
-
- ##### nieuw_begin
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden
-        for module in self.domain_modules.values():
-            for name, cls in inspect.getmembers(module,  inspect.isclass):
-                if cls.__base__ == EnsembleView:
-                    ddl.create_or_alter_ensemble_view(cls)
-
-
-##### nieuw_eind
-
-        self.pipeline.logger.log('FINISH CREATE DV'.format(self.pipeline.runid), indent_level=2)
-
     def create_db_functions(self):
-
         """
         DDL functie. Maakt nieuwe database functies aan.
 
@@ -564,8 +566,6 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
     def run_extra_sql(self):
         """
         Runt de aanwezige extra sql code.
-
-
         """
         ddl = Ddl(self, self.sor)
         for sql in self.extra_sql_statements:
@@ -574,7 +574,6 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
 
     def run(self, parts = ['sor', 'refs', 'hubs', 'links', 'views', 'viewlinks']):
         """
-
         :param parts: lijst van keywords. De eventuele aanwezigheid van een keyword in deze lijst bepaald of het log bestand dat hoort bij dit keyword gemaakt wordt en of de bijhorende DDL uitgevoerd wordt.
 
         """
@@ -681,22 +680,16 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         validation_msg += self.validate_mappings_after_ddl()
         return validation_msg
 
-    def validate_domains(self):
-        """
-        Valideert of er een domein is gedefiniëerd en via een aantal andere functies of de eventueel gebruikte entiteiten, hybridsats of links wel geldig zijn.
-
-        zie: :class:`Pipeline.validate_domains`
-
-        :return: validation_msg
-
-        """
-        validation_msg = ''
-        # if len(self.domain_modules) == 0:
-        #     validation_msg += 'GEEN <red>domein</> geregistreerd. Gebruik de methode pipe.register_domein(module).'
-        validator = DomainValidator()
-        for domain_module in self.domain_modules.values():
-            validation_msg += validator.validate(domain_module)
-        return validation_msg
+    # def validate_domains(self):
+    #     """
+    #     Valideert of er een domein is gedefiniëerd en via een aantal andere functies of de eventueel gebruikte entiteiten, hybridsats of links wel geldig zijn.
+    #
+    #     zie: :class:`Pipeline.validate_domains`
+    #
+    #     :return: validation_msg
+    #
+    #     """
+    #     pass
 
     def validate_mappings_before_ddl(self):
         """
@@ -724,17 +717,3 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
 
 
 
-        # def get_layer_name_by_type(self, layer_type):
-    #     if layer_type == DwhLayerTypes.SOR:
-    #         return self.sor.name
-    #     elif layer_type == DwhLayerTypes.RDV:
-    #         return self.pipeline.dwh.rdv.name
-    #     elif layer_type == DwhLayerTypes.DV:
-    #         return self.pipeline.dwh.dv.name
-    #     else:
-    #         return self.pipeline.dwh.name
-
-# class Run():
-#     def __init__(self):
-#         self.runid = 1
-#         self.start_time = time.time()

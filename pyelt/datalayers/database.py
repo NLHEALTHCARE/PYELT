@@ -1,8 +1,11 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
+
+import time
+import psycopg2
+import psycopg2.extras
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.engine import reflection
 from sqlalchemy.sql.sqltypes import NullType
-
 from pyelt.helpers.global_helper_functions import camelcase_to_underscores
 
 
@@ -21,6 +24,101 @@ class Database():
         schema_names = inspector.get_schema_names()
         for schema_name in schema_names:
             self.reflected_schemas[schema_name] = Schema(schema_name, self)
+
+    def execute(self, sql: str, log_message: str=''):
+        self.log('-- ' + log_message.upper())
+        self.log( sql)
+
+        start = time.time()
+        connection = self.engine.raw_connection()
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        connection.commit()
+
+        rowcount = cursor.rowcount
+        self.log('-- duur: ' + str(time.time() - start) +  '; aantal rijen:' + str(cursor.rowcount))
+        self.log('-- =============================================================')
+        cursor.close()
+        return rowcount
+
+    def execute_without_commit(self, sql: str, log_message: str=''):
+        self.log('-- ' + log_message.upper())
+        self.log( sql)
+
+        start = time.time()
+        if not self.__cursor:
+            self.start_transaction()
+        self.__cursor.execute(sql)
+
+        self.log('-- duur: ' + str(time.time() - start) +  '; aantal rijen:' + str(self.__cursor.rowcount))
+        self.log('-- =============================================================')
+
+    def start_transaction(self):
+        connection = self.engine.raw_connection()
+        self.__conn = connection
+        self.__cursor = connection.cursor()
+
+    def commit(self, log_message: str = ''):
+        # connection = self.engine.raw_connection()
+        self.__conn.commit()
+        self.__conn.close()
+
+    def execute_returning(self, sql: str, log_message: str = ''):
+        self.log('-- ' + log_message.upper())
+        self.log(sql)
+
+        start = time.time()
+        connection = self.engine.raw_connection()
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        connection.commit()
+
+        result = cursor.fetchall()
+        self.log('-- duur: ' + str(time.time() - start) + '; aantal rijen:' + str(cursor.rowcount))
+        self.log('-- =============================================================')
+        cursor.close()
+        return result
+
+    def execute_read(self, sql, log_message='') -> List[List[Any]]:
+        self.log('-- ' + log_message.upper())
+        self.log(sql)
+
+        start = time.time()
+        # plan = text(sql)
+        # result = engine.execute(sql)
+
+        connection = self.engine.raw_connection()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute(sql)
+        result = cursor.fetchall()
+
+        self.log('-- duur: ' + str(time.time() - start) + '; aantal rijen:' + str(cursor.rowcount))
+        self.log('-- =============================================================')
+        cursor.close()
+        return result
+
+    def confirm_execute(self, sql: str, log_message: str='') -> None:
+        ask_confirm = False
+        if 'ask_confirm_on_db_changes' in self.config:
+            ask_confirm = self.config['ask_confirm_on_db_changes']
+        else:
+            ask_confirm = 'debug' in self.config and self.config['debug']
+        if ask_confirm:
+            sql_sliced = sql
+            if len(sql) > 50:
+                sql_sliced = sql[:50] + '...'
+            else:
+                sql_sliced = sql
+            result = input('{}\r\nWil je de volgende wijzigingen aanbrengen in de database?\r\n{}\r\n'.format(log_message.upper(), sql_sliced))
+            if result.strip().lower()[:1] == 'j' or result.strip().lower()[:1] ==  'y':
+                self.execute(sql, log_message)
+                # print(log_message, 'uitgevoerd')
+            else:
+                raise Exception('afgebroken')
+        else:
+            self.execute(sql, log_message)
+
+
 
 
 class Schema():

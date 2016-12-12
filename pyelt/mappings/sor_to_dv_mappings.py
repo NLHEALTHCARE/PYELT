@@ -48,7 +48,7 @@ class SorToEntityMapping(BaseTableMapping):
                 if col.default_value:
                     self.map_field(ConstantValue(col.default_value), col)
 
-    def map_field(self, source: Union[str, 'ConstantValue'], target: 'Column' = None, transform_func: 'FieldTransformation'=None, ref: str = '', type: str = '', json_field = '') -> None:
+    def map_field(self, source: Union[str, 'ConstantValue', list, dict], target: 'Column' = None, transform_func: 'FieldTransformation'=None, ref: str = '', type: str = '') -> None:
         if not source:
             return
         if not target:

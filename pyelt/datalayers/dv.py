@@ -27,6 +27,7 @@ class DV(Schema):
 
 
 class DVTable(Table):
+    _schema = 'dv'
     name = ''
 
     # _id = Columns.IntColumn()
@@ -152,6 +153,7 @@ class HybridSat(Sat):
 
 
 class DvEntity(EntityData):
+    _schema_name = 'dv'
     hub = Hub()
     bk = hub.bk
     sats = {} #type: Dict[str, Sat]
@@ -160,6 +162,7 @@ class DvEntity(EntityData):
     def init_cls(cls):
         cls.init_sats()
         cls.hub = cls.get_hub()
+        cls.hub._schema_name = cls._schema_name
         cls.bk = cls.hub.bk
 
     @classmethod
@@ -167,6 +170,7 @@ class DvEntity(EntityData):
         sats = cls.get_sats()
         for sat in sats.values():
             sat.init_cols()
+            sat._schema_name = cls._schema_name
 
     @classmethod
     def get_name(cls) -> str:
@@ -178,6 +182,12 @@ class DvEntity(EntityData):
         cls.hub.name = cls.get_hub_name()
         hub_name = cls.get_hub_name()
         return Hub(hub_name)
+
+    @classmethod
+    def get_schema(cls, dwh) -> 'Schema':
+        schema_name = cls._schema_name
+        schema = dwh.get_dv_schema(schema_name)
+        return schema
 
 
 
@@ -326,6 +336,9 @@ class DvEntity(EntityData):
         return self.__class__.get_name()
 
 
+class DvValuesetEntity(DvEntity):
+    _schema_name = 'valset'
+
 class LinkReference():
     def __init__(self, entity_cls: 'DvEntity', name: str = ''):
         self.entity_cls = entity_cls
@@ -348,6 +361,7 @@ class DynamicLinkReference():
         return fk
 
 class Link():
+    _schema_name = 'dv'
     @classmethod
     def init_cls(cls):
         for prop_name, prop in cls.__dict__.items():
@@ -376,6 +390,15 @@ class Link():
         if not link_name.endswith('_link'):
             link_name += '_link'
         return link_name
+
+    @classmethod
+    def get_schema(cls, dwh) -> 'Schema':
+        schema_name = cls._schema_name
+        if schema_name == 'dv':
+            schema = dwh.dv
+        elif schema_name == 'valset':
+            schema = dwh.valset
+        return schema
 
     @classmethod
     def get_entities_old(cls):
