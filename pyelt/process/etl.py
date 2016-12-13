@@ -382,13 +382,13 @@ class EtlSorToDv(BaseEtl):
             if not mappings.filter:
                 mappings.filter = '1=1'
             params = mappings.__dict__
-            dv_schema = mappings.target.get_schema(self.dwh)
+            dv_schema = mappings.target.cls_get_schema(self.dwh)
             params.update(self._get_fixed_params())
             params['dv_schema'] = dv_schema.name
-            params['hub'] = mappings.target.get_hub_name()
+            params['hub'] = mappings.target.cls_get_hub_name()
             if 'zorgactiviteit' in str(mappings):
                 debug = True
-            params['hub_type'] = mappings.target.get_hub_type()
+            params['hub_type'] = mappings.target.cls_get_hub_type()
             if mappings.type:
                 params['hub_type'] = mappings.type
             params['sor_table'] = mappings.source.name
@@ -458,7 +458,7 @@ AND {filter} AND {filter_runid};""".format( **params)
         satparams.update(self._get_fixed_params())
         sat_cls = sat_mappings.target
         satparams['dv_schema'] = params['dv_schema']
-        satparams['sat'] = sat_cls.get_name()
+        satparams['sat'] = sat_cls.cls_get_name()
 
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']
@@ -536,9 +536,9 @@ AND {filter} AND {filter_runid};""".format( **params)
         satparams = sat_mappings.__dict__
         satparams.update(self._get_fixed_params())
         sat_cls = sat_mappings.target
-        if 'hl7' in sat_cls.get_name():
+        if 'hl7' in sat_cls.cls_get_name():
             debug = True
-        satparams['sat'] = sat_cls.get_name()
+        satparams['sat'] = sat_cls.cls_get_name()
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']
             satparams['relation_type'] = params['relation_type']
@@ -619,9 +619,9 @@ AND {filter} AND {filter_runid};""".format( **params)
                 mappings.filter = '1=1'
             params = mappings.__dict__
             params.update(self._get_fixed_params())
-            dv_schema = mappings.target.get_schema(self.dwh)
+            dv_schema = mappings.target.cls_get_schema(self.dwh)
             params['dv_schema'] = dv_schema.name
-            params['link'] = mappings.target.get_name()
+            params['link'] = mappings.target.cls_get_name()
             params['link_type'] = mappings.type
             params['sor_table'] = mappings.source.name
             params['source_fks'] = self.__get_link_source_fks(mappings)

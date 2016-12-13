@@ -25,11 +25,11 @@ class MappingWriter():
         s += """\r\n\r\n"""
         s += """    mapping = SorToEntityMapping('{0}', {1}, sor)\r\n""".format(sor_table, entity.__name__)
         s += """    mapping.map_bk([''])\r\n""".format(sor_table, entity.__name__)
-        for sat_name, sat in entity.get_sats().items():
-            sat.init_cols()
+        for sat_name, sat in entity.cls_get_sats().items():
+            sat.cls_init_cols()
             s += """\r\n""".format(sor_table, entity.__name__)
             s += """    #SAT {}.{}\r\n""".format(entity.__name__, sat_name)
-            for col in sat.get_columns():
+            for col in sat.cls_get_columns():
                 source = ''
                 if col.type != 'text':
                     # cast

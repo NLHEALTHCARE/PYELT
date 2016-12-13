@@ -18,6 +18,7 @@ class DomainValidator:
         validation_msg = ''
         for name, cls in inspect.getmembers(module,  inspect.isclass):
             if DvEntity in cls.__mro__ and cls is not DvEntity:
+                cls.cls_init()
                 validation_msg += self.validate_entity(cls)
             elif Link in cls.__mro__ and cls is not Link and cls is not HybridLink:
                 validation_msg += self.validate_link(cls)
@@ -25,44 +26,44 @@ class DomainValidator:
 
     def validate_entity(self, entity_cls):
         validation_msg = ''
-        sat_classes = entity_cls.get_sats()
+        sat_classes = entity_cls.cls_get_sats()
         for sat_cls in sat_classes.values():
-            columns = sat_cls.get_columns()
+            columns = sat_cls.cls_get_columns()
             if not columns:
-                validation_msg += 'Domainclass <red>{}.{}</> is niet geldig. Sat <red>{}</> zonder velden.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.get_name())
+                validation_msg += 'Domainclass <red>{}.{}</> is niet geldig. Sat <red>{}</> zonder velden.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
             for col in columns:
                 if col.name[0].isnumeric():
-                    validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. Columnname <red>{}</> is ongeldig.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.get_name(),
+                    validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. Columnname <red>{}</> is ongeldig.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name(),
                                                                                                                                    col.name)
 
                 for char in DomainValidator.wrong_field_name_chars:
                     if char in col.name:
-                        validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. Columnname <red>{}</> is ongeldig.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.get_name(),
+                        validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. Columnname <red>{}</> is ongeldig.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name(),
                                                                                                                                        col.name)
 
                 if isinstance(col, Columns.RefColumn):
                     if not col.ref_type:
-                        validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. RefColumn <red>{}</> zonder type.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.get_name(),
+                        validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. RefColumn <red>{}</> zonder type.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name(),
                                                                                                                                       col.name)
             if sat_cls.__base__ == HybridSat:
                 if not 'Types' in sat_cls.__dict__:
                     validation_msg += 'Hybrid Sat <red>{}.{}.{}</> is niet geldig. Definieer in de HybridSat een inner-class Types(HybridSat.Types) met een aantal string constanten. Dit is nodig om de databse view aan te maken.\r\n'.format(
-                        entity_cls.__module__, entity_cls.__name__, sat_cls.get_name())
+                        entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
                 elif sat_cls.__dict__['Types'] and not type(sat_cls.__dict__['Types'].__base__) is OrderedMembersMetaClass:
                     validation_msg += 'Hybrid Sat <red>{}.{}.{}</> is niet geldig. Inner-class Types moet erven van HybridSat.Types zoals "class Types(HybridSat.Types):" .\r\n'.format(
-                        entity_cls.__module__, entity_cls.__name__, sat_cls.get_name())
+                        entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
 
-        for sat_cls in entity_cls.get_this_class_sats().values():
+        for sat_cls in entity_cls.cls_get_this_class_sats().values():
             if sat_cls.__name__.lower() == 'default' and entity_cls.__base__ is not DvEntity:
                 validation_msg += 'Domainclass <red>{}.{}</> is niet geldig. Sat <red>Default</> mag alleen hangen onder de class die rechtstreeks erft van DvEntity (degene die de hub wordt).\r\n'.format(
-                    entity_cls.__module__, entity_cls.__name__, sat_cls.get_name())
+                    entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
 
 
         return validation_msg
 
     def validate_link(self, link_cls: Link) -> str:
         validation_msg = ''
-        link_refs = link_cls.get_link_refs()
+        link_refs = link_cls.cls_get_link_refs()
         if len(link_refs) < 2:
             validation_msg += """Link <red>{}.{}</> is niet geldig. Een link moet ten minste twee LinkReferences bevatten (klasse variabelen van type LinkReference(DvEntity)).
             Een link moet er zo uit zien:

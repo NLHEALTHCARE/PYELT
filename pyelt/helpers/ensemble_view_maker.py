@@ -16,7 +16,7 @@ for cls in patient_ensemble:
         for prop_name, link_ref in cls.__dict__.items():
             if isinstance(link_ref, LinkReference) or isinstance(link_ref, DynamicLinkReference):
                 if 'entity_cls' in link_ref.__dict__ and link_ref.entity_cls in patient_ensemble:
-                    hub_name = link_ref.entity_cls.get_hub_name()
+                    hub_name = link_ref.entity_cls.cls_get_hub_name()
                     view_name = hub_name.replace('_hub', '_view')
                     sql_where += """{} = {}._id AND """.format(link_ref.get_fk(), view_name)
 

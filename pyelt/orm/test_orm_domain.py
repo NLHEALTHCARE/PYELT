@@ -5,7 +5,7 @@ from pyelt.orm.dv_objects import DbSession
 
 def main():
     session = DbSession(config=general_config, runid=99)
-    pat_hub = Patient.get_hub()
+    pat_hub = Patient.cls_get_hub()
     rows = pat_hub.load()
     for row in rows.values():
         print(row.bk, row._id)
@@ -14,7 +14,7 @@ def main():
     new_hub.bk = 'ajshdgashdg4'
     pat_hub.save()
 
-    Patient.init_cls()
+    Patient.cls_init()
     sat = Patient.Naamgegevens()
     rows = sat.load()
     for row in rows.values():

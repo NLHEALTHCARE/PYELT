@@ -366,8 +366,8 @@ class EtlSorToDv(BaseEtl):
                 mappings.filter = '1=1'
             params = mappings.__dict__
             params.update(self._get_fixed_params())
-            params['hub'] = mappings.target.get_hub_name()
-            params['hub_type'] = mappings.target.get_hub_type()
+            params['hub'] = mappings.target.cls_get_hub_name()
+            params['hub_type'] = mappings.target.cls_get_hub_type()
             if mappings.type:
                 params['hub_type'] = mappings.type
             params['sor_table'] = mappings.source.name
@@ -422,7 +422,7 @@ class EtlSorToDv(BaseEtl):
         satparams = sat_mappings.__dict__
         satparams.update(self._get_fixed_params())
         sat_cls = sat_mappings.target
-        satparams['sat'] = sat_cls.get_name()
+        satparams['sat'] = sat_cls.cls_get_name()
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']
             satparams['relation_type'] = params['relation_type']
@@ -456,9 +456,9 @@ class EtlSorToDv(BaseEtl):
         satparams = sat_mappings.__dict__
         satparams.update(self._get_fixed_params())
         sat_cls = sat_mappings.target
-        if 'hl7' in sat_cls.get_name():
+        if 'hl7' in sat_cls.cls_get_name():
             debug = True
-        satparams['sat'] = sat_cls.get_name()
+        satparams['sat'] = sat_cls.cls_get_name()
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']
             satparams['relation_type'] = params['relation_type']
@@ -539,7 +539,7 @@ class EtlSorToDv(BaseEtl):
                 mappings.filter = '1=1'
             params = mappings.__dict__
             params.update(self._get_fixed_params())
-            params['link'] = mappings.target.get_name()
+            params['link'] = mappings.target.cls_get_name()
             params['link_type'] = mappings.type
             params['sor_table'] = mappings.source.name
             params['source_fks'] = self.__get_link_source_fks(mappings)

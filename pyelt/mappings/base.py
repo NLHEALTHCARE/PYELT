@@ -11,7 +11,7 @@ class BaseMapping():
         self.source = source
         self.target = target
         if inspect.isclass(target):
-            self.name = '{} -> {}'.format(str(self.source)[:80], self.target.get_name())
+            self.name = '{} -> {}'.format(str(self.source)[:80], self.target.cls_get_name())
         else:
             self.name = '{} -> {}'.format(str(self.source)[:80], str(self.target))
 

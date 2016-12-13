@@ -356,8 +356,8 @@ Voorbeeld::
         self.domain_modules[module_name] = module
         # init module
         for name, cls in inspect.getmembers(module,  inspect.isclass):
-            if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
-                cls.init_cls()
+            if hasattr(cls, 'cls_init') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
+                cls.cls_init()
                 if not cls._schema_name:
                     cls._schema_name = schema_name
 
@@ -368,7 +368,7 @@ Voorbeeld::
         # init module
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
-                cls.init_cls()
+                cls.cls_init()
 
     def create_dv_from_domain(self, schema):
         """

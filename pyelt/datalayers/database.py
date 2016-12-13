@@ -136,7 +136,7 @@ class Schema():
         table_names = inspector.get_table_names(self.name)
         view_names = inspector.get_view_names(self.name)
         for view_name in view_names:
-            cols = inspector.get_columns(view_name, self.name)
+            cols = inspector.cls_get_columns(view_name, self.name)
             self.views[view_name] = inspector.get_view_definition(view_name, self.name)
 
         self.functions = self.reflect_functions()

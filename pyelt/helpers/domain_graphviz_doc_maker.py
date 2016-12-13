@@ -145,7 +145,7 @@ def make_doc_from_docstring(cls):
         wiki_syntax += "__**{}**__: ".format(cls.__name__)
         wiki_syntax += clean_docstring(cls.__doc__)
         wiki_syntax += '\n\n'
-    sat_classes = cls.get_this_class_sats()
+    sat_classes = cls.cls_get_this_class_sats()
     for sat_cls in sat_classes.values():
         if sat_cls.__doc__:
             wiki_syntax += "__//{}//__: ".format(sat_cls.name)
@@ -163,7 +163,7 @@ def make_doc_from_docstring_subclasses(cls, wiki_syntax):
     return wiki_syntax
 
 def make_hub_graph(entity_cls: DvEntity, module_color='black'):
-    entity_cls.init_cls()
+    entity_cls.cls_init()
     graph_syntax = ''
     hub_name = entity_cls.hub.name
     if hub_name not in all_objects:
@@ -191,7 +191,7 @@ def make_hub_graph_subclass(base_cls, sub_cls, module_color):
 
 def make_entity_graph(entity_cls: DvEntity, module_color='black'):
     """Maak een subgraph van hub met sats eromheen """
-    entity_cls.init_cls()
+    entity_cls.cls_init()
     graph_syntax = ''
     # doc += """beschrijving [shape="None" label = "{}"];\n""".format(doc_string)
     hub_name = entity_cls.hub.name
@@ -204,14 +204,14 @@ def make_entity_graph(entity_cls: DvEntity, module_color='black'):
     # for sat_cls in sat_classes.values():
     for key, sat_cls in entity_cls.__dict__.items():
         if inspect.isclass(sat_cls) and Sat in sat_cls.__mro__:
-            sat_cls.init_cols()
+            sat_cls.cls_init_cols()
             if sat_cls.__base__ == HybridSat:
                 label = '<b>{} (hybrid)</b><br/>'.format(sat_cls.name)
                 test = sat_cls.type
-                label += '<br/>Types: {}<br/>'.format(sat_cls.get_types())
+                label += '<br/>Types: {}<br/>'.format(sat_cls.cls_get_types())
             else:
                 label = '<b>{}</b><br/>'.format(sat_cls.name)
-            columns = sat_cls.get_columns()
+            columns = sat_cls.cls_get_columns()
             for col in columns:
                 if isinstance(col, Columns.RefColumn):
                     label += '<br/>{} (ref)'.format(col.name)
@@ -228,7 +228,7 @@ def make_entity_graph(entity_cls: DvEntity, module_color='black'):
 
 def make_sub_entity_graph(base_cls: DvEntity, sub_cls: DvEntity, module_color='black'):
     """Maak een subgraph van hub met sats eromheen """
-    base_cls.init_cls()
+    base_cls.cls_init()
     graph_syntax = ''
     # doc += """beschrijving [shape="None" label = "{}"];\n""".format(doc_string)
     base_name = base_cls.__name__.lower()
@@ -246,14 +246,14 @@ def make_sub_entity_graph(base_cls: DvEntity, sub_cls: DvEntity, module_color='b
     # for sat_cls in sat_classes.values():
     for key, sat_cls in sub_cls.__dict__.items():
         if inspect.isclass(sat_cls) and Sat in sat_cls.__mro__:
-            sat_cls.init_cols()
+            sat_cls.cls_init_cols()
             if sat_cls.__base__ == HybridSat:
                 label = '<b>{} (hybrid)</b><br/>'.format(sat_cls.name)
                 test = sat_cls.type
-                label += '<br/>Types: {}<br/>'.format(sat_cls.get_types())
+                label += '<br/>Types: {}<br/>'.format(sat_cls.cls_get_types())
             else:
                 label = '<b>{}</b><br/>'.format(sat_cls.name)
-            columns = sat_cls.get_columns()
+            columns = sat_cls.cls_get_columns()
             for col in columns:
                 if isinstance(col, Columns.RefColumn):
                     label += '<br/>{} (ref)'.format(col.name)
@@ -272,7 +272,7 @@ def make_link_graph(link_cls, module_color='black'):
 
     if link_cls.__name__ not in all_objects:
         all_objects.append(link_cls.__name__)
-        link_refs = link_cls.get_link_refs()
+        link_refs = link_cls.cls_get_link_refs()
         graph_syntax += """{0} [shape="box" penwidth="3" color="{1}" URL="" style="filled" gradientangle="270" fillcolor="white:#FF9999"];\n""".format(link_cls.__name__, module_color)
 
         for name, link_ref in link_refs.items():
