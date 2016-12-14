@@ -7,7 +7,7 @@ from tests.unit_tests_extra._domeinmodel import *
 from pyelt.datalayers.database import Table
 from pyelt.helpers.mappingcreator import MappingWriter
 from pyelt.mappings.base import ConstantValue
-from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping, SorToEntityMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, SorToEntityMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.mappings.transformations import FieldTransformation
 from pyelt.sources.databases import SourceQuery, SourceTable
@@ -65,7 +65,7 @@ def lookup():
 def init_ref_mappings():
     mappings = []
 
-    ref_mapping = SorToRefMapping({'soort1': 'Soort omschrijving 1', 'soort2': 'Soort omschrijving 2', 'soort 3': 'Soort omschrijving 3'}, 'handeling_soorten')
+    ref_mapping = SorToValueSetMapping({'soort1': 'Soort omschrijving 1', 'soort2': 'Soort omschrijving 2', 'soort 3': 'Soort omschrijving 3'}, 'handeling_soorten')
     mappings.append(ref_mapping)
     return mappings
 

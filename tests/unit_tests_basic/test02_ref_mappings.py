@@ -2,19 +2,19 @@ import unittest
 
 from tests.unit_tests_basic.global_test_suite import *
 
-from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping
 
 
 def init_test_ref_mappings():
         mappings = []
 
-        ref_mapping = SorToRefMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
+        ref_mapping = SorToValueSetMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
         mappings.append(ref_mapping)
 
-        ref_mapping = SorToRefMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
+        ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
         mappings.append(ref_mapping)
 
-        ref_mapping = SorToRefMapping('patient_hstage', 'geslacht_types2')
+        ref_mapping = SorToValueSetMapping('patient_hstage', 'geslacht_types2')
         ref_mapping.map_code_field('patient_hstage.geslacht')
         ref_mapping.map_descr_field('patient_hstage.geslacht')
         mappings.append(ref_mapping)

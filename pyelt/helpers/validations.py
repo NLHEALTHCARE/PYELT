@@ -3,10 +3,10 @@ from typing import List
 
 from pyelt.datalayers.database import Columns, Table, DbFunction, Column
 from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference, DynamicLinkReference, OrderedMembersMetaClass, \
-    HybridLink
+    HybridLink, DvValueset
 from pyelt.datalayers.sor import SorTable, SorQuery
 from pyelt.mappings.base import BaseTableMapping, ConstantValue
-from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping, SorToEntityMapping, SorToLinkMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, SorToEntityMapping, SorToLinkMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.sources.databases import SourceQuery
 
@@ -22,6 +22,8 @@ class DomainValidator:
                 validation_msg += self.validate_entity(cls)
             elif Link in cls.__mro__ and cls is not Link and cls is not HybridLink:
                 validation_msg += self.validate_link(cls)
+            elif DvValueset in cls.__mro__ and cls is not DvValueset:
+                validation_msg += self.validate_valueset(cls)
         return validation_msg
 
     def validate_entity(self, entity_cls):
@@ -42,7 +44,7 @@ class DomainValidator:
                                                                                                                                        col.name)
 
                 if isinstance(col, Columns.RefColumn):
-                    if not col.ref_type:
+                    if not col.valueset_name:
                         validation_msg += 'Domainclass <red>{}.{}.{}</> is niet geldig. RefColumn <red>{}</> zonder type.\r\n'.format(entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name(),
                                                                                                                                       col.name)
             if sat_cls.__base__ == HybridSat:
@@ -79,6 +81,31 @@ class DomainValidator:
                     link_cls.__module__, link_cls.__name__, link_ref.name)
         return validation_msg
 
+    def validate_valueset(self, valueset_cls: DvValueset) -> str:
+        validation_msg = ''
+        valueset_cls.cls_init_cols()
+        contains_code_field = False
+        contains_valueset_name_field = False
+        contains_ref_column = False
+        for key, col in valueset_cls.cls_get_columns().items():
+            if isinstance(col, Column):
+                if col.name == 'code':
+                    contains_code_field = True
+                elif col.name == 'valueset_naam':
+                    contains_valueset_name_field = True
+                if isinstance(col, Columns.RefColumn):
+                    contains_ref_column = True
+        if not contains_code_field:
+            validation_msg += """ValueSet <red>{}.{}</> is niet geldig. Een ValueSet moet ten minste een code veld bevatten.""".format(
+                valueset_cls.__module__, valueset_cls.__name__)
+        if not contains_code_field:
+            validation_msg += """ValueSet <red>{}.{}</> is niet geldig. Een ValueSet moet ten minste een valueset_naam veld bevatten.""".format(
+                valueset_cls.__module__, valueset_cls.__name__)
+        # if contains_ref_column:
+        #     validation_msg += """ValueSet <red>{}.{}</> is niet geldig. Een ValueSet mag geen refcolumn bevatten.""".format(
+        #         valueset_cls.__module__, valueset_cls.__name__)
+        return validation_msg
+
 
 class MappingsValidator:
     """Helper om domein classes te valideren (entities, hubs, sats en links). Wordt aangeroepen voordat run start in pipeline.pipe"""
@@ -100,7 +127,7 @@ class MappingsValidator:
         for mappings in mappings_list:
             if isinstance(mappings, SourceToSorMapping):
                 validation_msg += self.validate_source_to_sor_mappings_after_ddl(mappings)
-            elif isinstance(mappings, SorToRefMapping):
+            elif isinstance(mappings, SorToValueSetMapping):
                 validation_msg += self.validate_sor_to_ref_mappings(mappings)
             elif isinstance(mappings, SorToEntityMapping):
                 validation_msg += self.validate_sor_to_entity_mappings(mappings)

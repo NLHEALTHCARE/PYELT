@@ -3,7 +3,7 @@ import unittest
 from tests.unit_tests_extra import _domeinmodel
 from tests.unit_tests_extra._configs import test_system_config
 from tests.unit_tests_extra._globals import *
-from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.sources.databases import SourceQuery, SourceTable
 
@@ -68,13 +68,13 @@ WHERE
 def init_ref_mappings():
     mappings = []
 
-    ref_mapping = SorToRefMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
+    ref_mapping = SorToValueSetMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
     mappings.append(ref_mapping)
 
-    ref_mapping = SorToRefMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
+    ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
     mappings.append(ref_mapping)
 
-    ref_mapping = SorToRefMapping('handeling_hstage', 'specialisaties')
+    ref_mapping = SorToValueSetMapping('handeling_hstage', 'specialisaties')
     ref_mapping.map_code_field('fk_spec')
     ref_mapping.map_descr_field('spec')
     mappings.append(ref_mapping)
@@ -132,7 +132,7 @@ class TestCase_RunRef(unittest.TestCase):
         print('===        R U N  3                                ===')
         print('======================================================')
         # relatie_soorten aanpassen: nieuwe
-        ref_mapping = SorToRefMapping({'9': 'patienten', '7': 'mdw', '6': 'artsen'}, 'relatie_soorten')
+        ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw', '6': 'artsen'}, 'relatie_soorten')
         self.pipe.mappings.append(ref_mapping)
         self.pipeline.run()
         self.assertEqual(get_row_count('dv._ref_valuesets'), 3)
@@ -145,7 +145,7 @@ class TestCase_RunRef(unittest.TestCase):
         print('===        R U N  4                                ===')
         print('======================================================')
         # relatie_soorten aanpassen: naam wijzigen
-        ref_mapping = SorToRefMapping({'9': 'patienten', '7': 'medewerkers', '6': 'artsen'}, 'relatie_soorten')
+        ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'medewerkers', '6': 'artsen'}, 'relatie_soorten')
         self.pipe.mappings.append(ref_mapping)
         self.pipeline.run()
         self.assertEqual(get_row_count('dv._ref_valuesets'), 3)
@@ -181,7 +181,7 @@ class TestCase_RunRef(unittest.TestCase):
         print('======================================================')
         self.pipe.mappings = []
         self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
-        ref_mapping = SorToRefMapping('handeling_hstage', 'specialisaties2')
+        ref_mapping = SorToValueSetMapping('handeling_hstage', 'specialisaties2')
         ref_mapping.map_code_field('fk_spec')
         ref_mapping.map_descr_field('spec')
         ref_mapping.map_type_field('spec_type', "'oid'")
@@ -204,7 +204,7 @@ class TestCase_RunRef(unittest.TestCase):
         # map met alleen code field
         self.pipe.mappings = []
         self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
-        ref_mapping = SorToRefMapping('handeling_hstage', 'specialisaties3')
+        ref_mapping = SorToValueSetMapping('handeling_hstage', 'specialisaties3')
         ref_mapping.map_code_field('fk_spec')
         self.pipe.mappings.extend([ref_mapping])
         self.pipeline.run()

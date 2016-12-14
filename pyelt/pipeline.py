@@ -8,12 +8,12 @@ from main import get_root_path
 # from sample_domains import _ensemble_views
 from pyelt.datalayers.database import Schema, DbFunction
 from pyelt.datalayers.dm import Dim, Fact
-from pyelt.datalayers.dv import DvEntity, Link, EnsembleView, HybridLink
-from pyelt.datalayers.dwh import Dwh
+from pyelt.datalayers.dv import DvEntity, Link, EnsembleView, HybridLink, DvValueset
+from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
 
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
 from pyelt.helpers.validations import DomainValidator, MappingsValidator
-from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping, EntityViewToEntityMapping, EntityViewToLinkMapping, SorToEntityMapping, SorToLinkMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, EntityViewToEntityMapping, EntityViewToLinkMapping, SorToEntityMapping, SorToLinkMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.mappings.validations import SorValidation, DvValidation, Validation
 from pyelt.process.ddl import DdlSor, DdlDv, Ddl, DdlDatamart
@@ -100,7 +100,7 @@ Voorbeeld::
             self.pipes[source_system] = pipe
         return self.pipes[source_system]
 
-    def run(self, parts=['sor', 'refs', 'hubs', 'links', 'views', 'viewlinks']) -> None:
+    def run(self, parts=['sor', 'valuesets', 'hubs', 'links', 'views', 'viewlinks']) -> None:
         """
         Deze functie start de run van de pipeline. Er wordt ddl uitgevoerd, een logbestand aangemaakt, een sql_logbestand en de etl per pipe wordt uitgevoerd..
 
@@ -128,8 +128,12 @@ Voorbeeld::
 
         self.logger.log('<b>START RUN {0:.2f}</>'.format(self.runid))
         self.logger.log('<b>START DDL</>')
-        for dv_schema in self.dwh.dvs.values():
-            self.create_dv_from_domain(dv_schema)
+        for dv_schema in self.dwh.schemas.values():
+            if dv_schema.schema_type == DwhLayerTypes.VALSET:
+                self.create_valueset_from_domain(dv_schema)
+        for dv_schema in self.dwh.schemas.values():
+            if dv_schema.schema_type == DwhLayerTypes.DV:
+                self.create_dv_from_domain(dv_schema)
 
         for pipe in self.pipes.values():
             self.logger.log('DDL PIPE ' + pipe.source_system, indent_level=1)
@@ -370,6 +374,24 @@ Voorbeeld::
             if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
                 cls.cls_init()
 
+    def create_valueset_from_domain(self, schema):
+        """
+        Voert ddl uit van de dv laag. Maakt eventuele nieuwe tabellen aan (hubs, sats en links) gebaseerd op de gedefiniëerde domeinen.
+
+        """
+        self.logger.log('START CREATE VALSET'.format(self.runid), indent_level=2)
+        ddl = DdlDv(self, schema)
+
+        ddl.create_or_alter_table_exceptions(schema)
+        domain_modules = {k:v for k,v in self.domain_modules.items() if k.startswith(schema.name + '.')}
+
+        # VALUESETS
+        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
+        for module_name, module in domain_modules.items():
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if cls.__base__ == DvValueset:
+                    ddl.create_or_alter_valueset(cls)
+
     def create_dv_from_domain(self, schema):
         """
         Voert ddl uit van de dv laag. Maakt eventuele nieuwe tabellen aan (hubs, sats en links) gebaseerd op de gedefiniëerde domeinen.
@@ -377,36 +399,41 @@ Voorbeeld::
         """
         self.logger.log('START CREATE DV'.format(self.runid), indent_level=2)
         ddl = DdlDv(self, schema)
-        if schema.name == 'valset':
-            ddl.create_or_alter_table_valueset(schema)
+
         ddl.create_or_alter_table_exceptions(schema)
-        for module_name, module in self.domain_modules.items():
-            if not module_name.startswith(schema.name + '.'):
-                continue
+        domain_modules = {k:v for k,v in self.domain_modules.items() if k.startswith(schema.name + '.')}
+
+        #CREATE HUBS AND SATS
+        for module_name, module in domain_modules.items():
+            # if not module_name.startswith(schema.name + '.'):
+            #     continue
             for name, cls in inspect.getmembers(module, inspect.isclass):
                 if DvEntity in cls.__bases__:
                     ddl.create_or_alter_entity(cls)
 
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
-        for module_name,module in self.domain_modules.items():
-            if not module_name == schema.name:
-                continue
-            for name, cls in inspect.getmembers(module, inspect.isclass):
-                if DvEntity in cls.__mro__ and cls != DvEntity:
-                    ddl.create_or_alter_view(cls)
-
+        # LINKS
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
-        for module_name,module in self.domain_modules.items():
-            if not module_name.startswith(schema.name + '.'):
-                continue
+        for module_name, module in domain_modules.items():
             for name, cls in inspect.getmembers(module, inspect.isclass):
                 if cls.__base__ == Link and cls != HybridLink:
                     ddl.create_or_alter_link(cls)
 
+        # # VALUESETS
+        # # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
+        # for module_name, module in domain_modules.items():
+        #     for name, cls in inspect.getmembers(module, inspect.isclass):
+        #         if cls.__base__ == DvValueset:
+        #             ddl.create_or_alter_valueset(cls)
+
+        #CREATE VIEWS
+        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
+        for module_name,module in domain_modules.items():
+            for name, cls in inspect.getmembers(module, inspect.isclass):
+                if DvEntity in cls.__mro__ and cls != DvEntity:
+                    ddl.create_or_alter_view(cls)
+
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden
-        for module_name,module in self.domain_modules.items():
-            if not module_name.startswith(schema.name + '.'):
-                continue
+        for module_name,module in domain_modules.items():
             for name, cls in inspect.getmembers(module, inspect.isclass):
                 if cls.__base__ == EnsembleView:
                     ddl.create_or_alter_ensemble_view(cls)
@@ -419,10 +446,8 @@ Voorbeeld::
 
         """
         self.logger.log('START CREATE DATAMARTS', indent_level=2)
-
         for name, module in self.datamart_modules.items():
             ddl = DdlDatamart(self, self.dwh.get_or_create_datamart_schema(name))
-
             for name, cls in inspect.getmembers(module, inspect.isclass):
                 if cls.__base__ == Dim:
                     ddl.create_or_alter_dim(cls)
@@ -433,10 +458,6 @@ Voorbeeld::
                     ddl.create_or_alter_fact(cls)
 
         self.logger.log('FINISH CREATE DATAMARTS', indent_level=2)
-
-
-
-
 
 
 
@@ -485,7 +506,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             self.source_db = SourceDatabase(config['source_connection'], config['default_schema'], temp_data_transfer_path)
         elif 'source_path' in config:
             self.source_path = config['source_path']
-        self.sor = pipeline.dwh.get_or_create_sor_schema(config)
+        self.sor = pipeline.dwh.get_or_create_sor_schema(config['sor_schema'])
 
         self.db_functions = {}
         self.extra_sql_statements = []  # type: List[str]
@@ -572,26 +593,16 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             if sql[0]:
                 ddl.execute(sql[1], "EXTRA SQL STATEMENT")
 
-    def run(self, parts = ['sor', 'refs', 'hubs', 'links', 'views', 'viewlinks']):
+    def run(self, parts = ['sor', 'valuesets', 'hubs', 'links', 'views', 'viewlinks']):
         """
         :param parts: lijst van keywords. De eventuele aanwezigheid van een keyword in deze lijst bepaald of het log bestand dat hoort bij dit keyword gemaakt wordt en of de bijhorende DDL uitgevoerd wordt.
 
         """
 
-        # self.pipeline.dwh.create_schemas_if_not_exists(self.sor.name)
-        # self.validate_mappings()
-
-
         if 'sor' in parts:
             #SOR
             etl = EtlSourceToSor(self)
             self.pipeline.logger.log('START FROM SOURCE TO SOR', indent_level=1)
-            # for mapping in self.mappings:
-            #     if isinstance(mapping, SourceToSorMapping):
-            #         ddl = DdlSor(self)
-            #         ddl.create_or_alter_sor(mapping)
-            # for db_function in self.db_functions:
-            #     ddl.create_or_alter_sor_functions(db_function)
 
             for mapping in self.mappings:
                 if isinstance(mapping, SourceToSorMapping):
@@ -606,17 +617,14 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             self.pipeline.logger.log('FINISH FROM SOURCE TO SOR', newline=True, indent_level=1)
 
         #DV
-
         ddl = DdlDv(self)
-
-        # self.create_db_from_domain()
         etl = EtlSorToDv(self)
-        if 'refs' in parts:
-            self.pipeline.logger.log('START FROM SOR TO REFS', indent_level=1)
+        if 'valuesets' in parts:
+            self.pipeline.logger.log('START FROM SOR TO VALUESETS', indent_level=1)
             #DV refs
             for mapping in self.mappings:
-                if isinstance(mapping, SorToRefMapping):
-                    etl.sor_to_ref(mapping)
+                if isinstance(mapping, SorToValueSetMapping):
+                    etl.sor_to_valuesets(mapping)
             self.pipeline.logger.log('FINISH FROM SOR TO REFS', newline=True, indent_level=1)
 
         # DV Entities (Hubs en Sats)
@@ -664,10 +672,6 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         #delete /tmp/datatranfser
         if self.source_db:
             path = self.source_db.get_or_create_datatransfer_path()
-            # shutil.rmtree(path)
-
-######
-
 
 
     def validate(self):
@@ -679,17 +683,6 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         validation_msg = self.validate_domains()
         validation_msg += self.validate_mappings_after_ddl()
         return validation_msg
-
-    # def validate_domains(self):
-    #     """
-    #     Valideert of er een domein is gedefiniëerd en via een aantal andere functies of de eventueel gebruikte entiteiten, hybridsats of links wel geldig zijn.
-    #
-    #     zie: :class:`Pipeline.validate_domains`
-    #
-    #     :return: validation_msg
-    #
-    #     """
-    #     pass
 
     def validate_mappings_before_ddl(self):
         """

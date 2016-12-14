@@ -2,7 +2,7 @@ from pyelt.datalayers.database import Table, Schema
 from pyelt.datalayers.dv import HybridSat
 from pyelt.datalayers.sor import SorTable, SorQuery
 from pyelt.mappings.base import ConstantValue
-from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping, SorToLinkMapping, SorToRefMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping, SorToLinkMapping, SorToValueSetMapping
 from pyelt.mappings.validations import DvValidation, SorValidation
 from pyelt.sources.databases import SourceTable, SourceQuery
 from pyelt.sources.files import File, CsvFile
@@ -669,7 +669,7 @@ AND hstg._valid AND {filter};""".format(
             alias = field_mapping.source_alias
         return alias
 
-    def sor_to_ref(self, mappings: SorToRefMapping):
+    def sor_to_ref(self, mappings: SorToValueSetMapping):
         self.logger.log('  START {}'.format(mappings))
         try:
             params = mappings.__dict__

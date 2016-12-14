@@ -4,7 +4,7 @@ from pyelt.datalayers.database import Table, Schema
 from pyelt.datalayers.dv import HybridSat
 from pyelt.datalayers.sor import SorTable, SorQuery
 from pyelt.mappings.base import ConstantValue
-from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping, SorToLinkMapping, SorToRefMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping, SorToLinkMapping, SorToValueSetMapping
 from pyelt.mappings.validations import DvValidation, SorValidation
 from pyelt.sources.databases import SourceTable, SourceQuery
 from pyelt.sources.files import File, CsvFile
@@ -751,11 +751,53 @@ AND hstg._valid AND {filter};""".format(
             alias = field_mapping.source_alias
         return alias
 
-    def sor_to_ref(self, mappings: SorToRefMapping):
+    def sor_to_valuesets(self, mappings: SorToValueSetMapping):
+        self.logger.log('  START {}'.format(mappings))
+        try:
+            if not mappings.filter:
+                mappings.filter = '1=1'
+            params = mappings.__dict__
+            params.update(self._get_fixed_params())
+            params['valset_schema'] = self.pipeline.dwh.valset.name
+            params['valset_table'] = mappings.target.cls_get_name()
+            params['valset_fields'] =  mappings.get_target_fields()
+            params['sor_table'] = mappings.source.name
+            params['sor_fields'] = mappings.get_source_fields('hstg')
+            params['from'] = "{sor}.{sor_table} AS hstg".format(**params)
+
+            insert_sql = """INSERT INTO {valset_schema}.{valset_table} (_runid, _source_system, _insert_date, _revision, {valset_fields})
+                                SELECT  {runid}, '{source_system}', now(), 0, {sor_fields}
+                                FROM {from} WHERE hstg._valid AND hstg._active
+                                AND {filter}
+                                --AND NOT EXISTS (SELECT 1 FROM {valset_schema}.{valset_table} valset where valset.code = hst.code and valset._runid = {runid})
+                                --AND filter_runid
+                                EXCEPT
+                                SELECT {runid}, '{source_system}', now(), 0, {valset_fields}
+                                FROM {valset_schema}.{valset_table} valset
+                                WHERE valset._active;""".format(
+                **params)
+            self.execute(insert_sql, 'insert valuesets')
+
+            # oude is nog actief, maar runid is kleiner. Dit is het laatste record
+            update_sql = """update {valset_schema}.{valset_table} current set _revision = previous._revision + 1
+                    from {valset_schema}.{valset_table} previous where current._active = True AND previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
+                **params)
+            self.execute(update_sql, 'update valset revision')
+            # nu oude inctief maken
+            update_sql = """update {valset_schema}.{valset_table} previous set _active = False, _finish_date = current._insert_date
+                    from {valset_schema}.{valset_table} current where previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
+                **params)
+            self.execute(update_sql, 'update valueset_code set old ones inactive')
+            self.logger.log('  FINISH {}'.format(mappings))
+        except Exception as ex:
+            self.logger.log_error(mappings.name, err_msg=ex.args[0])
+
+    def sor_to_valuesets_old(self, mappings: SorToValueSetMapping):
         self.logger.log('  START {}'.format(mappings))
         try:
             params = mappings.__dict__
             params.update(self._get_fixed_params())
+            params['valset_schema'] = self.pipeline.dwh.valset.name
 
             if isinstance(mappings.source, dict):
                 values = ''
@@ -767,83 +809,83 @@ AND hstg._valid AND {filter};""".format(
                 params['values'] = values
                 insert_sql = """
 
-                    CREATE TEMP TABLE _ref_values_temp (code text, weergave_naam text);
+                    CREATE TEMP TABLE _valueset_code_temp (code text, weergave_naam text);
 
-                    INSERT INTO _ref_values_temp (code, weergave_naam)
+                    INSERT INTO _valueset_code_temp (code, weergave_naam)
                     VALUES {values};
 
-                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
-                    SELECT {runid}, '{source_system}', now(), '{ref_type}', NULL
-                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
+                    INSERT INTO {valset_schema}.valueset (_runid, _source_system, _insert_date, naam, oid)
+                    SELECT {runid}, '{source_system}', now(), '{valueset}', NULL
+                    WHERE NOT EXISTS (SELECT 1 FROM {valset_schema}.valueset sets WHERE sets.naam = '{valueset}');
 
-                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam)
-                    SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{ref_type}', code, weergave_naam
-                    FROM _ref_values_temp tmp
+                    INSERT INTO {valset_schema}.valueset_code (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam)
+                    SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{valueset}', code, weergave_naam
+                    FROM _valueset_code_temp tmp
                     WHERE
-                      NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = tmp.code AND ref.weergave_naam = tmp.weergave_naam);
+                      NOT EXISTS (SELECT 1 FROM {valset_schema}.valueset_code code WHERE code.valueset_naam = '{valueset}' AND code.code = tmp.code AND code.weergave_naam = tmp.weergave_naam);
 
 
-                    DROP TABLE _ref_values_temp;
+                    DROP TABLE _valueset_code_temp;
                       """.format(**params)
             elif mappings.source_type_field:
                 insert_sql = """
-                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    INSERT INTO {valset_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
                     SELECT DISTINCT {runid}, '{source_system}', now(), {source_type_field}, {source_oid_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = hstg.{source_type_field});
+                      AND NOT EXISTS (SELECT 1 FROM {valset_schema}._ref_valuesets sets WHERE sets.naam = hstg.{source_type_field});
 
-                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_oid, valueset_naam, code, weergave_naam, niveau, niveau_type)
+                    INSERT INTO {valset_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_oid, valueset_naam, code, weergave_naam, niveau, niveau_type)
                     SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, {source_oid_field}, {source_type_field}, {source_code_field}, {source_descr_field}, {source_level_field}, {source_leveltype_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = hstg.{source_type_field} AND ref.code = hstg.{source_code_field}
+                      AND NOT EXISTS (SELECT 1 FROM {valset_schema}._ref_values ref WHERE ref.valueset_naam = hstg.{source_type_field} AND ref.code = hstg.{source_code_field}
                                 AND ref.weergave_naam = hstg.{source_descr_field} AND ref.niveau = {source_level_field});""".format(**params)
             elif mappings.source_code_field and not mappings.source_descr_field:
                 insert_sql = """
-                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
-                    SELECT {runid}, '{source_system}', now(), '{ref_type}', NULL
-                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
+                    INSERT INTO {valset_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    SELECT {runid}, '{source_system}', now(), '{valueset}', NULL
+                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{valueset}');
 
-                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type)
-                    SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{ref_type}', {source_code_field}, NULL, NULL, NULL,
+                    INSERT INTO {valset_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type)
+                    SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{valueset}', {source_code_field}, NULL, NULL, NULL,
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = hstg.{source_code_field}
+                      AND NOT EXISTS (SELECT 1 FROM {valset_schema}._ref_values ref WHERE ref.valueset_naam = '{valueset}' AND ref.code = hstg.{source_code_field}
                                     AND ref.weergave_naam = hstg.{source_descr_field} AND ref.niveau = {source_level_field} AND ref.niveau_type = {source_leveltype_field)};""".format(**params)
             else:
                 insert_sql = """
-                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
-                    SELECT {runid}, '{source_system}', now(), '{ref_type}', NULL
-                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
+                    INSERT INTO {valset_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    SELECT {runid}, '{source_system}', now(), '{valueset}', NULL
+                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{valueset}');
 
-                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type))
-                    SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{ref_type}', {source_code_field}, {source_descr_field}, {source_level_field}, {source_leveltype_field}
+                    INSERT INTO {valset_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type))
+                    SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{valueset}', {source_code_field}, {source_descr_field}, {source_level_field}, {source_leveltype_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = hstg.{source_code_field}
+                      AND NOT EXISTS (SELECT 1 FROM {valset_schema}._ref_values ref WHERE ref.valueset_naam = '{valueset}' AND ref.code = hstg.{source_code_field}
                                     AND ref.weergave_naam = {source_descr_field} AND ref.niveau = {source_level_field} AND ref.niveau_type = {source_leveltype_field);""".format(**params)
 
-            self.execute(insert_sql, 'insert refs')
+            self.execute(insert_sql, 'insert valuesets')
 
             # oude is nog actief, maar runid is kleiner. Dit is het laatste record
-            insert_sql = """update {dv_schema}._ref_values current set _revision = previous._revision + 1
-                    from {dv_schema}._ref_values previous where current._active = True AND previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
+            update_sql = """update {valset_schema}.valueset_code current set _revision = previous._revision + 1
+                    from {valset_schema}.valueset_code previous where current._active = True AND previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
                 **params)
-            self.execute(insert_sql, 'update ref revision')
+            self.execute(update_sql, 'update valset revision')
             # nu oude inctief maken
-            insert_sql = """update {dv_schema}._ref_values previous set _active = False, _finish_date = current._insert_date
-                    from {dv_schema}._ref_values current where previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
+            update_sql = """update {valset_schema}.valueset_code previous set _active = False, _finish_date = current._insert_date
+                    from {valset_schema}.valueset_code current where previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
                 **params)
-            self.execute(insert_sql, 'update ref set old ones inactive')
+            self.execute(update_sql, 'update valueset_code set old ones inactive')
             self.logger.log('  FINISH {}'.format(mappings))
         except Exception as ex:
             self.logger.log_error(mappings.name, err_msg=ex.args[0])
-            
+
     def view_to_entity(self, mappings):
         self.logger.log('  START {}'.format(mappings))
         try:

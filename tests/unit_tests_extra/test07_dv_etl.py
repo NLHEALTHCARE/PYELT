@@ -7,7 +7,7 @@ from tests.unit_tests_extra._domeinmodel import *
 from pyelt.datalayers.database import Table
 from pyelt.helpers.mappingcreator import MappingWriter
 from pyelt.mappings.base import ConstantValue
-from pyelt.mappings.sor_to_dv_mappings import SorToRefMapping, SorToEntityMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, SorToEntityMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.sources.databases import SourceQuery, SourceTable
 

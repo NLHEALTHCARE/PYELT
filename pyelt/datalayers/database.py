@@ -122,9 +122,10 @@ class Database():
 
 
 class Schema():
-    def __init__(self, name: str, db: 'Database') -> None:
+    def __init__(self, name: str, db: 'Database', schema_type: str = '') -> None:
         self.name = name  #type: str
         self.db = db  #type: Database
+        self.schema_type = schema_type
         self.tables = {} #type: Dict[str, Table]
         self.views = {} #type: Dict[str, View]
         self.functions = {}  # type: Dict[str, DbFunction]
@@ -136,7 +137,7 @@ class Schema():
         table_names = inspector.get_table_names(self.name)
         view_names = inspector.get_view_names(self.name)
         for view_name in view_names:
-            cols = inspector.cls_get_columns(view_name, self.name)
+            cols = inspector.get_columns(view_name, self.name)
             self.views[view_name] = inspector.get_view_definition(view_name, self.name)
 
         self.functions = self.reflect_functions()
@@ -480,9 +481,9 @@ class Columns():
             super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
 
     class RefColumn(Column):
-        def __init__(self,  ref_type:str,name:str = '', default_value='', fhir_name=''):
+        def __init__(self,  valueset_name:str,name:str = '', default_value='', fhir_name=''):
             super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
-            self.ref_type = ref_type
+            self.valueset_name = valueset_name
 
     class DateTimeColumn(Column):
         def __init__(self, name:str = '', default_value='', fhir_name=''):

@@ -12,10 +12,11 @@ from pyelt.datalayers.sor import Sor
 
 
 class DwhLayerTypes():
-    """We onderscheiden 4 soorten database schemas:
+    """We onderscheiden 5 soorten database schemas:
 
     * Sor: laag met historische staging tabellen
     * Dv: laag met hubs, sats en links
+    * Valset: laag met referentie data (code, omschrijving combinaties)
     * Dm: laag met dims en facts
     * sys: laag met logging info over de runs
 
@@ -26,6 +27,7 @@ class DwhLayerTypes():
     """
     SOR = 'SOR' #type: str
     DV = 'DV' #type: str
+    VALSET = 'VALSET'  # type: str
     DM = 'DM' #type: str
     SYS = 'SYS' #type: str
 
@@ -35,61 +37,63 @@ class Dwh(Database):
         if 'conn_dwh' in self.config:
             conn_string = self.config['conn_dwh']  # type: str
             super().__init__(conn_string)
-        self.sys = Schema('sys', self)  # type: Schema
-        self.sors = {}  #type: Dict[str, Schema]
-        self.dvs = {}  #type: Dict[str, Schema]
-        self.datamarts = {}  #type: Dict[str, Schema]
-        #standaard 3 dv schemas aanmaken
-        # self.dvs['rdv'] = Schema('rdv', self)  # type: Schema
-        self.dvs['dv'] = Schema('dv', self)  # type: Schema
-        self.dvs['valset'] = Schema('valset', self)  # type: Schema
+        self.schemas = {}
+        self.schemas['dv'] = Schema('dv', self, DwhLayerTypes.DV)  # type: Schema
+        self.schemas['valset'] = Schema('valset', self, DwhLayerTypes.VALSET)  # type: Schema
+        self.schemas['sys'] = Schema('sys', self, DwhLayerTypes.SYS)  # type: Schema
+        # self.sys = Schema('sys', self)  # type: Schema
+        # self.sors = {}  #type: Dict[str, Schema]
+        # self.dvs = {}  #type: Dict[str, Schema]
+        # self.valsets = {}  # type: Dict[str, Schema]
+        # self.datamarts = {}  #type: Dict[str, Schema]
+        # self.dvs['dv'] = Schema('dv', self)  # type: Schema
+        # self.valsets['valset'] = Schema('valset', self)  # type: Schema
 
-    def get_or_create_sor_schema(self, config: Dict[str,str] = {}) -> 'Schema':
-        if not 'sor_schema' in config:
-            return self.get_sor_schema()
-        if config['sor_schema'] != 'sor':
-            sor_name = config['sor_schema']
-            sor = Schema(sor_name, self)
-            self.sors[sor_name] = sor
+    def get_or_create_sor_schema(self, name) -> 'Schema':
+        # if not 'sor_schema' in config:
+        #     return self.get_sor_schema()
+        if name in  self.schemas:
+            return self.schemas[name]
+        else:
+            sor = Schema(name, self, DwhLayerTypes.SOR)
+            self.schemas[name] = sor
         return sor
 
-    def get_sor_schema(self, name=''):
-        found = None
-        if name in self.sors:
-            found = self.sors[name]
-        return found
+    # def get_sor_schema(self, name=''):
+    #     found = None
+    #     if name in self.sors:
+    #         found = self.sors[name]
+    #     return found
 
-    def get_dv_schema(self, name=''):
+    def get_schema(self, name=''):
         found = None
-        if name in self.dvs:
-            found = self.dvs[name]
+        if name in self.schemas:
+            found = self.schemas[name]
         return found
 
     @property
     def dv(self):
-        return self.get_dv_schema('dv')
+        return self.get_schema('dv')
 
     @property
     def rdv(self):
-        return self.get_dv_schema('rdv')
+        return self.get_schema('rdv')
 
     @property
     def valset(self):
-        return self.get_dv_schema('valset')
+        return self.get_schema('valset')
+
+    @property
+    def sys(self):
+        return self.get_schema('sys')
 
     def get_or_create_datamart_schema(self, dm_name: str) -> 'Schema':
-        dm = Schema(dm_name, self)
-        self.datamarts[dm_name] = dm
-        return dm
-
-    def get_or_create_datamart_schema(self, dm_name: str) -> 'Schema':
-        dm = Schema(dm_name, self)
-        self.datamarts[dm_name] = dm
-        return dm
-
-
-    def log(self, msg: str) -> None:
-        pass
+        if dm_name in self.schemas:
+            return self.schemas[dm_name]
+        else:
+            dm = Schema(dm_name, self, DwhLayerTypes.DM)
+            self.schemas[dm_name] = dm
+            return dm
 
     def create_schemas_if_not_exists(self, schema_name: str ='') -> None:
         self.reflect_schemas()
@@ -98,7 +102,7 @@ class Dwh(Database):
             self.confirm_execute(sql, 'nieuw schema aanmaken')
             sor = Sor(schema_name, self)
             self.sors[schema_name] = sor
-        for dv_schema_name in self.dvs.keys():
+        for dv_schema_name in self.schemas.keys():
             if not dv_schema_name in self.reflected_schemas:
                 sql = """CREATE SCHEMA {};""".format(dv_schema_name)
                 self.confirm_execute(sql, 'nieuw ' + dv_schema_name + ' schema aanmaken')
@@ -161,3 +165,7 @@ class Dwh(Database):
             sql = """INSERT INTO sys.currentversion (schemaname, version, date) VALUES ('{}', 1, now());""".format(layer_name)
             self.execute(sql, 'insert version')
         return new_version_number
+
+
+    def log(self, msg: str) -> None:
+        pass

@@ -174,7 +174,7 @@ class DvEntity(EntityData):
     @classmethod
     def cls_get_schema(cls, dwh) -> 'Schema':
         schema_name = cls._schema_name
-        schema = dwh.get_dv_schema(schema_name)
+        schema = dwh.get_schema(schema_name)
         return schema
 
 
@@ -276,9 +276,6 @@ class DvEntity(EntityData):
     def __str__(self):
         return self.__class__.cls_get_name()
 
-
-class DvValuesetEntity(DvEntity):
-    _schema_name = 'valset'
 
 class LinkReference():
     def __init__(self, entity_cls: 'DvEntity', name: str = ''):
@@ -389,6 +386,46 @@ class HybridLink(Link):
                 types.append(val)
         return types
 
+class DvValueset(Table, metaclass=OrderedMembersMetaClass):
+    _schema_name = 'valset'
+    __init = False
+    valueset_naam = Columns.TextColumn('valueset_naam')
+    code = Columns.TextColumn('code')
+    omschrijving = Columns.TextColumn('omschrijving')
+
+    @classmethod
+    def cls_get_name(cls) -> str:
+        from pyelt.helpers.global_helper_functions import camelcase_to_underscores
+        name = camelcase_to_underscores(cls.__name__)
+        return name
+
+    @classmethod
+    def cls_get_schema(cls, dwh) -> 'Schema':
+        schema_name = cls._schema_name
+        schema = dwh.get_schema(schema_name)
+        return schema
+
+    @classmethod
+    def cls_init_cols(cls):
+            # cls.__ordereddict__.update(cls.__base__.__ordereddict__)
+
+        for col_name, col in cls.__ordereddict__.items():
+            if isinstance(col, Column):
+                if not col.name:
+                    col.name = col_name
+                col.table = cls
+
+    @classmethod
+    def cls_get_columns(cls) -> Dict[str, Column]:
+        cols = {}
+        cls.cls_init_cols()
+        for col_name, col in cls.__base__.__ordereddict__.items():
+            if isinstance(col, Column):
+                cols[col_name] = col
+        for col_name, col in cls.__ordereddict__.items():
+            if isinstance(col, Column):
+                cols[col_name] = col
+        return cols
 
 class EnsembleView():
 

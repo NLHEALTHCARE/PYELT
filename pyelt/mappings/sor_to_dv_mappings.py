@@ -3,7 +3,7 @@ from collections import OrderedDict
 from typing import Union, List, Dict
 
 from pyelt.datalayers.database import Column, Table, Database, View, Schema, DbFunction
-from pyelt.datalayers.dv import DvEntity, Link, HybridSat, LinkReference, Sat, DynamicLinkReference
+from pyelt.datalayers.dv import DvEntity, Link, HybridSat, LinkReference, Sat, DynamicLinkReference, DvValueset
 from pyelt.datalayers.dwh import Dwh
 from pyelt.datalayers.sor import SorTable, SorQuery
 from pyelt.helpers.exceptions import PyeltException
@@ -477,12 +477,77 @@ class LinkFieldMapping(FieldMapping):
 #         self.source_descr_field = source_descr_field
 #
 
-class SorToRefMapping(BaseTableMapping):
-    def __init__(self, source: Union[str, Dict[str, str]], ref_type: str = '') -> None:
-        target = '_valuesets'
+class SorToValueSetMapping(BaseTableMapping):
+    def __init__(self, source: str, target: DvValueset, sor: Schema = None ) -> None:
+        if isinstance(source, str):
+            source = SorTable(source, sor)
+        target.cls_init_cols()
+        super().__init__(source, target)
+        self.sor_table = source
+        self.valueset = target
+
+    def get_source_fields(self, alias: str = '')-> str:
+        if not alias: alias = 'hstg'
+        fields = ''  # type: List[str]
+        target_json_dict = OrderedDict()
+        for field_map in self.field_mappings:
+            if field_map.target.type == 'jsonb':
+                if field_map.target.name not in target_json_dict:
+                    target_json_dict[field_map.target.name] = []
+                target_json_dict[field_map.target.name].append(field_map)
+            elif isinstance(field_map.source, ConstantValue):
+                field = '{},'.format(field_map.source)
+            elif isinstance(field_map.source, FieldTransformation):
+                # field = '{},'.format(field_map.source.get_sql(alias))
+                field = '{},'.format(field_map.source.get_sql())
+            elif isinstance(field_map.source, DbFunction):
+                # field = '{},'.format(field_map.source.get_sql(alias))
+                field = '{},'.format(field_map.source.get_sql(alias))
+            elif not alias:
+                field = '{},'.format(field_map.source)
+            else:
+                field = '{}.{},'.format(alias, field_map.source)
+            if '[]' in field_map.target.type:
+                #array velden
+                #eerst komma eraf halen
+                field = field[:-1]
+                field = "'{" + field + "}',"
+            # voorkom eventuele dubbele veldnamen bij hybrid sats
+            if field not in fields:
+                fields += field
+
+        for name, value in target_json_dict.items():
+            sql_snippet = """json_build_object("""
+            for field_map in value:
+                sql_snippet += """'{0}', {0}, """.format(field_map.source.name)
+            sql_snippet = sql_snippet[:-2] + ')::jsonb,'
+            fields += sql_snippet
+        fields = fields[:-1]
+        return fields
+
+    def get_target_fields(self) -> str:
+        fields = []
+        #json velden willen we helemaal als laatste omdat ze in get_source_fields ook als laatste komen te staan
+        json_fields = []
+        for field_map in self.field_mappings:
+            field = '{}'.format(field_map.target)
+            if field_map.target.type == 'jsonb':
+                if field not in json_fields:
+                    json_fields.append(field)
+            elif field not in fields:
+                fields.append(field)
+        return_sql = ','.join(fields)
+        if json_fields:
+            return_sql += "," + ','.join(json_fields)
+        return return_sql
+
+
+class SorToValueSetMapping_old(BaseTableMapping):
+    def __init__(self, source: Union[str, Dict[str, str]], target: str) -> None:
+        target = Table('valueset_code', )
         super().__init__(source, target)
 
-        self.ref_type = ref_type
+        self.valueset = target
         self.source_type_field = ''
         self.source_level_field = "''"
 
@@ -505,8 +570,8 @@ class SorToRefMapping(BaseTableMapping):
         self.map_field(source_desc_field, target)
         self.source_descr_field = source_desc_field
 
-    def map_type_field(self, source_type_field: str, source_oid_field: str = "''") -> None:
-        target = 'valueset_type_naam'
+    def map_type_field_old(self, source_type_field: str, source_oid_field: str = "''") -> None:
+        target = 'valueset_naam'
 
         self.map_field(source_type_field, target)
         self.source_type_field = source_type_field
@@ -515,6 +580,13 @@ class SorToRefMapping(BaseTableMapping):
             self.map_field(source_oid_field, target)
 
         self.source_oid_field = source_oid_field
+
+    def map_type_field(self, valueset_field: str) -> None:
+        target = 'valueset_naam'
+
+        self.map_field(valueset_field, target)
+        self.source_type_field = valueset_field
+
 
     def map_level_field(self, source_level_field: str) -> None:
         target = 'niveau'

@@ -6,7 +6,7 @@ from sqlalchemy.engine import reflection
 
 from pyelt.datalayers.database import Column, Columns, Schema, Table, DbFunction
 from pyelt.datalayers.dm import DmReference
-from pyelt.datalayers.dv import DvEntity, HybridSat, LinkReference, Link, DynamicLinkReference
+from pyelt.datalayers.dv import DvEntity, HybridSat, LinkReference, Link, DynamicLinkReference, DvValueset
 from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
 from pyelt.datalayers.sor import Sor, SorTable, SorQuery
 
@@ -635,6 +635,48 @@ class DdlDv(Ddl):
         """
         return sql
 
+    def create_or_alter_valueset(self, valueset_cls: DvValueset):
+        schema = valueset_cls.cls_get_schema(self.dwh)
+        if not schema.is_reflected:
+            schema.reflect()
+        table_name = valueset_cls.cls_get_name()
+
+        params = {}
+        params.update(self._get_fixed_params())
+        params['table_name'] = table_name
+        params['schema'] = schema.name
+        params['columns_def'] = self.__get_valueset_columns_def(valueset_cls)
+        if not table_name in schema:
+            sql = """CREATE TABLE IF NOT EXISTS {schema}.{table_name} (
+              _id SERIAL,
+              _runid numeric(8,2) NOT NULL,
+            _active boolean DEFAULT TRUE,
+            _source_system character varying,
+            _insert_date timestamp without time zone,
+            _finish_date timestamp without time zone,
+            _revision integer,
+            _valid boolean NOT NULL DEFAULT TRUE,
+            _validation_msg character varying,
+              {columns_def},
+
+              CONSTRAINT {table_name}_pkey PRIMARY KEY (_id),
+              CONSTRAINT {table_name}_code_unique UNIQUE (valueset_naam, code, _runid)
+        ) WITH (OIDS=FALSE, autovacuum_enabled=true);
+
+        CREATE INDEX ix_{table_name}_code ON {schema}.{table_name}(code);
+        CREATE INDEX ix_{table_name}_valueset_naam ON {schema}.{table_name}(valueset_naam);
+        """.format(**params)
+            self.execute(sql, 'create <blue>{}</>'.format(table_name))
+
+    def __get_valueset_columns_def(self, valueset_cls):
+        sql = ''
+        for name, col in valueset_cls.cls_get_columns().items():
+            if isinstance(col, Column):
+                sql += """{} {},\r\n""".format(col.name, col.type)
+        sql = sql[:-3]
+        return sql
+
+
     # def __mappings_to_sat_columns_def(self, mappings):
     #     sql = ''
     #     temp_fields_dict = {}
@@ -710,8 +752,7 @@ class DdlDv(Ddl):
         this_class_sats = entity_cls.cls_get_this_class_sats()
         all_sats.update(base_class_sats)
         all_sats.update(this_class_sats)
-        # for mapping_name, sat_mapping in entity_mappings.sat_mappings.items():
-        # for sat_cls in entity_cls.get_sats().values():
+
         for sat_cls in all_sats.values():
             params['sat'] = sat_cls.cls_get_name()
 
@@ -743,16 +784,14 @@ class DdlDv(Ddl):
                             alias = sat_cls.name[idx:] + '_type'
                         sql_sat_fields += "sat{}.{} AS {}, ".format(index, col.name, alias)
                         if isinstance(col, Columns.RefColumn):
-                            params['ref_alias'] = col.name + '_' + col.ref_type
-                            # if col.name in col.ref_type:
-                            #     ref_type = ref_type.replace(col.name, '')
-                            # elif col.ref_type in col.name:
-                            #     ref_type = ref_type.replace(col.ref_type, '')
-                            params['ref_type'] = col.ref_type
-                            params['ref_field'] = col.name
-                            sql_join_refs += """LEFT OUTER JOIN {dv_schema}._ref_values AS {ref_alias} ON {sat_alias}.{ref_field}::text = {ref_alias}.code AND {ref_alias}.valueset_naam = '{ref_type}' AND {ref_alias}._active\r\n        """.format(
+                            params['valueset_schema'] = 'valset' #todo valsetschema in generieke var
+                            params['valueset_table'] = 'valueset' #todo table name
+                            params['alias'] = col.name + '_' + col.valueset_name
+                            params['valueset_name'] = col.valueset_name
+                            params['code_field'] = col.name
+                            sql_join_refs += """LEFT OUTER JOIN {valueset_schema}.{valueset_table} AS {alias} ON {sat_alias}.{code_field}::text = {alias}.code AND {alias}.valueset_naam = '{valueset_name}' AND {alias}._active\r\n        """.format(
                                 **params)
-                            sql_sat_fields += "{ref_alias}.weergave_naam AS {ref_alias}_omschr, ".format(**params)
+                            sql_sat_fields += "{alias}.omschrijving AS {alias}_omschr, ".format(**params)
 
 
 
@@ -851,12 +890,12 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
 
         if not dv_schema.is_reflected:
             dv_schema.reflect()
-        if 'valuesets' not in dv_schema:
+        if 'valueset' not in dv_schema:
             params = {}
             params.update(self._get_fixed_params())
             params['dv_schema'] = dv_schema.name
             params['fixed_columns_def'] = self.__get_fixed_sat_columns_def()
-            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.valuesets (
+            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.valueset (
                       {fixed_columns_def},
                       naam text,
                       oid text,
@@ -865,6 +904,7 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
                       status text,
                       versie text,
                       projecten text,
+                      uri text,
                       CONSTRAINT valueset_pkey PRIMARY KEY (_id),
                       CONSTRAINT valueset_oid_unique UNIQUE (oid)
                       --CONSTRAINT ref_valueset_naam_unique UNIQUE (naam)
@@ -875,29 +915,28 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
                 );
 
 
-                CREATE TABLE IF NOT EXISTS {dv_schema}.valueset_codes (
+                CREATE TABLE IF NOT EXISTS {dv_schema}.valueset_code (
                       {fixed_columns_def},
-                      --fk_valueset_type int,
-                      fk_parent int,
-                      temp_id text,
-                      temp_fk text,
-                      valueset_oid text,
                       valueset_naam text,
-                      niveau text,
-                      niveau_type text,
                       code text,
-                      code_hl7 text,
                       weergave_naam text,
                       omschrijving text,
                       omschrijving2 text,
-                      CONSTRAINT valueset_codes_pkey PRIMARY KEY (_id),
-                      CONSTRAINT valueset_codes_code_unique UNIQUE (_runid, valueset_naam, code, niveau)
+                      --valueset_oid text,
+                      niveau text,
+                      fk_valueset int,
+                      fk_parent int,
+                      --niveau_type text,
+                      --code_hl7 text,
+
+                      CONSTRAINT valueset_code_pkey PRIMARY KEY (_id),
+                      CONSTRAINT valueset_code_code_unique UNIQUE (_runid, valueset_naam, code, niveau)
                 )
                 WITH (
                   OIDS=FALSE,
                   autovacuum_enabled=true
                 );
-                CREATE INDEX valueset_codes_valueset_naam_index ON {dv_schema}.valueset_codes USING btree (valueset_naam );""".format(**params)
+                CREATE INDEX valueset_code_valueset_naam_index ON {dv_schema}.valueset_code USING btree (valueset_naam );""".format(**params)
             self.execute(sql, 'create valuesets tables')
 
 
