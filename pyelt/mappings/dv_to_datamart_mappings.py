@@ -2,8 +2,11 @@ from pyelt.mappings.base import BaseTableMapping, FieldMapping
 
 
 class DvToDmMapping(BaseTableMapping):
-    def __init__(self, source, target):
+    def __init__(self, source, target,automap = False):
         super().__init__(source, target)
+        if automap:
+            pass
+    #         loop door alle veldnamen van de source komt en dan self.map fiels aangeven
 
     def map_field(self, source: str, target: str = '', transform_func: 'FieldTransformation'=None, ref: str = '') -> None:
         field_mapping = DvToDmFieldMapping(source, target)
