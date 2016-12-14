@@ -48,6 +48,9 @@ class Dim(DVTable, metaclass=OrderedMembersMetaClass):
         print('test jan ',cls.get_column_names(),schema_name,cls.get_name())
         return dim
 
+    def to_pygram_bulk_dim(self):
+        pass
+#     to do
 
 
 class Fact(DVTable, metaclass=OrderedMembersMetaClass):
