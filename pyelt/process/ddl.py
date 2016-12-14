@@ -1,5 +1,5 @@
 import time
-from typing import Dict
+from typing import Dict, Any, Union
 from sqlalchemy.engine import reflection
 
 # from sample_domains._ensemble_views import get_ensemble
@@ -19,8 +19,8 @@ from pyelt.process.base import BaseProcess
 
 
 class Ddl(BaseProcess):
-    def __init__(self, pipe: 'Pipe', layer: 'Schema') -> None:
-        super().__init__(pipe)
+    def __init__(self, owner: 'Pipe', layer: 'Schema') -> None:
+        super().__init__(owner)
         self.layer = layer
         self.sql_logger = None  # Type: Logger
         self.is_initialised = False  # Type: bool
@@ -135,6 +135,32 @@ rows: {}
                 sql = db_func.to_create_sql()
                 self.execute(sql, 'ALTER FUNCTION ' + complete_name)
 
+    def create_or_alter_table_exceptions(self, schema):
+        if not schema.is_reflected:
+            schema.reflect()
+        if '_exceptions' not in schema:
+            params = {}
+            params.update(self._get_fixed_params())
+            params['schema'] = schema.name
+            sql = """CREATE TABLE IF NOT EXISTS {schema}._exceptions (
+                      _id serial NOT NULL,
+                      _runid numeric(8,2) NOT NULL,
+                      _source_system character varying,
+                      _insert_date timestamp without time zone,
+                      _valid boolean DEFAULT TRUE,
+                      _validation_msg character varying,
+                      schema text,
+                      table_name text,
+                      message text,
+                      key_fields text,
+                      fields text,
+                      CONSTRAINT _exceptions_pkey PRIMARY KEY (_id)
+                )
+                WITH (
+                  OIDS=FALSE,
+                  autovacuum_enabled=true
+                );""".format(**params)
+            self.execute(sql, 'create exception table in ' + schema.name)
 
 class DdlSys(Ddl):
     pass
@@ -143,6 +169,13 @@ class DdlSys(Ddl):
 class DdlSor(Ddl):
     def __init__(self, pipe: 'Pipe') -> None:
         super().__init__(pipe, pipe.sor)
+
+    def _get_fixed_params(self) -> Dict[str, Any]:
+        params = {}
+        params['runid'] = self.runid
+        params['source_system'] = self.pipe.source_system
+        params['sor'] = self.pipe.sor.name
+        return params
 
     #####################################
     # SOR
@@ -257,7 +290,7 @@ class DdlSor(Ddl):
 
         params = {}
         params.update(self._get_fixed_params())
-        params['hub'] = mapping.target.get_hub_name()
+        params['hub'] = mapping.target.cls_get_hub_name()
         params['sor_table'] = sor_table
         params['type'] = mapping.type
 
@@ -276,7 +309,7 @@ class DdlSor(Ddl):
 
     def try_add_fk_sor_link(self, mapping: SorToLinkMapping) -> None:
         link = mapping.target
-        if len(link.get_sats()) == 0:
+        if len(link.cls_get_sats()) == 0:
             return
 
         sor = self.pipe.sor
@@ -285,7 +318,7 @@ class DdlSor(Ddl):
 
         params = {}
         params.update(self._get_fixed_params())
-        params['link'] = mapping.target.get_name()
+        params['link'] = mapping.target.cls_get_name()
         params['sor_table'] = mapping.source.name
         params['type'] = mapping.type
 
@@ -316,9 +349,11 @@ class DdlSor(Ddl):
 
 
 class DdlDv(Ddl):
-    def __init__(self, pipe: 'Pipe') -> None:
-        super().__init__(pipe, pipe.pipeline.dwh.dv)
-        self.ddl_sor = DdlSor(pipe)
+    def __init__(self, owner: Union['Pipe', 'Pipeline'], dv_schema = None) -> None:
+        super().__init__(owner, dv_schema)
+        import pyelt.pipeline
+        if isinstance(owner,pyelt.pipeline.Pipe):
+            self.ddl_sor = DdlSor(owner)
 
 
 
@@ -326,18 +361,24 @@ class DdlDv(Ddl):
     # DV
     #####################################
     def create_or_alter_entity(self, entity: DvEntity) -> None:
-        dv = self.dwh.dv
+        # schema_name = entity._schema_name
+        # if schema_name == 'dv':
+        #     schema = self.dwh.dv
+        # elif schema_name == 'valset':
+        #     schema = self.dwh.valset
+        dv_schema = entity.cls_get_schema(self.dwh)
         entity_is_changed = False
-        if not dv.is_reflected:
-            dv.reflect()
-        hub_name = entity.get_hub_name()
+        if not dv_schema.is_reflected:
+            dv_schema.reflect()
+        hub_name = entity.cls_get_hub_name()
         params = {}
-        params['hub'] = hub_name
         params.update(self._get_fixed_params())
-        if not hub_name in dv:
+        params['hub'] = hub_name
+        params['dv_schema'] = dv_schema.name
+        if not hub_name in dv_schema:
             params['fixed_hub_columns_def'] = self.__get_fixed_hub_columns_def()
 
-            sql = """CREATE TABLE IF NOT EXISTS {dv}.{hub} (
+            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.{hub} (
                           {fixed_hub_columns_def},
                           type text,
                           bk text NOT NULL,
@@ -350,27 +391,28 @@ class DdlDv(Ddl):
                     );""".format(**params)
             self.execute(sql, 'create <blue>{}</>'.format(hub_name))
             entity_is_changed = True
-        sats = entity.get_sats()
+        sats = entity.cls_get_sats()
         for sat in sats.values():
-            self.__create_or_alter_sat(sat, entity)
+            self.__create_or_alter_sat(sat, entity, dv_schema)
 
         # entity_is_changed = True
         # if entity_is_changed:
         #     self.create_or_alter_view(entity)
 
-    def __create_or_alter_sat(self, sat, hub_or_link):
-        dv = self.dwh.dv
+    def __create_or_alter_sat(self, sat, hub_or_link, schema):
+        # dv = self.dwh.dv
         params = {}
         params.update(self._get_fixed_params())
+        params['dv_schema'] = schema.name
         if DvEntity in hub_or_link.__bases__ :
-            hub_name = hub_or_link.get_hub_name()
+            hub_name = hub_or_link.cls_get_hub_name()
             params['hub_or_link'] = hub_name
         elif hub_or_link.__base__ == Link:
-            link_name = hub_or_link.get_name()
+            link_name = hub_or_link.cls_get_name()
             params['hub_or_link'] = link_name
-        sat_name = sat.get_name()
+        sat_name = sat.cls_get_name()
         params['sat'] = sat_name
-        if not sat_name in dv:
+        if not sat_name in schema:
             params['fixed_sat_columns_def'] = self.__get_fixed_sat_columns_def()
             params['sat_columns_def'] = self.__get_sat_column_names_with_types(sat)
             if not params['sat_columns_def']:
@@ -383,18 +425,18 @@ class DdlDv(Ddl):
                 params['sat_pk_fields'] = '_id, _runid, type'
                 params['fixed_sat_columns_def'] = self.__get_fixed_sat_columns_def(True)
 
-            sql = """CREATE TABLE IF NOT EXISTS {dv}.{sat} (
+            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.{sat} (
   {fixed_sat_columns_def},
   {sat_columns_def},
   CONSTRAINT {sat}_pkey PRIMARY KEY ({sat_pk_fields}),
-  CONSTRAINT fk_{sat}_{hub_or_link} FOREIGN KEY (_id) REFERENCES {dv}.{hub_or_link} (_id) MATCH SIMPLE)
+  CONSTRAINT fk_{sat}_{hub_or_link} FOREIGN KEY (_id) REFERENCES {dv_schema}.{hub_or_link} (_id) MATCH SIMPLE)
   WITH (OIDS=FALSE, autovacuum_enabled=true);
 {create_indexes}
 """.format(**params)
             self.execute(sql, 'create <cyan>{}</>'.format(params['sat']))
             entity_is_changed = True
         else:
-            sat_tbl = Table(sat_name, dv)
+            sat_tbl = Table(sat_name, schema)
             sat_tbl.reflect()
             add_fields = ''
             for col_name, col in sat.__dict__.items():
@@ -406,7 +448,7 @@ class DdlDv(Ddl):
             add_fields = add_fields[:-2]
             if add_fields:
                 params['add_fields'] = add_fields
-                sql = """ALTER TABLE {dv}.{sat} {add_fields}; """.format(**params)
+                sql = """ALTER TABLE {dv_schema}.{sat} {add_fields}; """.format(**params)
                 self.dwh.confirm_execute(sql, 'alter <cyan>{}</> '.format(params['sat']))
                 entity_is_changed = True
                 # result = input('\r\nWil je de volgende wijzigingen aanbrengen in de database? (j=ja;n=negeer)\r\n{}\r\n'.format(sql))
@@ -438,32 +480,33 @@ class DdlDv(Ddl):
         return fields
 
     def __get_sat_indexes(self, sat_cls, params):
-        indexes = "CREATE INDEX {sat}_active_idx ON {dv}.{sat}  USING btree (_active);\n".format(**params)
+        indexes = "CREATE INDEX {dv_schema}_{sat}_active_idx ON {dv_schema}.{sat}  USING btree (_active);\n".format(**params)
         if sat_cls.__base__ == HybridSat:
-            indexes += "CREATE INDEX {sat}_type_idx ON {dv}.{sat}  USING btree (type);\n".format(**params)
+            indexes += "CREATE INDEX {dv_schema}_{sat}_type_idx ON {dv_schema}.{sat}  USING btree (type);\n".format(**params)
 
         for col_name, col in sat_cls.__ordereddict__.items():
             if isinstance(col, Columns.RefColumn):
                 params['col_name'] = col.name
-                indexes += "CREATE INDEX {sat}_{col_name}_idx ON {dv}.{sat}  USING btree ({col_name});\n".format(**params)
+                indexes += "CREATE INDEX {dv_schema}_{sat}_{col_name}_idx ON {dv_schema}.{sat}  USING btree ({col_name});\n".format(**params)
         return indexes
 
     def create_or_alter_link(self, cls_link: Link) -> None:
-        dv = self.dwh.dv
-        if not dv.is_reflected:
-            dv.reflect()
+        schema = cls_link.cls_get_schema(self.dwh)
+        if not schema.is_reflected:
+            schema.reflect()
 
-        link_name = cls_link.get_name()
+        link_name = cls_link.cls_get_name()
         params = {}
         params['link'] = link_name
         params.update(self._get_fixed_params())
-        if not link_name in dv:
+        params['dv_schema'] = schema.name
+        if not link_name in schema:
             params['fixed_link_columns_def'] = self.__get_fixed_link_columns_def()
             params['link_columns_def'] = self.__get_link_column_names(cls_link)
-            params['foreign_key_constraints'] = self.__get_link_fk_constraints(cls_link)
-            params['link_indexes'] = self.__get_link_indexes(cls_link)
+            params['foreign_key_constraints'] = self.__get_link_fk_constraints(cls_link, params)
+            params['link_indexes'] = self.__get_link_indexes(cls_link, params)
 
-            sql = """CREATE TABLE IF NOT EXISTS {dv}.{link} (
+            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.{link} (
                           {fixed_link_columns_def},
                           type text,
                           {link_columns_def},
@@ -479,7 +522,7 @@ class DdlDv(Ddl):
             self.execute(sql, 'create <blue>{}</>'.format(link_name))
         else:
             # Kijken naar wijzigingen
-            link_tbl = Table(link_name, dv)
+            link_tbl = Table(link_name, schema)
             if not link_tbl.is_reflected:
                 link_tbl.reflect()
             add_fields = ''
@@ -487,24 +530,24 @@ class DdlDv(Ddl):
             for prop_name, link_ref in cls_link.__dict__.items():
                 if isinstance(link_ref, LinkReference):
                     fk = link_ref.get_fk()
-                    fk_params = {'dv': self.dwh.dv.name, 'hub': link_ref.entity_cls.get_hub_name(), 'fk': link_ref.get_fk(), 'link': cls_link.get_name()}
+                    fk_params = {'dv_schema': params['dv_schema'], 'hub': link_ref.entity_cls.cls_get_hub_name(), 'fk': link_ref.get_fk(), 'link': cls_link.cls_get_name()}
                     if not fk in link_tbl:
-                        add_fields += """ADD COLUMN {fk} integer, ADD CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv}.{hub} (_id) MATCH SIMPLE,\r\n""".format(**fk_params)
+                        add_fields += """ADD COLUMN {fk} integer, ADD CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv_schema}.{hub} (_id) MATCH SIMPLE,\r\n""".format(**fk_params)
                     index_name = "ix_{link}{fk}".format(**fk_params)
                     if not index_name in link_tbl:
-                        sql_indexes += """CREATE INDEX ix_{link}{fk} ON {dv}.{link} USING btree ({fk});\r\n""".format(**fk_params)
+                        sql_indexes += """CREATE INDEX ix_{dv_schema}_{link}{fk} ON {dv_schema}.{link} USING btree ({fk});\r\n""".format(**fk_params)
             add_fields = add_fields[:-3]
             sql_indexes = sql_indexes[:-3]
             if add_fields:
                 params['add_fields'] = add_fields
-                sql = """ALTER TABLE {dv}.{link} {add_fields};\r\n""".format(**params)
+                sql = """ALTER TABLE {dv_schema}.{link} {add_fields};\r\n""".format(**params)
                 sql += sql_indexes + ';'
                 # result = input('\r\nWil je de volgende wijzigingen aanbrengen in de database (j=ja;n=negeer)?\r\n{}\r\n'.format(sql))
                 # if result.strip().lower()[:1] == 'j' or result.strip().lower()[:1] == 'y':
                 self.confirm_execute(sql, 'alter <blue>{}</>'.format(link_name))
-        sats = cls_link.get_sats()
+        sats = cls_link.cls_get_sats()
         for sat in sats.values():
-            self.__create_or_alter_sat(sat, cls_link)
+            self.__create_or_alter_sat(sat, cls_link, schema )
 
 
 
@@ -517,23 +560,27 @@ class DdlDv(Ddl):
         sql = sql[:-3]
         return sql
 
-    def __get_link_fk_constraints(self, link_cls):
+    def __get_link_fk_constraints(self, link_cls, params):
         sql = ''
         for prop_name, link_ref in link_cls.__dict__.items():
             if isinstance(link_ref, LinkReference):
                 # fk = """_fk_{}""".format(link_ref.name.lower())
-                params = {'dv': self.dwh.dv.name, 'hub': link_ref.entity_cls.get_hub_name(), 'fk': link_ref.get_fk()} #.replace('_fk_parent_', '').replace('_fk_', '')}
-                sql += """CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv}.{hub} (_id) MATCH SIMPLE,\r\n""".format(
+                # params.update({'hub': link_ref.entity_cls.get_hub_name(), 'fk': link_ref.get_fk()})#.replace('_fk_parent_', '').replace('_fk_', '')}
+                params['hub'] = link_ref.entity_cls.cls_get_hub_name()
+                params['fk'] = link_ref.get_fk()
+                sql += """CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv_schema}.{hub} (_id) MATCH SIMPLE,\r\n""".format(
                     **params)
         sql = sql[:-3]
         return sql
 
-    def __get_link_indexes(self, link_cls):
+    def __get_link_indexes(self, link_cls, params):
         sql = ''
         for prop_name, link_ref in link_cls.__dict__.items():
             if isinstance(link_ref, LinkReference) or isinstance(link_ref, DynamicLinkReference):
-                params = {'dv': self.dwh.dv.name, 'fk': link_ref.get_fk(), 'link': link_cls.get_name()}
-                sql += """CREATE INDEX ix_{link}{fk} ON {dv}.{link} USING btree ({fk});\r\n""".format(**params)
+                # params = {'dv': self.dwh.dv.name, 'fk': link_ref.get_fk(), 'link': link_cls.get_name()}
+                params['link'] = link_cls.cls_get_name()
+                params['fk'] = link_ref.get_fk()
+                sql += """CREATE INDEX ix_{dv_schema}_{link}{fk} ON {dv_schema}.{link} USING btree ({fk});\r\n""".format(**params)
         sql = sql[:-3]
         return sql
 
@@ -637,19 +684,21 @@ class DdlDv(Ddl):
     #     return sql
 
     def create_or_alter_view(self, entity_cls: 'DvEntity'):
-        dv = self.dwh.dv
-        if not dv.is_reflected:
-            dv.reflect()
+        # schema = self.dwh.dv
+        schema = entity_cls.cls_get_schema(self.dwh)
+        if not schema.is_reflected:
+            schema.reflect()
         params = {}
         params.update(self._get_fixed_params())
+        params['dv_schema'] = schema.name
 
-        view_name = entity_cls.get_hub_name().replace('_hub', '_view')
-        view_name = entity_cls.get_view_name()
+        view_name = entity_cls.cls_get_hub_name().replace('_hub', '_view')
+        view_name = entity_cls.cls_get_view_name()
         params['view_name'] = view_name
-        params['hub'] = entity_cls.get_hub_name()
+        params['hub'] = entity_cls.cls_get_hub_name()
 
-        if view_name in dv:
-            sql = """DROP VIEW {dv}.{view_name};""".format(**params)
+        if view_name in schema:
+            sql = """DROP VIEW {dv_schema}.{view_name};""".format(**params)
             self.execute(sql, 'drop view')
 
         sql_sat_fields = ''
@@ -657,38 +706,38 @@ class DdlDv(Ddl):
         sql_join_refs = ''
         index = 1
         all_sats = {}
-        base_class_sats = entity_cls.get_base_class_sats()
-        this_class_sats = entity_cls.get_this_class_sats()
+        base_class_sats = entity_cls.cls_get_base_class_sats()
+        this_class_sats = entity_cls.cls_get_this_class_sats()
         all_sats.update(base_class_sats)
         all_sats.update(this_class_sats)
         # for mapping_name, sat_mapping in entity_mappings.sat_mappings.items():
         # for sat_cls in entity_cls.get_sats().values():
         for sat_cls in all_sats.values():
-            params['sat'] = sat_cls.get_name()
+            params['sat'] = sat_cls.cls_get_name()
 
             if sat_cls.__base__ == HybridSat:
-                for type in sat_cls.get_types():
+                for type in sat_cls.cls_get_types():
 
                     params['sat_alias'] = 'sat' + str(index)
                     params['type'] = type
-                    for col in sat_cls.get_columns():
+                    for col in sat_cls.cls_get_columns():
                         if not col.name.startswith('_'):
-                            alias = sat_cls.get_short_name() + '_' + type + '_' + col.name
+                            alias = sat_cls.cls_get_short_name() + '_' + type + '_' + col.name
                             alias = alias.replace(' ', '_')
                             if col.name == 'type':
                                 idx = sat_cls.name.index('_sat') + 5
                                 alias = sat_cls.name[idx:] + '_type'
                         sql_sat_fields += "sat{}.{} AS {}, ".format(index, col.name, alias)
 
-                    sql_join += """LEFT OUTER JOIN {dv}.{sat} AS {sat_alias} ON {sat_alias}._id = hub._id AND {sat_alias}._active AND ({sat_alias}.type = '{type}' OR {sat_alias}.type IS NULL)\r\n        """.format(
+                    sql_join += """LEFT OUTER JOIN {dv_schema}.{sat} AS {sat_alias} ON {sat_alias}._id = hub._id AND {sat_alias}._active AND ({sat_alias}.type = '{type}' OR {sat_alias}.type IS NULL)\r\n        """.format(
                         **params)
                     index += 1
 
             else:
                 params['sat_alias'] = 'sat' + str(index)
-                for col in sat_cls.get_columns():
+                for col in sat_cls.cls_get_columns():
                     if not col.name.startswith('_'):
-                        alias = sat_cls.get_short_name() + '_' + col.name
+                        alias = sat_cls.cls_get_short_name() + '_' + col.name
                         if col.name == 'type':
                             idx = sat_cls.name.index('_sat') + 5
                             alias = sat_cls.name[idx:] + '_type'
@@ -701,14 +750,14 @@ class DdlDv(Ddl):
                             #     ref_type = ref_type.replace(col.ref_type, '')
                             params['ref_type'] = col.ref_type
                             params['ref_field'] = col.name
-                            sql_join_refs += """LEFT OUTER JOIN {dv}._ref_values AS {ref_alias} ON {sat_alias}.{ref_field}::text = {ref_alias}.code AND {ref_alias}.valueset_naam = '{ref_type}' AND {ref_alias}._active\r\n        """.format(
+                            sql_join_refs += """LEFT OUTER JOIN {dv_schema}._ref_values AS {ref_alias} ON {sat_alias}.{ref_field}::text = {ref_alias}.code AND {ref_alias}.valueset_naam = '{ref_type}' AND {ref_alias}._active\r\n        """.format(
                                 **params)
                             sql_sat_fields += "{ref_alias}.weergave_naam AS {ref_alias}_omschr, ".format(**params)
 
 
 
                             # sql_sat_fields += self.mappings_sat_fields(sat_mapping, params['sat_alias']) + ','
-                sql_join += """LEFT OUTER JOIN {dv}.{sat} AS {sat_alias} ON {sat_alias}._id = hub._id AND {sat_alias}._active\r\n        """.format(**params)
+                sql_join += """LEFT OUTER JOIN {dv_schema}.{sat} AS {sat_alias} ON {sat_alias}._id = hub._id AND {sat_alias}._active\r\n        """.format(**params)
                 index += 1
 
                 # for field_map in sat_mapping.field_mappings:
@@ -723,21 +772,21 @@ class DdlDv(Ddl):
         params['join'] = sql_join + sql_join_refs
 
         if params['sat_fields']:
-            sql = """--DROP VIEW {dv}.{view_name};
-CREATE OR REPLACE VIEW {dv}.{view_name} AS
+            sql = """--DROP VIEW {dv_schema}.{view_name};
+CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
     SELECT hub._id, hub.bk, hub.type, hub._runid, hub._source_system, True as _valid,
         {sat_fields}
-    FROM {dv}.{hub} hub
+    FROM {dv_schema}.{hub} hub
         {join}""".format(**params)
             self.execute(sql, 'create <darkcyan>{}</>'.format(view_name))
         else:
-            sql = """CREATE OR REPLACE VIEW {dv}.{view_name} AS
+            sql = """CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
                 SELECT hub._id, hub.bk, hub.type,
                     hub._runid as _runid, hub._source_system as hub_source_system, True as _valid
-                FROM {dv}.{hub} hub
+                FROM {dv_schema}.{hub} hub
                     {join}""".format(**params)
             self.execute(sql, 'create <darkcyan>{}</>'.format(view_name))
-        dv.is_reflected = False
+        # schema.is_reflected = False
 
     def create_or_alter_ensemble_view(self, ensemble_cls):
 
@@ -757,19 +806,19 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
         params = {'schema_name': 'dv'}
 
         for alias, cls in ensemble.entity_dict.items():
-            cls.init_cls()
-            cls.entity_name = cls.get_name().strip('_entity')
-            cls.view_name = cls.get_name().strip('_entity') + '_view'
+            cls.cls_init()
+            cls.entity_name = cls.cls_get_name().strip('_entity')
+            cls.view_name = cls.cls_get_name().strip('_entity') + '_view'
 
             if cls.__base__ == Link:
-                sql_selectedtables += ', {schema_name}.'.format(**params) + cls.get_name()
+                sql_selectedtables += ', {schema_name}.'.format(**params) + cls.cls_get_name()
             else:
-                if alias == str(cls.get_name()):  # geen alias opgegeven; dus alias is hetzelfde als de entity_name
+                if alias == str(cls.cls_get_name()):  # geen alias opgegeven; dus alias is hetzelfde als de entity_name
                     sql_selectedtables += ', {schema_name}.{} as {}'.format(cls.view_name, cls.entity_name,**params)
                     sql_conditions += ' AND {0}._id = fk_{0}_hub'.format(cls.entity_name)
                     sql_ensemblename = sql_ensemblename.replace('.', '.{}_'.format(cls.entity_name)) # hier wordt de opgehaalde entiteit geplaatst direct achter de punt en voor datgene dat eerst na de punt volgde.
 
-                    cols = inspector.get_columns(cls.view_name, dv.name)
+                    cols = inspector.cls_get_columns(cls.view_name, dv.name)
                     for col in cols:
                         col_name = col['name']
                         sql_columns += ', {0}.{1} as {0}_{1}'.format(cls.entity_name,col_name)
@@ -779,7 +828,7 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                     sql_conditions += ' AND {0}._id = fk_{0}_{1}_hub'.format(alias,cls.entity_name)
                     sql_ensemblename = sql_ensemblename.replace('v.', 'v.{}_'.format(alias))
 
-                    cols = inspector.get_columns(cls.view_name, dv.name)
+                    cols = inspector.cls_get_columns(cls.view_name, dv.name)
                     for col in cols:
                         col_name = col['name']
                         sql_columns += ', {0}.{1} as {0}_{1}'.format(alias,col_name)
@@ -797,16 +846,17 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
         self.execute(sql, '<darkcyan>{}</>'.format(sql_ensemblename))
 
 
-    def create_or_alter_ref(self):
+    def create_or_alter_table_valueset(self, dv_schema):
         #maak reftable
-        dv = self.dwh.dv
-        if not dv.is_reflected:
-            dv.reflect()
-        if '_ref_values' not in dv:
+
+        if not dv_schema.is_reflected:
+            dv_schema.reflect()
+        if 'valuesets' not in dv_schema:
             params = {}
             params.update(self._get_fixed_params())
+            params['dv_schema'] = dv_schema.name
             params['fixed_columns_def'] = self.__get_fixed_sat_columns_def()
-            sql = """CREATE TABLE IF NOT EXISTS {dv}._ref_valuesets (
+            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.valuesets (
                       {fixed_columns_def},
                       naam text,
                       oid text,
@@ -815,8 +865,8 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                       status text,
                       versie text,
                       projecten text,
-                      CONSTRAINT ref_valueset_pkey PRIMARY KEY (_id),
-                      CONSTRAINT ref_valueset_oid_unique UNIQUE (oid)
+                      CONSTRAINT valueset_pkey PRIMARY KEY (_id),
+                      CONSTRAINT valueset_oid_unique UNIQUE (oid)
                       --CONSTRAINT ref_valueset_naam_unique UNIQUE (naam)
                 )
                 WITH (
@@ -825,7 +875,7 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                 );
 
 
-                CREATE TABLE IF NOT EXISTS {dv}._ref_values (
+                CREATE TABLE IF NOT EXISTS {dv_schema}.valueset_codes (
                       {fixed_columns_def},
                       --fk_valueset_type int,
                       fk_parent int,
@@ -840,38 +890,17 @@ CREATE OR REPLACE VIEW {dv}.{view_name} AS
                       weergave_naam text,
                       omschrijving text,
                       omschrijving2 text,
-                      CONSTRAINT ref_values_pkey PRIMARY KEY (_id),
-                      CONSTRAINT ref_values_code_unique UNIQUE (_runid, valueset_naam, code, niveau)
+                      CONSTRAINT valueset_codes_pkey PRIMARY KEY (_id),
+                      CONSTRAINT valueset_codes_code_unique UNIQUE (_runid, valueset_naam, code, niveau)
                 )
                 WITH (
                   OIDS=FALSE,
                   autovacuum_enabled=true
                 );
-                CREATE INDEX _ref_values_valueset_naam_index ON {dv}._ref_values USING btree (valueset_naam );""".format(**params)
+                CREATE INDEX valueset_codes_valueset_naam_index ON {dv_schema}.valueset_codes USING btree (valueset_naam );""".format(**params)
             self.execute(sql, 'create valuesets tables')
 
-    def create_or_alter_table_exceptions(self):
-        dv = self.dwh.dv
-        if not dv.is_reflected:
-            dv.reflect()
-        if '_exceptions' not in dv:
-            params = {}
-            params.update(self._get_fixed_params())
-            params['fixed_columns_def'] = self.__get_fixed_hub_columns_def()
-            sql = """CREATE TABLE IF NOT EXISTS {dv}._exceptions (
-                      {fixed_columns_def},
-                      schema text,
-                      table_name text,
-                      message text,
-                      key_fields text,
-                      fields text,
-                      CONSTRAINT _exceptions_pkey PRIMARY KEY (_id)
-                )
-                WITH (
-                  OIDS=FALSE,
-                  autovacuum_enabled=true
-                );""".format(**params)
-            self.execute(sql, 'create exception table')
+
 
 
 class DdlDatamart(Ddl):
@@ -882,7 +911,7 @@ class DdlDatamart(Ddl):
         dm = self.layer
         if not dm.is_reflected:
             dm.reflect()
-        dim_name = cls.get_name()
+        dim_name = cls.cls_get_name()
         params = {}
         params['dim'] = dim_name
         params['dm'] = self.layer.name
@@ -929,7 +958,7 @@ class DdlDatamart(Ddl):
         dm = self.layer
         if not dm.is_reflected:
             dm.reflect()
-        facttable_name = fact_cls.get_name()
+        facttable_name = fact_cls.cls_get_name()
         params = {}
         params['facttable'] = facttable_name
         params['dm'] = self.layer.name
@@ -1000,7 +1029,7 @@ class DdlDatamart(Ddl):
         for name, field in fact_cls.__ordereddict__.items():
             if isinstance(field, DmReference):
                 params['fk_fieldname'] = name
-                params['dim_tabel'] = field.dim_cls.get_name()
+                params['dim_tabel'] = field.dim_cls.cls_get_name()
                 fields += 'FOREIGN KEY ({fk_fieldname}) REFERENCES {dm}.{dim_tabel}(ID),\n'.format(**params)
         fields = fields.rstrip(',\n')
         return fields

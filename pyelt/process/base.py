@@ -83,10 +83,6 @@ class BaseProcess():
     def _get_fixed_params(self) -> Dict[str, Any]:
         params = {}
         params['runid'] = self.runid
-        params['source_system'] = self.pipe.source_system
-        params['sor'] = self.pipe.sor.name
-        params['rdv'] = self.dwh.rdv.name
-        params['dv'] = self.dwh.dv.name
         return params
 
 class ProcesStep:

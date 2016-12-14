@@ -27,6 +27,7 @@ class DV(Schema):
 
 
 class DVTable(Table):
+    _schema = 'dv'
     name = ''
 
     # _id = Columns.IntColumn()
@@ -41,7 +42,7 @@ class DVTable(Table):
 
 
 class Hub(DVTable, HubData):
-    # bk = Columns.TextColumn('bk')
+
     def __init__(self, name: str = '') -> None:
         DVTable.__init__(self)
         HubData.__init__(self)
@@ -49,17 +50,14 @@ class Hub(DVTable, HubData):
         self.bk = Columns.TextColumn('bk')
         self.bk.table = self
 
-    # @classmethod
-    # def get_name(cls):
-    #     hub_name = cls.__name__.lower() + '_hub'
-    #     return hub_name
-
-
 class OrderedMembersMetaClass(type):
     """Metaclass voor de sats. Deze zorgt ervoor dat de class properties in de class-dict gesorteerd blijven zoals ze in de code staan.
-    Hierdoor kun je volgorde van de velden in de db bepalen
+    Hierdoor kun je volgorde van de velden in de db bepalen.
+    Naast de default __dict__ van de class komt er bij deze implementatie van deze meta class een extra __ordereddict__ property
 
     gebruik:
+    class Sat(DVTable, metaclass=OrderedMembersMetaClass):
+        ...
     class Adres(Sat):
         ...
     for col_name, col in Adres.__ordereddict__.items():
@@ -78,28 +76,19 @@ class OrderedMembersMetaClass(type):
 
 class Sat(DVTable, SatData, metaclass=OrderedMembersMetaClass):
     def __new__(cls, *args, **kwargs):
-        cls.init_cols()
+        cls.cls_init_cols()
         return super().__new__(cls)
 
     @classmethod
-    def init_cols(cls):
-        # all_attr = dict(cls.__dict__)
-        # all_attr.update(dict(cls.__base__.__dict__))
+    def cls_init_cols(cls):
         for col_name, col in cls.__ordereddict__.items():
             if isinstance(col, Column):
                 if not col.name:
                     col.name = col_name
                 col.table = cls
 
-                # for col_name, col in cls.__base__.__dict__.items():
-                #     if isinstance(col, Column):
-                #         if not col.name:
-                #             col.name = col_name
-                #         col.table = cls
-                #         setattr(cls, col_name, col)
-
     @classmethod
-    def get_name(cls):
+    def cls_get_name(cls):
         if cls.name:
             return cls.name
         else:
@@ -108,7 +97,7 @@ class Sat(DVTable, SatData, metaclass=OrderedMembersMetaClass):
             import sys
             entity_cls = getattr(sys.modules[cls.__module__], entity_name) #globals()[entity_name]
             #haal de super class op die als base de DvEntity heeft, deze heeft de naam vd super in zich
-            base_entity_cls = entity_cls.get_class_with_dventity_base()
+            base_entity_cls = entity_cls.cls_get_class_with_dventity_base()
             entity_name = base_entity_cls.__name__.lower()
             sat_name = full_name.replace('.', '_sat_')
             sat_name = entity_name + '_sat_' + cls.__name__.lower()
@@ -117,11 +106,11 @@ class Sat(DVTable, SatData, metaclass=OrderedMembersMetaClass):
             return sat_name
 
     @classmethod
-    def get_short_name(cls):
+    def cls_get_short_name(cls):
         return cls.__name__.lower().replace('_sat', '')
 
     @classmethod
-    def get_columns(cls) -> List[Column]:
+    def cls_get_columns(cls) -> List[Column]:
         cols = []
         for col_name, col in cls.__ordereddict__.items():
             if isinstance(col, Column):
@@ -143,7 +132,7 @@ class HybridSat(Sat):
     #     return super().__new__(cls, args, kwargs)
 
     @classmethod
-    def get_types(cls):
+    def cls_get_types(cls):
         types = []
         for key, val in cls.Types.__ordereddict__.items():
             if not key.startswith('__'):
@@ -152,85 +141,90 @@ class HybridSat(Sat):
 
 
 class DvEntity(EntityData):
+    _schema_name = 'dv'
     hub = Hub()
     bk = hub.bk
     sats = {} #type: Dict[str, Sat]
 
     @classmethod
-    def init_cls(cls):
-        cls.init_sats()
-        cls.hub = cls.get_hub()
+    def cls_init(cls):
+        cls.cls_init_sats()
+        cls.hub = cls.cls_get_hub()
+        cls.hub._schema_name = cls._schema_name
         cls.bk = cls.hub.bk
 
     @classmethod
-    def init_sats(cls):
-        sats = cls.get_sats()
+    def cls_init_sats(cls):
+        sats = cls.cls_get_sats()
         for sat in sats.values():
-            sat.init_cols()
+            sat.cls_init_cols()
+            sat._schema_name = cls._schema_name
 
     @classmethod
-    def get_name(cls) -> str:
+    def cls_get_name(cls) -> str:
         entity_name = cls.__name__.lower() + '_entity'
         return entity_name
 
     @classmethod
-    def get_hub(cls) -> 'Hub':
-        cls.hub.name = cls.get_hub_name()
-        hub_name = cls.get_hub_name()
+    def cls_get_hub(cls) -> 'Hub':
+        cls.hub.name = cls.cls_get_hub_name()
+        hub_name = cls.cls_get_hub_name()
         return Hub(hub_name)
 
+    @classmethod
+    def cls_get_schema(cls, dwh) -> 'Schema':
+        schema_name = cls._schema_name
+        schema = dwh.get_dv_schema(schema_name)
+        return schema
+
 
 
     @classmethod
-    def get_class_with_dventity_base(cls) -> 'DvEntity':
-            if DvEntity in cls.__bases__:
-                return cls
-            else:
-                for base in cls.__bases__:
-                    if hasattr(base, "get_class_with_dventity_base"):
-                        return base.get_class_with_dventity_base()
+    def cls_get_class_with_dventity_base(cls) -> 'DvEntity':
+        if DvEntity in cls.__bases__:
+            return cls
+        else:
+            for base in cls.__bases__:
+                if hasattr(base, "cls_get_class_with_dventity_base"):
+                    return base.cls_get_class_with_dventity_base()
 
     @classmethod
-    def get_hub_name(cls) -> str:
-        dventity = cls.get_class_with_dventity_base()
+    def cls_get_hub_name(cls) -> str:
+        dventity = cls.cls_get_class_with_dventity_base()
         hub_name = dventity.__name__.lower().replace('_entity', '').replace('entity', '') + '_hub'
         return hub_name
 
 
 
     @classmethod
-    def get_hub_type(cls) -> str:
+    def cls_get_hub_type(cls) -> str:
         """Naam van de (sub)class geldt als type"""
         type = cls.__name__.lower().replace('_entity', '').replace('entity', '')
         return type
 
     @classmethod
-    def get_view_name(cls) -> str:
+    def cls_get_view_name(cls) -> str:
         # dventity = cls.get_class_with_dventity_base()
         view_name = cls.__name__.lower().replace('_entity', '').replace('entity', '') + '_view'
         return view_name
 
     @classmethod
-    def get_sats(cls) -> Dict[str, Sat]:
+    def cls_get_sats(cls) -> Dict[str, Sat]:
         all_sats = {}
-        base_class_sats = cls.get_base_class_sats()
-        this_class_sats = cls.get_this_class_sats()
-        sub_class_sats = cls.get_sub_classes_sats()
+        base_class_sats = cls.cls_get_base_class_sats()
+        this_class_sats = cls.cls_get_this_class_sats()
+        sub_class_sats = cls.cls_get_sub_classes_sats()
         all_sats.update(base_class_sats)
         all_sats.update(this_class_sats)
         all_sats.update(sub_class_sats)
         return all_sats
 
     @classmethod
-    def get_this_class_sats(cls) -> Dict[str, Sat]:
+    def cls_get_this_class_sats(cls) -> Dict[str, Sat]:
         sats = {}
-        class_with_dv_entity_base = cls.get_class_with_dventity_base()
+        class_with_dv_entity_base = cls.cls_get_class_with_dventity_base()
         for key, sat_cls in cls.__dict__.items():
             if inspect.isclass(sat_cls) and Sat in sat_cls.__mro__:
-                # test = sat_cls.__mro__
-
-                # if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
-            # if isinstance(sat_cls, type) and sat_cls.__base__ == Sat:
                 sat_cls.name = class_with_dv_entity_base.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
                 sat_cls.name = sat_cls.name.replace('_default', '')
                 if sat_cls.__base__ == HybridSat:
@@ -239,14 +233,13 @@ class DvEntity(EntityData):
         return sats
 
     @classmethod
-    def get_sub_classes_sats(cls) -> Dict[str, Sat]:
+    def cls_get_sub_classes_sats(cls) -> Dict[str, Sat]:
         #subclasses
         sats = {}
-        class_with_dv_entity_base = cls.get_class_with_dventity_base()
+        class_with_dv_entity_base = cls.cls_get_class_with_dventity_base()
         for sub_cls in cls.__subclasses__():
             if isinstance(sub_cls, type):
                 for key, sat_cls in sub_cls.__dict__.items():
-                    # if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
                     if inspect.isclass(sat_cls) and Sat in sat_cls.__mro__:
                         sat_cls.name = class_with_dv_entity_base.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
                         sat_cls.name = sat_cls.name.replace('_default', '')
@@ -256,32 +249,17 @@ class DvEntity(EntityData):
         return sats
 
     @classmethod
-    def get_base_class_sats(cls):
+    def cls_get_base_class_sats(cls):
         sats = {}
-        class_with_dv_entity_base = cls.get_class_with_dventity_base()
+        class_with_dv_entity_base = cls.cls_get_class_with_dventity_base()
         for base in cls.__mro__:
             for key, sat_cls in base.__dict__.items():
                 if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
-                # if isinstance(sat_cls, type) and sat_cls.__base__ == Sat:
                     sat_cls.name = class_with_dv_entity_base.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
                     sat_cls.name = sat_cls.name.replace('_default', '')
                     if sat_cls.__base__ == HybridSat:
                         sat_cls.type = key
                     sats[key] = sat_cls
-        return sats
-
-    @classmethod
-    def get_base_class_sats_old(cls, _cls, sats = {}):
-        for base in _cls.__bases__:
-            for key, sat_cls in base.__dict__.items():
-                if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
-                # if isinstance(sat_cls, type) and sat_cls.__base__ == Sat:
-                    sat_cls.name = cls.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
-                    sat_cls.name = sat_cls.name.replace('_default', '')
-                    if sat_cls.__base__ == HybridSat:
-                        sat_cls.type = key
-                    sats[key] = sat_cls
-            sats = cls.get_base_class_sats(base, sats)
         return sats
 
     def sats(self):
@@ -291,45 +269,21 @@ class DvEntity(EntityData):
                 sats[sat_name] = sat
         return sats
 
-
-    # @classmethod
-    # def init_sats(cls):
-    #     """haal alle sats op bij deze class en bij alle subclasses van deze class"""
-    #     for key, sat_cls in cls.__dict__.items():
-    #         if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
-    #         # if isinstance(sat_cls, type) and sat_cls.__base__ == Sat:
-    #             sat_cls.name = cls.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
-    #             sat_cls.name = sat_cls.name.replace('_default', '')
-    #             if sat_cls.__base__ == HybridSat:
-    #                 sat_cls.type = key
-    #             cls.sats[key] = sat_cls
-    #     for sub_cls in cls.__subclasses__():
-    #         if isinstance(sub_cls, type):
-    #             for key, sat_cls in sub_cls.__dict__.items():
-    #                 if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
-    #                     sat_cls.name = cls.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
-    #                     sat_cls.name = sat_cls.name.replace('_default', '')
-    #                     if sat_cls.__base__ == HybridSat:
-    #                         sat_cls.type = key
-    #                     cls.sats[key] = sat_cls
-    #
-    #
-    # def __new__(cls, *args, **kwargs):
-    #     cls.init_sats()
-    #     return super().__new__(cls)
-
     def __init__(self):
         EntityData.__init__(self)
         self.dv = DV()
 
     def __str__(self):
-        return self.__class__.get_name()
+        return self.__class__.cls_get_name()
 
+
+class DvValuesetEntity(DvEntity):
+    _schema_name = 'valset'
 
 class LinkReference():
     def __init__(self, entity_cls: 'DvEntity', name: str = ''):
         self.entity_cls = entity_cls
-        self.entity_cls_with_dventity_base = entity_cls.get_class_with_dventity_base()
+        self.entity_cls_with_dventity_base = entity_cls.cls_get_class_with_dventity_base()
         self.name = name
 
     def get_fk(self):
@@ -348,8 +302,9 @@ class DynamicLinkReference():
         return fk
 
 class Link():
+    _schema_name = 'dv'
     @classmethod
-    def init_cls(cls):
+    def cls_init(cls):
         for prop_name, prop in cls.__dict__.items():
             if isinstance(prop, LinkReference):
                 if not prop.name:
@@ -360,16 +315,16 @@ class Link():
                         prop.name = prop_name
             if isinstance(prop, DynamicLinkReference):
                 prop.name = prop_name
-        cls.init_sats()
+        cls.cls_init_sats()
 
     @classmethod
-    def init_sats(cls):
-        sats = cls.get_sats()
+    def cls_init_sats(cls):
+        sats = cls.cls_get_sats()
         for sat in sats.values():
-            sat.init_cols()
+            sat.cls_init_cols()
 
     @classmethod
-    def get_name(cls):
+    def cls_get_name(cls):
         from pyelt.helpers.global_helper_functions import camelcase_to_underscores
         link_name = camelcase_to_underscores(cls.__name__)
 
@@ -378,7 +333,16 @@ class Link():
         return link_name
 
     @classmethod
-    def get_entities_old(cls):
+    def cls_get_schema(cls, dwh) -> 'Schema':
+        schema_name = cls._schema_name
+        if schema_name == 'dv':
+            schema = dwh.dv
+        elif schema_name == 'valset':
+            schema = dwh.valset
+        return schema
+
+    @classmethod
+    def cls_get_entities_old(cls):
         entities = {}
         for key, entity_cls in cls.__dict__.items():
             if isinstance(entity_cls, type) and DvEntity in entity_cls.__bases__:
@@ -386,13 +350,8 @@ class Link():
                 entities[key.lower()] = entity_cls
         return entities
 
-    def __init__(self, *args):
-        self.hubs = []
-        for arg in args:
-            self.hubs.append(arg)
-
     @classmethod
-    def get_link_refs(cls) -> Dict[str, LinkReference]:
+    def cls_get_link_refs(cls) -> Dict[str, LinkReference]:
         link_refs = {}
         for prop_name, link_ref in cls.__dict__.items():
             if isinstance(link_ref, LinkReference):
@@ -400,29 +359,30 @@ class Link():
         return link_refs
 
     @classmethod
-    def get_sats(cls):
+    def cls_get_sats(cls):
         sats = {}
         for key, sat_cls in cls.__dict__.items():
             if inspect.isclass(sat_cls) and (sat_cls.__base__ == Sat or sat_cls.__base__ == HybridSat) and key[:1].isupper():
                 # if isinstance(sat_cls, type) and sat_cls.__base__ == Sat:
                 sat_cls.name = cls.__name__.lower() + '_sat_' + sat_cls.__name__.lower()
-                sat_cls.name = cls.get_name() + '_sat_' + sat_cls.__name__.lower()
+                sat_cls.name = cls.cls_get_name() + '_sat_' + sat_cls.__name__.lower()
                 sat_cls.name = sat_cls.name.replace('_default', '')
                 if sat_cls.__base__ == HybridSat:
                     sat_cls.type = key
                 sats[key] = sat_cls
         return sats
 
+    def __init__(self, *args):
+        self.hubs = []
+        for arg in args:
+            self.hubs.append(arg)
 
 class HybridLink(Link):
     class Types:
         pass
-    # # type_col = Columns.TextColumn('type')
-    # def __new__(cls, *args, **kwargs):
-    #     return super().__new__(cls, args, kwargs)
 
     @classmethod
-    def get_types(cls):
+    def cls_get_types(cls):
         types = []
         for key, val in cls.Types.__dict__.items():
             if not key.startswith('__'):
@@ -430,19 +390,14 @@ class HybridLink(Link):
         return types
 
 
-# class Ref():
-#     class Types():
-#         pass
-
 class EnsembleView():
 
     @classmethod
-    def init_cls(cls):
+    def cls_init(cls):
         name = cls.__name__.lower()
         entity_dict = {}
         for key, entity_or_link_cls in cls.__dict__.items():
             entity_dict[key] = entity_or_link_cls
-
 
     def __init__(self, name='', entity_and_link_list=[]):
         self.name = name
@@ -457,7 +412,7 @@ class EnsembleView():
         :rtype: object
         """
         if not alias:
-            alias = entity_or_link.get_name()
+            alias = entity_or_link.cls_get_name()
         # testen of alias al bestaat
         assert alias not in self.entity_dict.keys(), '{} bestaat al; kies een nieuw alias'.format(alias)
         self.entity_dict[alias] = entity_or_link

@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from pyelt.datalayers.database import Table, Schema
 from pyelt.datalayers.dv import HybridSat
 from pyelt.datalayers.sor import SorTable, SorQuery
@@ -35,7 +37,7 @@ class BaseEtl(BaseProcess):
         field_values = field_values[:-10]
         params['field_values'] = field_values
 
-        sql = """INSERT INTO {dv}._exceptions (_runid, schema, table_name, message, key_fields, fields )
+        sql = """INSERT INTO {schema}._exceptions (_runid, schema, table_name, message, key_fields, fields )
 SELECT {runid}, '{schema}', '{from_table}', _validation_msg, {key_values}, {field_values}
 FROM {schema}.{from_table}
 WHERE _runid = {runid} AND NOT _valid;""".format(
@@ -51,6 +53,12 @@ class EtlSourceToSor(BaseEtl):
     def __init__(self, pipe):
         super().__init__(pipe)
 
+    def _get_fixed_params(self) -> Dict[str, Any]:
+        params = {}
+        params['runid'] = self.runid
+        params['source_system'] = self.pipe.source_system
+        params['sor'] = self.pipe.sor.name
+        return params
 
     # def source_to_sor(self, mappings):
     #     if isinstance(mappings.source, File):
@@ -361,22 +369,33 @@ class EtlSorToDv(BaseEtl):
     def __init__(self, pipe):
         super().__init__(pipe)
 
+    def _get_fixed_params(self) -> Dict[str, Any]:
+        params = {}
+        params['runid'] = self.runid
+        params['source_system'] = self.pipe.source_system
+        params['sor'] = self.pipe.sor.name
+        return params
+
     def sor_to_entity(self, mappings: 'SorToEntityMapping'):
         self.logger.log('START <blue>{}</>'.format(mappings), indent_level=3)
         try:
             if not mappings.filter:
                 mappings.filter = '1=1'
             params = mappings.__dict__
+            dv_schema = mappings.target.cls_get_schema(self.dwh)
             params.update(self._get_fixed_params())
-            params['hub'] = mappings.target.get_hub_name()
-            params['hub_type'] = mappings.target.get_hub_type()
+            params['dv_schema'] = dv_schema.name
+            params['hub'] = mappings.target.cls_get_hub_name()
+            if 'zorgactiviteit' in str(mappings):
+                debug = True
+            params['hub_type'] = mappings.target.cls_get_hub_type()
             if mappings.type:
                 params['hub_type'] = mappings.type
             params['sor_table'] = mappings.source.name
             params['relation_type'] = mappings.type
             # params['filter_hub'] = params['filter']
 
-            sql = "SELECT COUNT(*) FROM {dv}.{hub};".format(**params)
+            sql = "SELECT COUNT(*) FROM {dv_schema}.{hub};".format(**params)
             result = self.execute_read(sql, 'get rowcount')
             rowcount_hub = result[0][0]
 
@@ -386,25 +405,25 @@ class EtlSorToDv(BaseEtl):
                 params['filter_runid'] = 'floor(hstg._runid) = floor({runid})'.format(**params)
 
             if mappings.bk_mapping and isinstance(mappings.source, SorTable):
-                sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk)
+                sql = """INSERT INTO {dv_schema}.{hub} (_runid, _insert_date, _source_system, type, bk)
 SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
 FROM {sor}.{sor_table} hstg
-WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv}.{hub} WHERE bk = ({bk_mapping})) AND {filter} AND {filter_runid};""".format(
+WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{hub} WHERE bk = ({bk_mapping})) AND {filter} AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
                 # onderstaande regels voor performance
-                sql = """SELECT hub._id FROM {dv}.{hub} hub JOIN {sor}.{sor_table} hstg ON {bk_mapping} = hub.bk WHERE hstg._valid AND {filter} AND {filter_runid};""".format(
+                sql = """SELECT hub._id FROM {dv_schema}.{hub} hub JOIN {sor}.{sor_table} hstg ON {bk_mapping} = hub.bk WHERE hstg._valid AND {filter} AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'load hub_ids in mem (performance)')
 
-                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
+                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
             elif mappings.bk_mapping and isinstance(mappings.source, SorQuery):
                 params['sql'] = mappings.source.sql
 
-                sql = """INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk)
+                sql = """INSERT INTO {dv_schema}.{hub} (_runid, _insert_date, _source_system, type, bk)
 SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
 FROM ({sql}) hstg
 WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL
@@ -421,7 +440,7 @@ AND {filter} AND {filter_runid};""".format( **params)
                 compare_key_fields = compare_key_fields[:-5]
                 params['target_key_sat'] = target_key_sat
                 params['compare_key_fields'] = compare_key_fields
-                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv}.{hub} hub, {dv}.{target_key_sat} key_sat WHERE hub._id = key_sat._id AND key_sat._active AND {compare_key_fields} AND hstg._valid AND {filter_hub};""".format(
+                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub, {dv_schema}.{target_key_sat} key_sat WHERE hub._id = key_sat._id AND key_sat._active AND {compare_key_fields} AND hstg._valid AND {filter_hub};""".format(
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
 
@@ -438,7 +457,9 @@ AND {filter} AND {filter_runid};""".format( **params)
         satparams = sat_mappings.__dict__
         satparams.update(self._get_fixed_params())
         sat_cls = sat_mappings.target
-        satparams['sat'] = sat_cls.get_name()
+        satparams['dv_schema'] = params['dv_schema']
+        satparams['sat'] = sat_cls.cls_get_name()
+
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']
             satparams['relation_type'] = params['relation_type']
@@ -455,26 +476,26 @@ AND {filter} AND {filter_runid};""".format( **params)
             satparams['from'] = "({}) AS hstg".format(sat_mappings.source.sql)
 
         if sat_cls.__base__ == HybridSat:
-            sql = """INSERT INTO {dv}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
+            sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
                     SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
-                    AND NOT EXISTS (SELECT 1 FROM {dv}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
+                    AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
                     AND {filter_runid}
                     EXCEPT
                     SELECT _id, {runid}, '{type}', '{source_system}', now(), 0, {sat_fields}
-                    FROM {dv}.{sat} sat
+                    FROM {dv_schema}.{sat} sat
                     WHERE _active AND type = '{type}';""".format(
                 **satparams)
             self.execute(sql, 'insert new in sat')
 
             # oude is nog actief, maar runid is kleiner. Dit is het laatste record
-            sql = """update {dv}.{sat} current set _revision = previous._revision + 1
-                    from {dv}.{sat} previous where current._active = True AND previous._active = True AND previous._id = current._id and previous._runid < current._runid AND current.type = '{type}' AND previous.type = '{type}';""".format(
+            sql = """update {dv_schema}.{sat} current set _revision = previous._revision + 1
+                    from {dv_schema}.{sat} previous where current._active = True AND previous._active = True AND previous._id = current._id and previous._runid < current._runid AND current.type = '{type}' AND previous.type = '{type}';""".format(
                 **satparams)
             self.execute(sql, 'update sat revision')
             # nu oude inctief maken
-            sql = """update {dv}.{sat} previous set _active = False, _finish_date = current._insert_date
-                    from {dv}.{sat} current where previous._active = True AND previous._id = current._id and previous._runid < current._runid AND current.type = '{type}' AND previous.type = '{type}';""".format(
+            sql = """update {dv_schema}.{sat} previous set _active = False, _finish_date = current._insert_date
+                    from {dv_schema}.{sat} current where previous._active = True AND previous._id = current._id and previous._runid < current._runid AND current.type = '{type}' AND previous.type = '{type}';""".format(
                 **satparams)
             self.execute(sql, 'update sat set old ones inactive')
 
@@ -485,26 +506,26 @@ AND {filter} AND {filter_runid};""".format( **params)
             #     satparams['from'] = "({}) AS hstg".format(sat_mappings.source.sql)
 
 
-            sql = """INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+            sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                     SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
-                    AND NOT EXISTS (SELECT 1 FROM {dv}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
+                    AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
                     AND {filter_runid}
                     EXCEPT
                     SELECT _id, {runid}, '{source_system}', now(), 0, {sat_fields}
-                    FROM {dv}.{sat} sat
+                    FROM {dv_schema}.{sat} sat
                     WHERE sat._active;""".format(
                 **satparams)
             self.execute(sql, 'insert new in sat')
 
             # oude is nog actief, maar runid is kleiner. Dit is het laatste record
-            sql = """update {dv}.{sat} current set _revision = previous._revision + 1
-                    from {dv}.{sat} previous where current._active = True AND previous._active = True AND previous._id = current._id and previous._runid < current._runid;""".format(
+            sql = """update {dv_schema}.{sat} current set _revision = previous._revision + 1
+                    from {dv_schema}.{sat} previous where current._active = True AND previous._active = True AND previous._id = current._id and previous._runid < current._runid;""".format(
                 **satparams)
             self.execute(sql, 'update sat revision')
             # nu oude inctief maken
-            sql = """update {dv}.{sat} previous set _active = False, _finish_date = current._insert_date
-                    from {dv}.{sat} current where previous._active = True AND previous._id = current._id and previous._runid < current._runid;""".format(
+            sql = """update {dv_schema}.{sat} previous set _active = False, _finish_date = current._insert_date
+                    from {dv_schema}.{sat} current where previous._active = True AND previous._id = current._id and previous._runid < current._runid;""".format(
                 **satparams)
             self.execute(sql, 'update sat set old ones inactive')
 
@@ -515,9 +536,9 @@ AND {filter} AND {filter_runid};""".format( **params)
         satparams = sat_mappings.__dict__
         satparams.update(self._get_fixed_params())
         sat_cls = sat_mappings.target
-        if 'hl7' in sat_cls.get_name():
+        if 'hl7' in sat_cls.cls_get_name():
             debug = True
-        satparams['sat'] = sat_cls.get_name()
+        satparams['sat'] = sat_cls.cls_get_name()
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']
             satparams['relation_type'] = params['relation_type']
@@ -528,35 +549,35 @@ AND {filter} AND {filter_runid};""".format( **params)
         satparams['sor_fields'] = sat_mappings.get_source_fields(alias='hstg')
         satparams['sat_fields'] = sat_mappings.get_sat_fields()
         satparams['fields_compare'] = sat_mappings.get_fields_compare(source_alias='hstg', target_alias='sat')
-        sql = "SELECT COUNT(*) FROM {dv}.{sat};".format(**satparams)
+        sql = "SELECT COUNT(*) FROM {dv_schema}.{sat};".format(**satparams)
         result = self.execute_read(sql, 'get rowcount')
         rowcount = result[0][0]
         if sat_cls.__base__ == HybridSat:
             if rowcount == 0:
                 # alle zijn nieuw; geen rekening houden met _runid
-                sql = """INSERT INTO {dv}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
+                sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
                         SELECT DISTINCT ON (fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 1, {sor_fields}
                         FROM {sor}.{sor_table} hstg
-                        WHERE hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv}.{sat} sat where sat._id  =  _fk_{relation_type}{hub_or_link} AND sat.type = '{type}') AND {filter};""".format(
+                        WHERE hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv_schema}.{sat} sat where sat._id  =  _fk_{relation_type}{hub_or_link} AND sat.type = '{type}') AND {filter};""".format(
                     **satparams)
                 self.execute(sql, '  insert new in sat')
             else:
-                sql = """INSERT INTO {dv}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
+                sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
                         SELECT DISTINCT ON (fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 1, {sor_fields}
                         FROM {sor}.{sor_table} hstg
-                        WHERE floor(hstg._runid) = floor({runid}) AND hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv}.{sat} sat where sat._id  =  fk_{relation_type}{hub_or_link} AND sat.type = '{type}') AND {filter};""".format(
+                        WHERE floor(hstg._runid) = floor({runid}) AND hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv_schema}.{sat} sat where sat._id  =  fk_{relation_type}{hub_or_link} AND sat.type = '{type}') AND {filter};""".format(
                     **satparams)
                 self.execute(sql, '  insert new in sat')
 
-                sql = """INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+                sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                         SELECT DISTINCT ON (fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), sat._revision + 1, {sor_fields}
-                        FROM {sor}.{sor_table} hstg JOIN {dv}.{sat} sat ON sat._id =  fk_{relation_type}{hub_or_link}
+                        FROM {sor}.{sor_table} hstg JOIN {dv_schema}.{sat} sat ON sat._id =  fk_{relation_type}{hub_or_link}
                         WHERE floor(hstg._runid) = floor({runid}) AND hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND sat._active = True AND sat.type = '{type}' AND ({fields_compare}) AND {filter};""".format(
                     **satparams)
                 self.execute(sql, '  insert changed in sat')
 
-                sql = """UPDATE {dv}.{sat} previous SET _active = FALSE, _finish_date = current._insert_date
-                        FROM {dv}.{sat} current WHERE previous._active = TRUE AND previous._id = current._id AND current._revision = (previous._revision + 1) AND current.type = '{type}' AND previous.type = '{type}' ;""".format(
+                sql = """UPDATE {dv_schema}.{sat} previous SET _active = FALSE, _finish_date = current._insert_date
+                        FROM {dv_schema}.{sat} current WHERE previous._active = TRUE AND previous._id = current._id AND current._revision = (previous._revision + 1) AND current.type = '{type}' AND previous.type = '{type}' ;""".format(
                     **satparams)
                 self.execute(sql, '  update sat set old ones inactive')
                 self.logger.log('    FINISH {}'.format(sat_mappings))
@@ -564,29 +585,29 @@ AND {filter} AND {filter_runid};""".format( **params)
 
             if rowcount == 0:
                 # alle zijn nieuw; geen rekening houden met _runid
-                sql = """INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+                sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                         SELECT DISTINCT ON (fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 1, {sor_fields}
                         FROM {sor}.{sor_table} hstg
-                        WHERE hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv}.{sat} sat where sat._id  =  _fk_{relation_type}{hub_or_link}) AND {filter};""".format(
+                        WHERE hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv_schema}.{sat} sat where sat._id  =  _fk_{relation_type}{hub_or_link}) AND {filter};""".format(
                     **satparams)
                 self.execute(sql, '  insert new in sat')
             else:
-                sql = """INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+                sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                         SELECT DISTINCT ON (fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 1, {sor_fields}
                         FROM {sor}.{sor_table} hstg
-                        WHERE floor(hstg._runid) = floor({runid}) AND hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv}.{sat} sat where sat._id  =  _fk_{relation_type}{hub_or_link}) AND {filter};""".format(
+                        WHERE floor(hstg._runid) = floor({runid}) AND hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND NOT EXISTS (select 1 from {dv_schema}.{sat} sat where sat._id  =  _fk_{relation_type}{hub_or_link}) AND {filter};""".format(
                     **satparams)
                 self.execute(sql, '  insert new in sat')
 
-                sql = """INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+                sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                         SELECT DISTINCT ON (fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), sat._revision + 1, {sor_fields}
-                        FROM {sor}.{sor_table} hstg JOIN {dv}.{sat} sat ON sat._id =  fk_{relation_type}{hub_or_link}
+                        FROM {sor}.{sor_table} hstg JOIN {dv_schema}.{sat} sat ON sat._id =  fk_{relation_type}{hub_or_link}
                         WHERE floor(hstg._runid) = floor({runid}) AND hstg._valid AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND sat._active = True AND ({fields_compare}) AND {filter};""".format(
                     **satparams)
                 self.execute(sql, '  insert changed in sat')
 
-                sql = """UPDATE {dv}.{sat} previous SET _active = FALSE, _finish_date = current._insert_date
-                        FROM {dv}.{sat} current WHERE previous._active = TRUE AND previous._id = current._id AND current._revision = (previous._revision + 1);""".format(
+                sql = """UPDATE {dv_schema}.{sat} previous SET _active = FALSE, _finish_date = current._insert_date
+                        FROM {dv_schema}.{sat} current WHERE previous._active = TRUE AND previous._id = current._id AND current._revision = (previous._revision + 1);""".format(
                     **satparams)
                 self.execute(sql, '  update sat set old ones inactive')
                 self.logger.log('    FINISH {}'.format(sat_mappings))
@@ -598,7 +619,9 @@ AND {filter} AND {filter_runid};""".format( **params)
                 mappings.filter = '1=1'
             params = mappings.__dict__
             params.update(self._get_fixed_params())
-            params['link'] = mappings.target.get_name()
+            dv_schema = mappings.target.cls_get_schema(self.dwh)
+            params['dv_schema'] = dv_schema.name
+            params['link'] = mappings.target.cls_get_name()
             params['link_type'] = mappings.type
             params['sor_table'] = mappings.source.name
             params['source_fks'] = self.__get_link_source_fks(mappings)
@@ -610,12 +633,12 @@ AND {filter} AND {filter_runid};""".format( **params)
             params['fks_compare'] = self.__get_link_fks_compare(mappings, source_alias='hstg', target_alias='link')
 
             sql = """
-            INSERT INTO {dv}.{link} (_runid, _source_system, _insert_date, type, {target_fks})
+            INSERT INTO {dv_schema}.{link} (_runid, _source_system, _insert_date, type, {target_fks})
             SELECT DISTINCT {runid}, '{source_system}', now(), '{link_type}', {source_fks}
             FROM {sor}.{sor_table} hstg {join}
             WHERE floor(hstg._runid) = floor({runid})
             AND NOT ({source_fks_is_null})
-            AND NOT EXISTS (SELECT 1 FROM {dv}.{link} link WHERE {fks_compare} AND link.type='{link_type}') AND {filter};""".format(**params)
+            AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{link} link WHERE {fks_compare} AND link.type='{link_type}') AND {filter};""".format(**params)
             self.execute(sql,  'insert new links')
 
             if len(mappings.sat_mappings) > 0:
@@ -635,7 +658,7 @@ AND {filter} AND {filter_runid};""".format( **params)
                 params['where'] = where_sql
 
                 sql = """UPDATE {sor}.{sor_table} hstg SET fk_{type}{link} = link._id
-FROM {dv}.{link} link {from}
+FROM {dv_schema}.{link} link {from}
 WHERE {fks_compare} AND {where}
 AND hstg._valid AND {filter};""".format(
                     **params)
@@ -749,72 +772,72 @@ AND hstg._valid AND {filter};""".format(
                     INSERT INTO _ref_values_temp (code, weergave_naam)
                     VALUES {values};
 
-                    INSERT INTO {dv}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
                     SELECT {runid}, '{source_system}', now(), '{ref_type}', NULL
-                    WHERE NOT EXISTS (SELECT 1 FROM {dv}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
+                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
 
-                    INSERT INTO {dv}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam)
+                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam)
                     SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{ref_type}', code, weergave_naam
                     FROM _ref_values_temp tmp
                     WHERE
-                      NOT EXISTS (SELECT 1 FROM {dv}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = tmp.code AND ref.weergave_naam = tmp.weergave_naam);
+                      NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = tmp.code AND ref.weergave_naam = tmp.weergave_naam);
 
 
                     DROP TABLE _ref_values_temp;
                       """.format(**params)
             elif mappings.source_type_field:
                 insert_sql = """
-                    INSERT INTO {dv}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
                     SELECT DISTINCT {runid}, '{source_system}', now(), {source_type_field}, {source_oid_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv}._ref_valuesets sets WHERE sets.naam = hstg.{source_type_field});
+                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = hstg.{source_type_field});
 
-                    INSERT INTO {dv}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_oid, valueset_naam, code, weergave_naam, niveau, niveau_type)
+                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_oid, valueset_naam, code, weergave_naam, niveau, niveau_type)
                     SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, {source_oid_field}, {source_type_field}, {source_code_field}, {source_descr_field}, {source_level_field}, {source_leveltype_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv}._ref_values ref WHERE ref.valueset_naam = hstg.{source_type_field} AND ref.code = hstg.{source_code_field}
+                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = hstg.{source_type_field} AND ref.code = hstg.{source_code_field}
                                 AND ref.weergave_naam = hstg.{source_descr_field} AND ref.niveau = {source_level_field});""".format(**params)
             elif mappings.source_code_field and not mappings.source_descr_field:
                 insert_sql = """
-                    INSERT INTO {dv}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
                     SELECT {runid}, '{source_system}', now(), '{ref_type}', NULL
-                    WHERE NOT EXISTS (SELECT 1 FROM {dv}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
+                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
 
-                    INSERT INTO {dv}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type)
+                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type)
                     SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{ref_type}', {source_code_field}, NULL, NULL, NULL,
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = hstg.{source_code_field}
+                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = hstg.{source_code_field}
                                     AND ref.weergave_naam = hstg.{source_descr_field} AND ref.niveau = {source_level_field} AND ref.niveau_type = {source_leveltype_field)};""".format(**params)
             else:
                 insert_sql = """
-                    INSERT INTO {dv}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
+                    INSERT INTO {dv_schema}._ref_valuesets (_runid, _source_system, _insert_date, naam, oid)
                     SELECT {runid}, '{source_system}', now(), '{ref_type}', NULL
-                    WHERE NOT EXISTS (SELECT 1 FROM {dv}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
+                    WHERE NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_valuesets sets WHERE sets.naam = '{ref_type}');
 
-                    INSERT INTO {dv}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type))
+                    INSERT INTO {dv_schema}._ref_values (_runid, _active, _source_system, _insert_date, _revision, valueset_naam, code, weergave_naam, niveau, niveau_type))
                     SELECT DISTINCT {runid}, True, '{source_system}', now(), 0, '{ref_type}', {source_code_field}, {source_descr_field}, {source_level_field}, {source_leveltype_field}
                     FROM {sor}.{sor_table} hstg
                     WHERE floor(hstg._runid) = floor({runid})
                       AND hstg._valid AND hstg._active
-                      AND NOT EXISTS (SELECT 1 FROM {dv}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = hstg.{source_code_field}
+                      AND NOT EXISTS (SELECT 1 FROM {dv_schema}._ref_values ref WHERE ref.valueset_naam = '{ref_type}' AND ref.code = hstg.{source_code_field}
                                     AND ref.weergave_naam = {source_descr_field} AND ref.niveau = {source_level_field} AND ref.niveau_type = {source_leveltype_field);""".format(**params)
 
             self.execute(insert_sql, 'insert refs')
 
             # oude is nog actief, maar runid is kleiner. Dit is het laatste record
-            insert_sql = """update {dv}._ref_values current set _revision = previous._revision + 1
-                    from {dv}._ref_values previous where current._active = True AND previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
+            insert_sql = """update {dv_schema}._ref_values current set _revision = previous._revision + 1
+                    from {dv_schema}._ref_values previous where current._active = True AND previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
                 **params)
             self.execute(insert_sql, 'update ref revision')
             # nu oude inctief maken
-            insert_sql = """update {dv}._ref_values previous set _active = False, _finish_date = current._insert_date
-                    from {dv}._ref_values current where previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
+            insert_sql = """update {dv_schema}._ref_values previous set _active = False, _finish_date = current._insert_date
+                    from {dv_schema}._ref_values current where previous._active = True AND previous.valueset_naam = current.valueset_naam AND previous.code = current.code and previous._runid < current._runid;""".format(
                 **params)
             self.execute(insert_sql, 'update ref set old ones inactive')
             self.logger.log('  FINISH {}'.format(mappings))
@@ -830,17 +853,17 @@ AND hstg._valid AND {filter};""".format(
             params.update(self._get_fixed_params())
 
             sql = """
-          INSERT INTO {dv}.{hub} (_runid, _insert_date, _source_system, type, bk)
-          SELECT DISTINCT {runid}, now(), '{source_system}', '{type}', {bk_mapping} FROM {dv}.{view} view
-          WHERE view._valid AND {bk_mapping} NOT IN (SELECT bk FROM {dv}.{hub}) AND {filter};""".format(
+          INSERT INTO {dv_schema}.{hub} (_runid, _insert_date, _source_system, type, bk)
+          SELECT DISTINCT {runid}, now(), '{source_system}', '{type}', {bk_mapping} FROM {dv_schema}.{view} view
+          WHERE view._valid AND {bk_mapping} NOT IN (SELECT bk FROM {dv_schema}.{hub}) AND {filter};""".format(
                 **params)
             self.execute(sql,  'insert new hub')
 
-            # sql = """SELECT hub._id FROM {dv}.{hub} hub JOIN {dv}.{sor_table} view ON {bk_mapping} = hub.bk WHERE floor(view._runid) = floor({runid}) AND view._valid AND {filter};""".format(
+            # sql = """SELECT hub._id FROM {dv_schema}.{hub} hub JOIN {dv_schema}.{sor_table} view ON {bk_mapping} = hub.bk WHERE floor(view._runid) = floor({runid}) AND view._valid AND {filter};""".format(
             #     **params)
             # self.execute(sql,  'load hub_ids in mem (performance)')
 
-            # sql = """UPDATE {dv}.{sor_table} view SET _fk_{type}{hub} = hub._id FROM {dv}.{hub} hub WHERE {bk_mapping} = hub.bk AND floor(view._runid) = floor({runid}) AND view._valid AND {filter};""".format(
+            # sql = """UPDATE {dv_schema}.{sor_table} view SET _fk_{type}{hub} = hub._id FROM {dv_schema}.{hub} hub WHERE {bk_mapping} = hub.bk AND floor(view._runid) = floor({runid}) AND view._valid AND {filter};""".format(
             #     **params)
             # self.execute(sql,  'update fk_hub in sor table')
 
@@ -858,27 +881,27 @@ AND hstg._valid AND {filter};""".format(
                 satparams['fields_compare'] = sat_mappings.get_fields_compare(source_alias='view', target_alias='sat')
 
                 sql = """
-                INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+                INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                 SELECT DISTINCT ON (hub._id) hub._id, {runid}, '{source_system}', now(), 1, {view_fields}
-                FROM {dv}.{view} view
-                JOIN {dv}.{hub} hub ON hub.bk = {bk_mapping}
-                WHERE view._valid AND NOT EXISTS (select 1 from {dv}.{sat} sat where sat._id  =  hub._id) AND {filter};""".format(
+                FROM {dv_schema}.{view} view
+                JOIN {dv_schema}.{hub} hub ON hub.bk = {bk_mapping}
+                WHERE view._valid AND NOT EXISTS (select 1 from {dv_schema}.{sat} sat where sat._id  =  hub._id) AND {filter};""".format(
                     **satparams)
                 self.execute(sql,  '  insert new in sat')
 
                 sql = """
-                INSERT INTO {dv}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
+                INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                 SELECT DISTINCT ON (hub._id) hub._id, {runid}, '{source_system}', now(), sat._revision + 1, {view_fields}
-                FROM {dv}.{view} view
-                JOIN {dv}.{hub} hub ON hub.bk = view.bk
-                JOIN {dv}.{sat} sat ON sat._id =  hub._id
+                FROM {dv_schema}.{view} view
+                JOIN {dv_schema}.{hub} hub ON hub.bk = view.bk
+                JOIN {dv_schema}.{sat} sat ON sat._id =  hub._id
                 WHERE view._valid AND sat._active = True AND ({fields_compare}) AND {filter};""".format(
                     **satparams)
                 self.execute(sql,  '  insert changed in sat')
 
                 sql = """
-                UPDATE {dv}.{sat} previous SET _active = FALSE, _finish_date = current._insert_date
-                FROM {dv}.{sat} current WHERE previous._active = TRUE AND previous._id = current._id AND current._revision = (previous._revision + 1);""".format(
+                UPDATE {dv_schema}.{sat} previous SET _active = FALSE, _finish_date = current._insert_date
+                FROM {dv_schema}.{sat} current WHERE previous._active = TRUE AND previous._id = current._id AND current._revision = (previous._revision + 1);""".format(
                     **satparams)
                 self.execute(sql,  '  update sat set old ones inactive')
                 self.logger.log('    FINISH {}'.format(sat_mappings))
@@ -900,18 +923,18 @@ AND hstg._valid AND {filter};""".format(
             params['fks_compare'] = mappings.get_fks_compare(target_alias='link')
 
             sql = """
-            INSERT INTO {dv}.{link} (_runid, _source_system, _insert_date, {target_fks})
+            INSERT INTO {dv_schema}.{link} (_runid, _source_system, _insert_date, {target_fks})
             SELECT {runid}, '{source_system}', now(), {source_fks}
-            FROM {dv}.{view}  {join}
-            WHERE floor({dv}.{view}._runid) = floor({runid}) AND
-              NOT EXISTS (SELECT 1 FROM {dv}.{link} link WHERE {fks_compare}) AND {filter};""".format(**params)
+            FROM {dv_schema}.{view}  {join}
+            WHERE floor({dv_schema}.{view}._runid) = floor({runid}) AND
+              NOT EXISTS (SELECT 1 FROM {dv_schema}.{link} link WHERE {fks_compare}) AND {filter};""".format(**params)
 
             # sql = """
-            # INSERT INTO {dv}.{link} (_runid, _source_system, _insert_date, {target_fks})
+            # INSERT INTO {dv_schema}.{link} (_runid, _source_system, _insert_date, {target_fks})
             # SELECT {runid}, '{source_system}', now(), {source_fks}
             # FROM {from}
-            # WHERE {join} AND floor({dv}.{view}._runid) = floor({runid}) AND
-            #   NOT EXISTS (SELECT 1 FROM {dv}.{link} link WHERE {fks_compare}) AND {filter};""".format(**params)
+            # WHERE {join} AND floor({dv_schema}.{view}._runid) = floor({runid}) AND
+            #   NOT EXISTS (SELECT 1 FROM {dv_schema}.{link} link WHERE {fks_compare}) AND {filter};""".format(**params)
 
             self.execute(sql,  'insert new links')
             self.logger.log('  FINISH {}'.format(mappings))
@@ -923,7 +946,7 @@ AND hstg._valid AND {filter};""".format(
             params = validation.__dict__
             params.update(self._get_fixed_params())
             params['table'] = validation.table.name
-            sql = """UPDATE {dv}.{table} set _valid = False, _validation_msg = COALESCE(_validation_msg, '') || '{msg}; '
+            sql = """UPDATE {dv_schema}.{table} set _valid = False, _validation_msg = COALESCE(_validation_msg, '') || '{msg}; '
                 where _runid = {runid} AND {sql_condition};""".format(
                 **params)
             self.execute(sql, 'validate dv: ' + validation.msg)

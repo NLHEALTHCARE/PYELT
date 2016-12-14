@@ -12,26 +12,37 @@ from pyelt.datalayers.sor import Sor
 
 
 class DwhLayerTypes():
+    """We onderscheiden 4 soorten database schemas:
+
+    * Sor: laag met historische staging tabellen
+    * Dv: laag met hubs, sats en links
+    * Dm: laag met dims en facts
+    * sys: laag met logging info over de runs
+
+    De dwh kan meerdere sor lagen bevatten. aan te raden per import-bron 1 sor laag
+    De dwh kan ook meerdere dv-lagen bevatten, zoals de raw-dv, de dv en de valuesets
+    De dwh kan meerdere dm lagen bevatten: per bedrijfsonderdeel kan er een eigen dm laag worden gemaakt.
+    Er is altijd maar 1 sys laag
+    """
     SOR = 'SOR' #type: str
-    RDV = 'RDV' #type: str
     DV = 'DV' #type: str
+    DM = 'DM' #type: str
     SYS = 'SYS' #type: str
 
 class Dwh(Database):
     def __init__(self, config: Dict[str, str] = {}) -> None:
-        # if len(config) == 0:
-        #     config = general_config
         self.config = config  # type: Dict[str, str]
         if 'conn_dwh' in self.config:
             conn_string = self.config['conn_dwh']  # type: str
             super().__init__(conn_string)
-        self.sors = {}  # [Schema('sor', self)] #type: Dict[str, Schema]
-        # self.default_sor = None #self.sors[0] #type: Schema
-        self.rdv = Schema('rdv', self) #type: Schema
-        self.dv = Schema('dv', self) #type: Schema
-        self.sys = Schema('sys', self) #type: Schema
-        self.datamarts = {}  # [Schema('dm', self)] #type: Dict[str, Schema]
-        # self.default_sor = None #self.sors[0] #type: Schema
+        self.sys = Schema('sys', self)  # type: Schema
+        self.sors = {}  #type: Dict[str, Schema]
+        self.dvs = {}  #type: Dict[str, Schema]
+        self.datamarts = {}  #type: Dict[str, Schema]
+        #standaard 3 dv schemas aanmaken
+        # self.dvs['rdv'] = Schema('rdv', self)  # type: Schema
+        self.dvs['dv'] = Schema('dv', self)  # type: Schema
+        self.dvs['valset'] = Schema('valset', self)  # type: Schema
 
     def get_or_create_sor_schema(self, config: Dict[str,str] = {}) -> 'Schema':
         if not 'sor_schema' in config:
@@ -44,112 +55,38 @@ class Dwh(Database):
 
     def get_sor_schema(self, name=''):
         found = None
-        if len(self.sors) == 1:
-            for sor in self.sors.values():
-                found = sor
-        elif len(self.sors) > 1:
+        if name in self.sors:
             found = self.sors[name]
         return found
+
+    def get_dv_schema(self, name=''):
+        found = None
+        if name in self.dvs:
+            found = self.dvs[name]
+        return found
+
+    @property
+    def dv(self):
+        return self.get_dv_schema('dv')
+
+    @property
+    def rdv(self):
+        return self.get_dv_schema('rdv')
+
+    @property
+    def valset(self):
+        return self.get_dv_schema('valset')
 
     def get_or_create_datamart_schema(self, dm_name: str) -> 'Schema':
         dm = Schema(dm_name, self)
         self.datamarts[dm_name] = dm
         return dm
 
+    def get_or_create_datamart_schema(self, dm_name: str) -> 'Schema':
+        dm = Schema(dm_name, self)
+        self.datamarts[dm_name] = dm
+        return dm
 
-    def execute(self, sql: str, log_message: str=''):
-        self.log('-- ' + log_message.upper())
-        self.log( sql)
-
-        start = time.time()
-        connection = self.engine.raw_connection()
-        cursor = connection.cursor()
-        cursor.execute(sql)
-        connection.commit()
-
-        rowcount = cursor.rowcount
-        self.log('-- duur: ' + str(time.time() - start) +  '; aantal rijen:' + str(cursor.rowcount))
-        self.log('-- =============================================================')
-        cursor.close()
-        return rowcount
-
-    def execute_without_commit(self, sql: str, log_message: str=''):
-        self.log('-- ' + log_message.upper())
-        self.log( sql)
-
-        start = time.time()
-        if not self.__cursor:
-            self.start_transaction()
-        self.__cursor.execute(sql)
-
-        self.log('-- duur: ' + str(time.time() - start) +  '; aantal rijen:' + str(self.__cursor.rowcount))
-        self.log('-- =============================================================')
-
-    def start_transaction(self):
-        connection = self.engine.raw_connection()
-        self.__conn = connection
-        self.__cursor = connection.cursor()
-
-    def commit(self, log_message: str = ''):
-        # connection = self.engine.raw_connection()
-        self.__conn.commit()
-        self.__conn.close()
-
-
-    def execute_returning(self, sql: str, log_message: str = ''):
-        self.log('-- ' + log_message.upper())
-        self.log(sql)
-
-        start = time.time()
-        connection = self.engine.raw_connection()
-        cursor = connection.cursor()
-        cursor.execute(sql)
-        connection.commit()
-
-        result = cursor.fetchall()
-        self.log('-- duur: ' + str(time.time() - start) + '; aantal rijen:' + str(cursor.rowcount))
-        self.log('-- =============================================================')
-        cursor.close()
-        return result
-
-    def execute_read(self, sql, log_message='') -> List[List[Any]]:
-        self.log('-- ' + log_message.upper())
-        self.log(sql)
-
-        start = time.time()
-        # plan = text(sql)
-        # result = engine.execute(sql)
-
-        connection = self.engine.raw_connection()
-        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cursor.execute(sql)
-        result = cursor.fetchall()
-
-        self.log('-- duur: ' + str(time.time() - start) + '; aantal rijen:' + str(cursor.rowcount))
-        self.log('-- =============================================================')
-        cursor.close()
-        return result
-
-    def confirm_execute(self, sql: str, log_message: str='') -> None:
-        ask_confirm = False
-        if 'ask_confirm_on_db_changes' in self.config:
-            ask_confirm = self.config['ask_confirm_on_db_changes']
-        else:
-            ask_confirm = 'debug' in self.config and self.config['debug']
-        if ask_confirm:
-            sql_sliced = sql
-            if len(sql) > 50:
-                sql_sliced = sql[:50] + '...'
-            else:
-                sql_sliced = sql
-            result = input('{}\r\nWil je de volgende wijzigingen aanbrengen in de database?\r\n{}\r\n'.format(log_message.upper(), sql_sliced))
-            if result.strip().lower()[:1] == 'j' or result.strip().lower()[:1] ==  'y':
-                self.execute(sql, log_message)
-                # print(log_message, 'uitgevoerd')
-            else:
-                raise Exception('afgebroken')
-        else:
-            self.execute(sql, log_message)
 
     def log(self, msg: str) -> None:
         pass
@@ -161,9 +98,10 @@ class Dwh(Database):
             self.confirm_execute(sql, 'nieuw schema aanmaken')
             sor = Sor(schema_name, self)
             self.sors[schema_name] = sor
-        if not self.dv.name in self.reflected_schemas:
-            sql = """CREATE SCHEMA {};""".format(self.dv.name)
-            self.confirm_execute(sql, 'nieuw dv schema aanmaken')
+        for dv_schema_name in self.dvs.keys():
+            if not dv_schema_name in self.reflected_schemas:
+                sql = """CREATE SCHEMA {};""".format(dv_schema_name)
+                self.confirm_execute(sql, 'nieuw ' + dv_schema_name + ' schema aanmaken')
         if not self.sys.name in self.reflected_schemas:
             sql = """CREATE SCHEMA {};""".format(self.sys.name)
             self.confirm_execute(sql, 'nieuw sys schema aanmaken')

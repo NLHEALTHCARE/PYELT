@@ -100,6 +100,6 @@ class DmReference():
         self.dim_cls = dim_cls
 
     def get_fk_field_name(self):
-        fk_name = self.dim_cls.get_name()
+        fk_name = self.dim_cls.cls_get_name()
         fk_name = fk_name.replace('dim_', 'fk_')
         return fk_name

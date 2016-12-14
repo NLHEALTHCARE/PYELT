@@ -47,7 +47,7 @@ class SorQuery(Table):
     def reflect_2(self) -> None:
         self.columns = []  # type: List[Column]
         inspector = reflection.Inspector.from_engine(self.db.engine)
-        columns = inspector.get_columns(self.name, self.schema.name)
+        columns = inspector.cls_get_columns(self.name, self.schema.name)
         pks = inspector.get_primary_keys(self.name, self.schema.name)
         indexes = inspector.get_indexes(self.name, self.schema.name)
         self.key_names = []
