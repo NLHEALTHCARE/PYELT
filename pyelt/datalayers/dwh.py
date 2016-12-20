@@ -101,7 +101,7 @@ class Dwh(Database):
             sql = """CREATE SCHEMA {};""".format(schema_name)
             self.confirm_execute(sql, 'nieuw schema aanmaken')
             sor = Sor(schema_name, self)
-            self.sors[schema_name] = sor
+            self.schemas[schema_name] = sor
         for dv_schema_name in self.schemas.keys():
             if not dv_schema_name in self.reflected_schemas:
                 sql = """CREATE SCHEMA {};""".format(dv_schema_name)

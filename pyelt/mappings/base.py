@@ -32,8 +32,9 @@ class BaseTableMapping(BaseMapping):
         #type: List[Union[ConstantValue, FieldTransformation, Column, str]]
 
     def map_field(self, source: str, target: str = '', transform_func: 'FieldTransformation'=None, ref: str = '') -> None:
-        field_mapping = FieldMapping(source, target, transform_func, ref = ref)
-        self.field_mappings.append(field_mapping)
+        if source and target:
+            field_mapping = FieldMapping(source, target, transform_func, ref = ref)
+            self.field_mappings.append(field_mapping)
 
     # def parse_mapping_str(self, input_str: str) -> Tuple[str, str]:
     #     """input str in format

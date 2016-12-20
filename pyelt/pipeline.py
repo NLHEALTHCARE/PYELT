@@ -369,6 +369,7 @@ Voorbeeld::
         if not schema_name:
             schema_name = module.__name__
         self.datamart_modules[schema_name] = module
+        self.dwh.get_or_create_sor_schema(schema_name)
         # init module
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen

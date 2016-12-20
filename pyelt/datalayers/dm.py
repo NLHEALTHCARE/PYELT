@@ -1,12 +1,13 @@
-from pygrametl.tables import Dimension,FactTable
+from pygrametl.tables import Dimension,FactTable, BulkDimension, CachedDimension
 
 from pyelt.datalayers.database import Column
 from pyelt.datalayers.dv import OrderedMembersMetaClass, DVTable
 
 
 class Dim(DVTable, metaclass=OrderedMembersMetaClass):
+    _lookup_fields = []
     @classmethod
-    def get_name(cls):
+    def cls_get_name(cls):
         if cls.name:
             return cls.name
         else:
@@ -19,43 +20,72 @@ class Dim(DVTable, metaclass=OrderedMembersMetaClass):
             cls.name = dim_name
             return dim_name
 
-
     @classmethod
-    def init_cols(cls):
+    def cls_init_cols(cls):
         for col_name, col in cls.__ordereddict__.items():
             if isinstance(col, Column):
                 if not col.name:
                     col.name = col_name
                 col.table = cls
 
-
     @classmethod
-    def get_column_names(cls):
+    def cls_get_column_names(cls):
         list_col_names = []
         for col_name, col in cls.__ordereddict__.items():
             if isinstance(col, Column):
                 list_col_names.append(col.name)
         return list_col_names
 
+    @classmethod
+    def cls_get_lookup_fields(cls):
+        cls.cls_init_cols()
+        lookup_fields = [col.name for col in cls._lookup_fields]
+        return lookup_fields
 
     @classmethod
-    def to_pygram_dim(cls,schema_name):
-        cls.init_cols()
-        dim = Dimension(
-            name= schema_name + '.' + cls.get_name(),
-            key='id',
-            attributes= cls.get_column_names())
-        print('test jan ',cls.get_column_names(),schema_name,cls.get_name())
+    def cls_to_pygram_dim(cls, schema_name, lookup_fields = []):
+        cls.cls_init_cols()
+        if not lookup_fields:
+            lookup_fields = cls.cls_get_lookup_fields()
+        if lookup_fields:
+            dim = CachedDimension(
+                name= schema_name + '.' + cls.cls_get_name(),
+                key='id',
+                attributes= cls.cls_get_column_names(),
+                lookupatts = lookup_fields,
+                cachefullrows=True)
+        else:
+            dim = Dimension(
+                name=schema_name + '.' + cls.cls_get_name(),
+                key='id',
+                attributes=cls.cls_get_column_names())
         return dim
 
-    def to_pygram_bulk_dim(self):
-        pass
-#     to do
+    @classmethod
+    def cls_to_pygram_bulk_dim(cls, schema_name, lookup_fields = [], bulkloader = None):
+        cls.cls_init_cols()
+        dim = BulkDimension(
+            name = schema_name + '.' + 'dim_patient',
+            key = 'id',
+            attributes = cls.cls_get_column_names(),
+            lookupatts = lookup_fields,
+            bulksize = 50000,
+            nullsubst = '0',  # anders kan bulkdimension er niet mee omgaan
+            bulkloader = bulkloader)
+        return dim
+
+    @classmethod
+    def cls_to_pygram_mapping(cls):
+        d = {}
+        for col_name, col in cls.__ordereddict__.items():
+            if isinstance(col, Column):
+                d[col_name] = 'null' #col.default_value
+        return d
 
 
 class Fact(DVTable, metaclass=OrderedMembersMetaClass):
     @classmethod
-    def get_name(cls):
+    def cls_get_name(cls):
         if cls.name:
             return cls.name
         else:
@@ -70,7 +100,7 @@ class Fact(DVTable, metaclass=OrderedMembersMetaClass):
 
 
     @classmethod
-    def get_key_names(cls):
+    def cls_get_measure_names(cls):
         list_col_names = []
         for col_name, col in cls.__ordereddict__.items():
             if not isinstance(col, DmReference) and isinstance(col,Column):
@@ -78,7 +108,7 @@ class Fact(DVTable, metaclass=OrderedMembersMetaClass):
         return list_col_names
 
     @classmethod
-    def get_measure_names(cls):
+    def cls_get_key_names(cls):
         list_col_names = []
         for col_name, col in cls.__ordereddict__.items():
             if isinstance(col, DmReference):
@@ -86,12 +116,11 @@ class Fact(DVTable, metaclass=OrderedMembersMetaClass):
         return list_col_names
 
     @classmethod
-    def to_pygram_fact(cls, schema_name):
+    def cls_to_pygram_fact(cls, schema_name):
         fct = FactTable(
-            name=schema_name + '.' + cls.get_name(),
-            keyrefs=cls.get_key_names(),
-            measures=cls.get_measure_names())
-        print(schema_name,cls.get_name(),cls.get_key_names(),cls.get_measure_names())
+            name=schema_name + '.' + cls.cls_get_name(),
+            keyrefs=cls.cls_get_key_names(),
+            measures=cls.cls_get_measure_names())
         return fct
 
 

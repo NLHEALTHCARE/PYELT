@@ -533,7 +533,7 @@ class DdlDv(Ddl):
                     fk_params = {'dv_schema': params['dv_schema'], 'hub': link_ref.entity_cls.cls_get_hub_name(), 'fk': link_ref.get_fk(), 'link': cls_link.cls_get_name()}
                     if not fk in link_tbl:
                         add_fields += """ADD COLUMN {fk} integer, ADD CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv_schema}.{hub} (_id) MATCH SIMPLE,\r\n""".format(**fk_params)
-                    index_name = "ix_{link}{fk}".format(**fk_params)
+                    index_name = "ix_{dv_schema}_{link}{fk}".format(**fk_params)
                     if not index_name in link_tbl:
                         sql_indexes += """CREATE INDEX ix_{dv_schema}_{link}{fk} ON {dv_schema}.{link} USING btree ({fk});\r\n""".format(**fk_params)
             add_fields = add_fields[:-3]

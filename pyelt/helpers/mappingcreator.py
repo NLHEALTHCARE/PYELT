@@ -1,4 +1,7 @@
+from sqlalchemy.engine import reflection
+
 from pyelt.datalayers.database import Table
+from pyelt.datalayers.dm import Dim
 from pyelt.datalayers.dv import DvEntity, HybridSat
 
 
@@ -52,6 +55,33 @@ class MappingWriter():
         print(s)
         return s
 
+    @staticmethod
+    def create_python_code_dm_mappings(source_schema, source_name: str, dm_schema, dim: Dim) -> None:
+        col_names = ''
+        if source_name:
+            inspector = reflection.Inspector.from_engine(dm_schema.db.engine)
+            cols = inspector.get_columns(source_name, source_schema)
+            i = 0
+            for col in cols:
+                col_names += col['name'] + ', '
+                if i> 0 and i % 5 == 0:
+                    col_names += '\r\n    # '
+                i += 1
+
+        """helper functie om mappings aan te maken in string format"""
+        s = """def init_{}_{}_to_{}_mappings():\r\n""".format(source_schema, source_name, dim.cls_get_name())
+        s += """\r\n    # ###########################\r\n"""
+        s += """    # Beschikbare velden: {}\r\n""".format(col_names)
+        s += '    \r\n'
+        s += '    source_sql = "SELECT * FROM {}.{}"\r\n'.format(source_schema, source_name)
+        s += '    mapping = DvToDimMapping(source_sql, {})\r\n'.format(dim.__name__)
+        dim.cls_init_cols()
+        for col_name in dim.cls_get_column_names():
+            s += """    mapping.map_field('', {}.{})\r\n""".format(dim.__name__, col_name)
+        s += """    return mapping\r\n"""
+        s += """\r\n"""
+        print(s)
+        return s
 
     @staticmethod
     def create_python_code_mappings_old(table: 'Table', remove_prefix: str = '') -> None:

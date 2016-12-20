@@ -324,6 +324,17 @@ class EtlSourceToSor(BaseEtl):
             self.logger.log_error(mappings.name, err_msg=ex.args[0])
             # raise Exception(ex.args[0])
 
+    def validate_duplicate_fks(self, sor_table, sor_schema, fk_name):
+        try:
+            validation = SorValidation(tbl=sor_table, schema=sor_schema)
+            validation.msg = 'duplicate fk error'
+            validation.set_check_for_duplicate_keys(fk_name)
+            self.validate_duplicates(validation)
+
+        except Exception as ex:
+            self.logger.log_error('duplicate check ' + fk_name, err_msg=ex.args[0])
+            # raise Exception(ex.args[0])
+
     def validate_duplicates(self, validation: SorValidation):
         try:
             params = validation.__dict__
@@ -444,7 +455,8 @@ AND {filter} AND {filter_runid};""".format( **params)
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
 
-            # EtlSourceToSor(self.pipe).validate_duplicate_fks(mappings)
+            fk_name = "fk_{relation_type}{hub}".format(**params)
+            EtlSourceToSor(self.pipe).validate_duplicate_fks(mappings.source, dv_schema, fk_name)
 
             for sat_mappings in mappings.sat_mappings.values():
                 self.__sor_to_sat(params, sat_mappings)
