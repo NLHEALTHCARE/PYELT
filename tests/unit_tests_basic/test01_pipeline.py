@@ -12,7 +12,6 @@ class TestCase_Pipeline(unittest.TestCase):
         pipeline = Pipeline({})
         self.assertIsNotNone(pipeline)
         self.assertIsNotNone(pipeline.dwh)
-        self.assertIsNotNone(pipeline.dwh.rdv)
         self.assertIsNotNone(pipeline.dwh.dv)
         self.assertIsNotNone(pipeline.dwh.sys)
 
@@ -23,7 +22,6 @@ class TestCase_Pipeline(unittest.TestCase):
         self.assertIsNotNone(pipe.pipeline)
         self.assertEqual(len(pipeline.pipes), 1)
         self.assertEqual(len(pipeline.dwh.sors), 1)
-
 
         self.assertIsNone(pipe.source_db)
         self.assertIsNotNone(pipe.source_path)

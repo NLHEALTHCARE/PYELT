@@ -18,7 +18,7 @@ class DwhLayerTypes():
     * Dv: laag met hubs, sats en links
     * Valset: laag met referentie data (code, omschrijving combinaties)
     * Dm: laag met dims en facts
-    * sys: laag met logging info over de runs
+    * Sys: laag met logging info over de runs
 
     De dwh kan meerdere sor lagen bevatten. aan te raden per import-bron 1 sor laag
     De dwh kan ook meerdere dv-lagen bevatten, zoals de raw-dv, de dv en de valuesets
@@ -32,6 +32,7 @@ class DwhLayerTypes():
     SYS = 'SYS' #type: str
 
 class Dwh(Database):
+    """De datawarehouse database. Binnen deze database meerdere schema's."""
     def __init__(self, config: Dict[str, str] = {}) -> None:
         self.config = config  # type: Dict[str, str]
         if 'conn_dwh' in self.config:
@@ -72,6 +73,10 @@ class Dwh(Database):
         return found
 
     @property
+    def sors(self):
+        return {k:v for k,v in self.schemas.items() if v.schema_type == DwhLayerTypes.SOR}
+
+    @property
     def dv(self):
         return self.get_schema('dv')
 
@@ -102,7 +107,8 @@ class Dwh(Database):
             self.confirm_execute(sql, 'nieuw schema aanmaken')
             sor = Sor(schema_name, self)
             self.schemas[schema_name] = sor
-        for dv_schema_name in self.schemas.keys():
+        dv_schemas = {k:v for k,v in self.schemas.items() if v.schema_type == DwhLayerTypes.DV}
+        for dv_schema_name in dv_schemas.keys():
             if not dv_schema_name in self.reflected_schemas:
                 sql = """CREATE SCHEMA {};""".format(dv_schema_name)
                 self.confirm_execute(sql, 'nieuw ' + dv_schema_name + ' schema aanmaken')

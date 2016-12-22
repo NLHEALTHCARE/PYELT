@@ -14,7 +14,7 @@ class FieldTransformation():
     def __init__(self, name: str = '', sql: str = '') -> None:
         self.name = name #type: str
         self.field_name = 'id' #type: str
-        # self.table_alias = ''
+        self.table = ''
         self.descr = '' #type: str
         self.filter = '' #type: str
         # self.type = FieldTransformationType.INLINE #type: str
@@ -23,6 +23,8 @@ class FieldTransformation():
             # self.parse_sql(sql)
             step = self.new_step(sql)
 
+    def get_table(self):
+        return self.table
 
     def parse_sql(self, sql: str):
         pos_start = sql.find('(')

@@ -42,7 +42,7 @@ class TestCase_RunProces(unittest.TestCase):
         get_row_count(self, 'dv.patient_sat_inschrijving', 4)
         get_row_count(self, 'dv.patient_sat_contactgegevens', 8)
         get_row_count(self, 'dv.handeling_hub', 4)
-        get_row_count(self, 'dv.hulpverlener_hub', 2)
+        # get_row_count(self, 'dv.hulpverlener_hub', 2)
         get_row_count(self, 'dv.patient_handeling_link', 9)
 
     def test_run1_her(self):
@@ -55,11 +55,12 @@ class TestCase_RunProces(unittest.TestCase):
         get_row_count(self, 'dv.patient_sat_inschrijving', 4)
         get_row_count(self, 'dv.patient_sat_contactgegevens', 8)
         get_row_count(self, 'dv.handeling_hub', 4)
-        get_row_count(self, 'dv.hulpverlener_hub', 2)
+        # get_row_count(self, 'dv.hulpverlener_hub', 2)
         get_row_count(self, 'dv.patient_handeling_link', 9)
 
     def test_run2_from_source_to_sor(self):
         self.pipe.mappings[0].file_name = get_root_path() + '/PYELT/tests/data/patienten2.csv'
+        self.pipe.mappings[0].delimiter = ';'
         self.pipeline.run()
         get_row_count(self, 'sor_test_system.patient_hstage', 7)
         get_row_count(self, 'dv.patient_hub', 5)

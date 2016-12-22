@@ -131,7 +131,10 @@ class Logger:
             Logger.pprint(descr)
         self.last_start_time = end_time
 
-    def log_error(self, log_msg, sql='', err_msg= ''):
+    def log_error(self, log_msg, sql='', err_msg= '', ex = None):
+        if ex:
+            for arg in ex.args:
+                err_msg += str(arg)
         while err_msg.endswith('\n'):
             err_msg = err_msg[:-1]
         msg = """

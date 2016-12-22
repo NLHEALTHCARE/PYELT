@@ -5,16 +5,8 @@ from pyelt.datalayers.database import Column, Columns
 from pyelt.datalayers.dv import Sat, DvEntity, Link, Hub, HybridSat, LinkReference, DynamicLinkReference
 
 
-class Role:
-    pass
-class Act:
-    pass
-class Participation:
-    pass
 
-
-
-class Patient(DvEntity, Role):
+class Patient(DvEntity):
     """Patienten zijn alle personen in de rol van patient.
     bk: registratie_syteem + inschrijvingsnummer"""
 
@@ -48,17 +40,17 @@ class Patient(DvEntity, Role):
             mobiel2 = 'mobiel2'
         telnummer = Columns.TextColumn()
         datum = Columns.DateColumn()
-
-    default = Default()
-    personalia = Personalia()
-    adres = Adres()
-    inschrijving = Inschrijving()
-    contactgegevens = ContactGegevens()
-
-
+    #
+    # default = Default()
+    # personalia = Personalia()
+    # adres = Adres()
+    # inschrijving = Inschrijving()
+    # contactgegevens = ContactGegevens()
 
 
-class Traject(DvEntity, Act):
+
+
+class Traject(DvEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         start = Columns.DateTimeColumn()
@@ -66,7 +58,6 @@ class Traject(DvEntity, Act):
         nummer = Columns.IntColumn()
         status =  Columns.TextColumn()
 
-    sat = Default()
 
 
 class SubTraject(Traject):
@@ -75,7 +66,7 @@ class SubTraject(Traject):
 
 
 
-class Patient_Traject_Link(Link, Participation):
+class Patient_Traject_Link(Link):
     Patient = LinkReference(Patient)
     Traject = LinkReference(Traject)
 

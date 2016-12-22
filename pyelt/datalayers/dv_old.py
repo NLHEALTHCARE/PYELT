@@ -27,44 +27,22 @@ class DV(Schema):
     def register_table(self, cls):
         self.tables[''] = cls()
 
-class OrderedMembersMetaClass(type):
-    """Metaclass voor de sats. Deze zorgt ervoor dat de class properties in de class-dict gesorteerd blijven zoals ze in de code staan.
-    Hierdoor kun je volgorde van de velden in de db bepalen.
-    Naast de default __dict__ van de class komt er bij deze implementatie van deze meta class een extra __ordereddict__ property
 
-    gebruik:
-    class Sat(DVTable, metaclass=OrderedMembersMetaClass):
-        ...
-    class Adres(Sat):
-        ...
-    for col_name, col in Adres.__ordereddict__.items():
-        ...
-    """
-
-    @classmethod
-    def __prepare__(mcs, name, bases):
-        return OrderedDict()
-
-    def __new__(cls, name, bases, classdict):
-        result = type.__new__(cls, name, bases, classdict)
-        result.__ordereddict__ = classdict
-        return result
-
-class DVTable(Table, metaclass=OrderedMembersMetaClass):
+class DVTable(Table):
     """Datavault abstract table. Bevat de standaard velden zoals _id, _runid enz. Standaard velden beginnen met _ in de database en in het framework.
     Hubs en sats erver van deze base over.  """
     __cls_is_init = False
     _schema = 'dv'
-    _id = Columns.IntColumn()
-    _runid = Columns.FloatColumn()
-    _source_system = Columns.TextColumn()
+    # _id = Columns.IntColumn()
+    # _runid = Columns.FloatColumn()
+    # _source_system = Columns.TextColumn()
     name = ''
 
     def __init__(self):
         super().__init__(self.__class__.name, None)
-        # self._id = Column('_id', type='int', tbl=self)
-        # self._runid = Column('_runid', type='numeric', tbl=self)
-        # self._source_system = Column('_source_system', type='text', tbl=self)
+        self._id = Column('_id', type='int', tbl=self)
+        self._runid = Column('_runid', type='numeric', tbl=self)
+        self._source_system = Column('_source_system', type='text', tbl=self)
 
     @classmethod
     def cls_init_cols(cls):
@@ -84,7 +62,8 @@ class DVTable(Table, metaclass=OrderedMembersMetaClass):
                 col.table = cls
 
         cls.__cls_is_init = True
-
+        base_entity_cls = cls.cls_get_entity()
+        base_entity_cls.cls_init()
 
     @classmethod
     def cls_get_entity(cls) -> 'DvEntity':
@@ -110,7 +89,7 @@ class DVTable(Table, metaclass=OrderedMembersMetaClass):
         entity_cls = getattr(sys.modules[cls.__module__], entity_name)  # globals()[entity_name]
         # haal de super class op die als base de DvEntity heeft, deze heeft de naam vd super in zich
         base_entity_cls = entity_cls.cls_get_class_with_dventity_base()
-        return base_entity_cls
+        return entity_cls
 
     @classmethod
     def cls_get_columns(cls) -> List[Column]:
@@ -141,7 +120,28 @@ class Hub(DVTable, HubData):
         self.bk = Columns.TextColumn('bk')
         self.bk.table = self
 
+class OrderedMembersMetaClass(type):
+    """Metaclass voor de sats. Deze zorgt ervoor dat de class properties in de class-dict gesorteerd blijven zoals ze in de code staan.
+    Hierdoor kun je volgorde van de velden in de db bepalen.
+    Naast de default __dict__ van de class komt er bij deze implementatie van deze meta class een extra __ordereddict__ property
 
+    gebruik:
+    class Sat(DVTable, metaclass=OrderedMembersMetaClass):
+        ...
+    class Adres(Sat):
+        ...
+    for col_name, col in Adres.__ordereddict__.items():
+        ...
+    """
+
+    @classmethod
+    def __prepare__(mcs, name, bases):
+        return OrderedDict()
+
+    def __new__(cls, name, bases, classdict):
+        result = type.__new__(cls, name, bases, classdict)
+        result.__ordereddict__ = classdict
+        return result
 
 
 class Sat(DVTable, SatData, metaclass=OrderedMembersMetaClass):

@@ -172,7 +172,7 @@ class EtlSourceToSor(BaseEtl):
             # self.execute(sql,  'update sor set old ones inactive')
 
         except Exception as ex:
-            self.logger.log_error(mappings.name, err_msg=ex.args[0])
+            self.logger.log_error(mappings.name, ex=ex)
 
 
 

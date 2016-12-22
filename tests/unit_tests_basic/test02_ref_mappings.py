@@ -8,16 +8,16 @@ from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping
 def init_test_ref_mappings():
         mappings = []
 
-        ref_mapping = SorToValueSetMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
-        mappings.append(ref_mapping)
-
-        ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
-        mappings.append(ref_mapping)
-
-        ref_mapping = SorToValueSetMapping('patient_hstage', 'geslacht_types2')
-        ref_mapping.map_code_field('patient_hstage.geslacht')
-        ref_mapping.map_descr_field('patient_hstage.geslacht')
-        mappings.append(ref_mapping)
+        # ref_mapping = SorToValueSetMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
+        # mappings.append(ref_mapping)
+        #
+        # ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
+        # mappings.append(ref_mapping)
+        #
+        # ref_mapping = SorToValueSetMapping('patient_hstage', 'geslacht_types2')
+        # ref_mapping.map_code_field('patient_hstage.geslacht')
+        # ref_mapping.map_descr_field('patient_hstage.geslacht')
+        # mappings.append(ref_mapping)
 
         return mappings
 

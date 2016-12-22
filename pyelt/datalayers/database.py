@@ -467,6 +467,12 @@ class Column():
         item = '{} AND {}'.format(item1, item2)
         return Condition(self.name, 'between', item, table=self.table)
 
+    def join(self, item):
+        sql = self.name + '||' + item.name
+        if isinstance(item, (list, tuple)):
+            sql = self.name + '||' + '||'.join(item)
+        return SqlSnippet(sql, table=self.table)
+
 
 
 
@@ -561,7 +567,16 @@ class Condition():
         else:
             return Condition('({} OR {})'.format(self.name, other), table=self.table)
 
+    def get_table(self):
+        return self.table
 
+class SqlSnippet():
+    def __init__(self, sql='', table=None):
+        self.table = table
+        self.sql = sql
+
+    def get_table(self):
+        return self.table
 ################
 # class DatabaseFunction():
 #     def __init__(self, name: str) -> None:
