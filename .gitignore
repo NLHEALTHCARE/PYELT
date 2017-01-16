@@ -10,3 +10,6 @@ logs/
 pyelt.egg-info/
 docs/build/
 **/*configs.py
+
+
+run_get_tests.py
