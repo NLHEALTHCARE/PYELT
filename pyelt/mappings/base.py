@@ -1,9 +1,9 @@
 import inspect
 from typing import Union, Tuple, Any
 from pyelt.datalayers.database import Column, Table, View, DbFunction
-from pyelt.datalayers.dv import DvEntity
+from pyelt.datalayers.dv import HubEntity
 from pyelt.mappings.transformations import FieldTransformation
-from pyelt.mappings.validations import Validation
+#from pyelt.mappings.validations import Validation
 
 
 class BaseMapping():

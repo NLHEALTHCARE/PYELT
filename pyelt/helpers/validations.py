@@ -2,9 +2,9 @@ import inspect
 from typing import List
 
 from pyelt.datalayers.database import Columns, Table, DbFunction, Column
-from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference, DynamicLinkReference, OrderedMembersMetaClass, \
-    HybridLink, DvValueset
+from pyelt.datalayers.dv import * #HubEntity, Sat, HybridSat, Link, LinkReference, DynamicLinkReference, OrderedMembersMetaClass, HybridLink, DvValueset
 from pyelt.datalayers.sor import SorTable, SorQuery
+from pyelt.datalayers.valset import DvValueset
 from pyelt.mappings.base import BaseTableMapping, ConstantValue
 from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, SorToEntityMapping, SorToLinkMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
@@ -17,11 +17,13 @@ class DomainValidator:
     def validate(self, module):
         validation_msg = ''
         for name, cls in inspect.getmembers(module,  inspect.isclass):
-            if DvEntity in cls.__mro__ and cls is not DvEntity:
-                cls.cls_init()
+            if HubEntity in cls.__mro__ and cls is not HubEntity:
+                # cls.cls_init()
                 validation_msg += self.validate_entity(cls)
-            elif Link in cls.__mro__ and cls is not Link and cls is not HybridLink:
-                validation_msg += self.validate_link(cls)
+            elif LinkEntity in cls.__mro__ and cls is not LinkEntity:
+                validation_msg += self.validate_linkentity(cls)
+            # elif Link in cls.__mro__ and cls is not Link and cls is not HybridLink:
+            #     validation_msg += self.validate_linkentity(cls)
             elif DvValueset in cls.__mro__ and cls is not DvValueset:
                 validation_msg += self.validate_valueset(cls)
         return validation_msg
@@ -51,43 +53,54 @@ class DomainValidator:
                 if not 'Types' in sat_cls.__dict__:
                     validation_msg += 'Hybrid Sat <red>{}.{}.{}</> is niet geldig. Definieer in de HybridSat een inner-class Types(HybridSat.Types) met een aantal string constanten. Dit is nodig om de databse view aan te maken.\r\n'.format(
                         entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
-                elif sat_cls.__dict__['Types'] and not type(sat_cls.__dict__['Types'].__base__) is OrderedMembersMetaClass:
+                elif sat_cls.__dict__['Types'] and not sat_cls.__dict__['Types'].__base__ is HybridSat.Types:
                     validation_msg += 'Hybrid Sat <red>{}.{}.{}</> is niet geldig. Inner-class Types moet erven van HybridSat.Types zoals "class Types(HybridSat.Types):" .\r\n'.format(
                         entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
 
-        for sat_cls in entity_cls.cls_get_this_class_sats().values():
-            if sat_cls.__name__.lower() == 'default' and entity_cls.__base__ is not DvEntity:
-                validation_msg += 'Domainclass <red>{}.{}</> is niet geldig. Sat <red>Default</> mag alleen hangen onder de class die rechtstreeks erft van DvEntity (degene die de hub wordt).\r\n'.format(
-                    entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
+        # for sat_cls in entity_cls.__sats__.values():
+        #     if sat_cls.__name__.lower() == 'default' and entity_cls.__base__ is not HubEntity:
+        #         validation_msg += 'Domainclass <red>{}.{}</> is niet geldig. Sat <red>Default</> mag alleen hangen onder de class die rechtstreeks erft van HubEntity (degene die de hub wordt).\r\n'.format(
+        #             entity_cls.__module__, entity_cls.__name__, sat_cls.cls_get_name())
 
 
         return validation_msg
 
-    def validate_link(self, link_cls: Link) -> str:
+    def validate_linkentity(self, link_entity_cls: Link) -> str:
         validation_msg = ''
-        link_refs = link_cls.cls_get_link_refs()
-        if len(link_refs) < 2:
-            validation_msg += """Link <red>{}.{}</> is niet geldig. Een link moet ten minste twee LinkReferences bevatten (klasse variabelen van type LinkReference(DvEntity)).
-            Een link moet er zo uit zien:
-    <blue>
-    class Medewerker_Werkgever_Link(Link):
-        medewerker = LinkReference(Medewerker)
-        werkgever = LinkReference(Organisatie)
-        </>""".format(
-                link_cls.__module__, link_cls.__name__)
-        for link_ref in link_refs.values():
-            if DvEntity not in link_ref.entity_cls_with_dventity_base.__bases__:
-                validation_msg += 'Link <red>{}.{}</> is niet geldig. LinkReference <red>{}</> moet verwijzen naar een afgeleide van DvEntity.\r\n'.format(
-                    link_cls.__module__, link_cls.__name__, link_ref.name)
+        if 'Link' not in link_entity_cls.__dict__:
+            validation_msg += """LinkEntity <red>{}.{}</> is niet geldig. Een linkentity moet tenminste een subclass Link bevatten
+             Een link entity moet er zo uit zien:
+        <blue>
+        class MedewerkerOrganisatieLinkEntity(LinkEntity):
+            class Link(Link):
+                medewerker = LinkReference(Medewerker)
+                werkgever = LinkReference(Organisatie)"""
+            return validation_msg
+        else:
+            link_cls = link_entity_cls.Link
+            link_refs = link_cls.cls_get_link_refs()
+            if len(link_refs) < 2:
+                validation_msg += """Link <red>{}.{}</> is niet geldig. Een link moet ten minste twee LinkReferences bevatten (klasse variabelen van type LinkReference(HubEntity)).
+                Een link moet er zo uit zien:
+        <blue>
+        class MedewerkerOrganisatieLinkEntity(LinkEntity):
+            class Link(Link):
+                medewerker = LinkReference(Medewerker)
+                werkgever = LinkReference(Organisatie)
+            </>""".format(
+                    link_cls.__module__, link_cls.__name__)
+            for link_ref in link_refs.values():
+                if '_hub' not in link_ref.hub.__dbname__:
+                    validation_msg += 'Link <red>{}.{}</> is niet geldig. LinkReference <red>{}</> moet verwijzen naar een Hub.\r\n'.format(
+                        link_cls.__module__, link_cls.__name__, link_ref.name)
         return validation_msg
 
     def validate_valueset(self, valueset_cls: DvValueset) -> str:
         validation_msg = ''
-        valueset_cls.cls_init_cols()
         contains_code_field = False
         contains_valueset_name_field = False
         contains_ref_column = False
-        for key, col in valueset_cls.cls_get_columns().items():
+        for col in valueset_cls.cls_get_columns():
             if isinstance(col, Column):
                 if col.name == 'code':
                     contains_code_field = True

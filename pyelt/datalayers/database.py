@@ -11,6 +11,11 @@ from pyelt.helpers.global_helper_functions import camelcase_to_underscores
 
 
 class Database():
+    """Deze class representeert een database. Maakt gebruik van sql alchemy. Geef een sqlalchemy connection string mee om te initieren::
+
+        db = Database('postgresql://user:pwd@localhost:5432/db')
+        db.execute("INSERT (id, veld) INTO table VALUES (1, 'waarde')")
+        """
     def __init__(self, conn_string: str = '', default_schema: str = 'public') -> None:
         self.engine = create_engine(conn_string)
         conn_string_parts = conn_string.split('/')
@@ -20,12 +25,20 @@ class Database():
         self.reflected_schemas = {} #type: Dict[str, Schema]
 
     def reflect_schemas(self):
+        """via sqlalchemy inspector worden de schema-namen in de database opgehaald. Hier worden schema objecten van gemaakt.
+        """
         inspector = reflection.Inspector.from_engine(self.engine)
         schema_names = inspector.get_schema_names()
         for schema_name in schema_names:
             self.reflected_schemas[schema_name] = Schema(schema_name, self)
 
-    def execute(self, sql: str, log_message: str=''):
+    def execute(self, sql: str, log_message: str='') -> int:
+        """
+        voert sql uit (insert, update, delete enz)
+        :param sql: geldige sql string
+        :param log_message: indien database logging bevat wordt er gelogd
+        :return: executed rowcount
+        """
         self.log('-- ' + log_message.upper())
         self.log( sql)
 
@@ -41,29 +54,10 @@ class Database():
         cursor.close()
         return rowcount
 
-    def execute_without_commit(self, sql: str, log_message: str=''):
-        self.log('-- ' + log_message.upper())
-        self.log( sql)
 
-        start = time.time()
-        if not self.__cursor:
-            self.start_transaction()
-        self.__cursor.execute(sql)
-
-        self.log('-- duur: ' + str(time.time() - start) +  '; aantal rijen:' + str(self.__cursor.rowcount))
-        self.log('-- =============================================================')
-
-    def start_transaction(self):
-        connection = self.engine.raw_connection()
-        self.__conn = connection
-        self.__cursor = connection.cursor()
-
-    def commit(self, log_message: str = ''):
-        # connection = self.engine.raw_connection()
-        self.__conn.commit()
-        self.__conn.close()
 
     def execute_returning(self, sql: str, log_message: str = ''):
+        """Geeft rijen terug"""
         self.log('-- ' + log_message.upper())
         self.log(sql)
 
@@ -80,13 +74,11 @@ class Database():
         return result
 
     def execute_read(self, sql, log_message='') -> List[List[Any]]:
+        """Geeft rijen terug. Zelfde als execute_returning, maar dan met dict cursor"""
         self.log('-- ' + log_message.upper())
         self.log(sql)
 
         start = time.time()
-        # plan = text(sql)
-        # result = engine.execute(sql)
-
         connection = self.engine.raw_connection()
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute(sql)
@@ -97,12 +89,9 @@ class Database():
         cursor.close()
         return result
 
-    def confirm_execute(self, sql: str, log_message: str='') -> None:
-        ask_confirm = False
-        if 'ask_confirm_on_db_changes' in self.config:
-            ask_confirm = self.config['ask_confirm_on_db_changes']
-        else:
-            ask_confirm = 'debug' in self.config and self.config['debug']
+    def confirm_execute(self, sql: str, log_message: str='', ask_confirm = True) -> None:
+        """Vraagt de gebruiker via cmd prompt om een wijziging in de db te confirmen.
+        Toets j of y voor bevestiging"""
         if ask_confirm:
             sql_sliced = sql
             if len(sql) > 50:
@@ -112,16 +101,17 @@ class Database():
             result = input('{}\r\nWil je de volgende wijzigingen aanbrengen in de database?\r\n{}\r\n'.format(log_message.upper(), sql_sliced))
             if result.strip().lower()[:1] == 'j' or result.strip().lower()[:1] ==  'y':
                 self.execute(sql, log_message)
-                # print(log_message, 'uitgevoerd')
             else:
                 raise Exception('afgebroken')
         else:
             self.execute(sql, log_message)
 
-
-
+    def log(self, msg: str) -> None:
+        """override om te implementeren"""
+        pass
 
 class Schema():
+    """Database schema"""
     def __init__(self, name: str, db: 'Database', schema_type: str = '') -> None:
         self.name = name  #type: str
         self.db = db  #type: Database
@@ -142,14 +132,6 @@ class Schema():
 
         self.functions = self.reflect_functions()
 
-        # for table_name in table_names:
-        #     tbl = Table(table_name, self, self.db)
-        #     cols = inspector.get_columns(table_name, self.name)
-        #     for col in cols:
-        #         col = Column(col['name'], str(col['type']), tbl)
-        #         # col.is_key = sa_col.primary_key
-        #         tbl.columns.append(col)
-        #     indexes = inspector.get_indexes(table_name, self.name)
         tmp_meta = MetaData()
         tmp_meta.reflect(bind=self.db.engine, schema=self.name)
         for sa_tbl in tmp_meta.sorted_tables:
@@ -164,24 +146,15 @@ class Schema():
                 tbl.columns.append(col)
             self.tables[tbl.name] = tbl
             for sa_idx in sa_tbl.indexes:
-                # self.indexes[sa_idx.name] = sa_idx.name
                 tbl.indexes[sa_idx.name] = sa_idx.name
             for sa_constraint in sa_tbl.constraints:
-                # constraint_type = sa_constraint.__class__.__name__
-                # name = sa_tbl.name + '_' + constraint_type
-                # self.constraints[sa_constraint.name] = sa_constraint.name
                 tbl.constraints[sa_constraint.name] = sa_constraint.name
             for sa_constraint in sa_tbl.foreign_key_constraints:
-                # constraint_type = sa_constraint.__class__.__name__
-                # name = sa_tbl.name + '_' + constraint_type
-                # self.constraints[sa_constraint.name] = sa_constraint.name
                 tbl.constraints[sa_constraint.name] = sa_constraint.name
         self.is_reflected = True
 
     def reflect_functions(self) -> Dict[str, 'DbFunction']:
         self.functions = {}
-        cursor = self.db.engine.raw_connection().cursor()
-        sql = """SELECT routine_name as name, data_type, type_udt_name as data_type2, external_language as lang, routine_definition as body FROM information_schema.routines WHERE SPECIFIC_SCHEMA='{}' and routine_type = 'FUNCTION'""".format(self.name)
         sql = """SELECT n.nspname AS schema_name
       ,p.proname AS function_name
       ,pg_get_function_arguments(p.oid) AS args
@@ -191,12 +164,6 @@ FROM   (SELECT oid, * FROM pg_proc p WHERE NOT p.proisagg) p
 JOIN   pg_namespace n ON n.oid = p.pronamespace
 WHERE  n.nspname = '{}'""".format(self.name)
         for row in self.db.engine.execute(sql):
-            # db_func = DbFunction(row['name'])
-            # db_func.lang = row['lang']
-            # db_func.return_type = row['data_type2']
-            # db_func.sql_body = row['body']
-            # db_func.schema = self
-
             db_func = DbFunction()
             db_func.name = row['function_name']
             db_func.parse_args(row['args'])
@@ -247,13 +214,10 @@ class Table():
             col.is_key = (col.name.lower() in key_names)
 
     def primary_keys(self) -> List[str]:
-        return self.key_names #[col.name for col in self.columns if col.is_key]
+        return self.key_names
 
     def field_names(self) -> List[str]:
         return [col.name for col in self.columns]
-
-
-
 
     def reflect(self) -> None:
         self.columns = [] #type: List[Column]
@@ -261,139 +225,51 @@ class Table():
         columns = inspector.get_columns(self.name, self.schema.name)
         pks = inspector.get_primary_keys(self.name, self.schema.name)
         indexes = inspector.get_indexes(self.name, self.schema.name)
+        pk_constraint = inspector.get_pk_constraint(self.name, self.schema.name)
+        unique_constraints = inspector.get_unique_constraints(self.name, self.schema.name)
+        fks = inspector.get_foreign_keys(self.name, self.schema.name)
         self.key_names = []
         for col in columns:
-            #col = Column(col['name'], str(col['type']), self)
             col = Column(col['name'], col['type'], self)
             col.is_key = (col.name in pks)
             if col.is_key:
                 self.key_names.append(col.name)
-            # if self.key_names:
-            #     col.is_key = (col.name in self.key_names)
             self.columns.append(col)
         for index in indexes:
             self.indexes[index['name']] = index
+        if pk_constraint:
+            self.constraints[pk_constraint['name']] = pk_constraint
+        for unique_constraint in unique_constraints:
+            self.constraints[unique_constraint['name']] = unique_constraints
+        for fk in fks:
+            self.constraints[fk['name']] = fk
         self.is_reflected = True
-
-        # sql = """SELECT * FROM {}.{} WHERE 1=0 """.format(self.schema.name, self.name)
-        # result = self.db.engine.execute(sql)
-        # oracle = True
-        # for sa_col in result.cursor.description:
-        #     if oracle:
-        #         type = sa_col[1].__name__
-        #         col = Column(sa_col[0], type, self)
-        #     else:
-        #         col = Column(sa_col.name, str(sa_col.type_code), self)
-        #         col.is_key = sa_col.primary_key
-        #     self.columns.append(col)
-        # self.db.__dict__[self.name] = self
 
     def __contains__(self, item: Union[str, 'Column']) -> bool:
         item_name = str(item)
         if isinstance(item, Column):
             item_name = item.name
         for col in self.columns:
-            if item_name.lower() == col.name.lower():
+            if item_name.lower()[:63] == col.name.lower():
                 return True
         for name in self.indexes:
-            #name van indexes in db maar max 63 posities lang
+            #name van indexes in posgres mag maar max 63 posities lang zijn
             if item_name[:63] == name:
                 return True
         for name in self.constraints:
-            if item_name == name:
+            # name van constraints in posgres mag maar max 63 posities lang zijn
+            if item_name[:63] == name:
                 return True
         return False
-
-        # meta = MetaData()
-        # meta.bind = self.db.engine
-        # complete_name = '{}.{}'.format(self.schema.name, self.name)
-        # sa_tbl = Table(complete_name, meta, autoload=True)
-        # tbl = SourceTable(self.db, self, sa_tbl.name)
-        # for sa_col in sa_tbl.columns:
-        #     col = SourceColumn(tbl, sa_col.name, str(sa_col.type))
-        #     col.is_key = sa_col.primary_key
-        #     tbl.columns.append(col)
-        # self.db.__dict__[tbl.name] = tbl
-
-    # def to_csv(self, path = ''):
-    #     if not path:
-    #         from pyelt.__main__ import get_path
-    #         path = get_path() + '/data/transfer/' + self.schema.name
-    #     else:
-    #         path = path
-    #     if not os.path.exists(path):
-    #         os.makedirs(path)
-    #     file_name = '{}/{}.csv'.format(path, self.name)
-    #
-    #     head = [col.name for col in self.columns]
-    #     with open(file_name, 'w', newline='', encoding='utf8') as fp:
-    #         csv_writer = csv.writer(fp, delimiter=';')
-    #         csv_writer.writerow(head)
-    #         data = self.load()
-    #         csv_writer.writerows(data)
-    #     return file_name
-    #
-    # def load(self):
-    #     rows = []
-    #     sql = """SELECT * FROM {}.{}""".format(self.schema.name, self.name)
-    #     sql += " OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY"
-    #     result = self.db.engine.execute(sql)
-    #     for row in result:
-    #         rows.append(row)
-    #     return rows
-    #
-    # def create_python_code_mappings(self, remove_prefix =''):
-    #     """helper functie om mappings aan te maken in string formaat"""
-    #     if len(self.columns) == 0: self.reflect()
-    #     s = """mapping = EntityMapping('{0}_hstage', '{0}_entity')\r\n""".format(self.name)
-    #     for col in self.columns:
-    #         source = col.name.lower()
-    #         target = col.name.lower().replace(remove_prefix, '')
-    #         s += """mapping.map_field('{0:<30} => {1} {2}')\r\n""".format(source, target, col.type)
-    #     print(s)
-
-
-# class Query(Table):
-#     def __init__(self, db, sql):
-#         self.db = db
-#         self.sql = sql
-#         self.name = 'query'
-#         self.columns = []
-#
-#     def reflect(self):
-#         result = self.db.engine.execute(self.sql + ' WHERE 1 = 0')
-#         for sa_col in result.cursor.description:
-#             col = Column(self, sa_col.name, str(sa_col.type_code))
-#             self.columns.append(col)
-#
-#
-#     def to_csv(self, path=''):
-#         if not path:
-#             from pyelt.__main__ import get_path
-#             path = get_path() + '/data/transfer/' + self.db.name
-#         return super().to_csv(path)
-#
-#     def load(self):
-#         rows = []
-#         sql = self.sql
-#         result = self.db.engine.execute(sql)
-#         for row in result:
-#             rows.append(row)
-#         return rows
 
 class View(Table):
     def __init__(self, name: str, schema: 'Schema', db: 'Database') -> None:
         super().__init__(name, schema, db)
         self.sql = ''
 
-
 class Column():
-    def __init__(self, name: str, type: str = 'text', tbl: 'Table' = None, default_value = '', fhir_name = '') -> None:
+    def __init__(self, name: str, type: str = 'text', tbl: 'Table' = None, default_value = '', pk = False, unique = False, indexed = False, nullable = True, fhir_name = '') -> None:
         name = name.strip()
-        # while '  ' in name:
-        #     name = name.replace('  ', ' ')
-        # if ' ' in name:
-        #     name, type, *rest_args = name.split(' ')
         self.name = name.strip().lower()
         if not isinstance(type, str):
             if type == 23:
@@ -404,7 +280,10 @@ class Column():
         #todo length
         self.length = ''
         self.table = tbl
-        self.is_key = False
+        self.is_key = pk
+        self.is_unique = unique
+        self.is_indexed = indexed
+        self.nullable = nullable
         self.default_value = default_value
         self.fhir_name = fhir_name
 
@@ -413,7 +292,6 @@ class Column():
 
     def __repr__(self) -> str:
         return "{} ({})".format(self.name.lower(), self.type.lower())
-        # return self.default_value
 
     @staticmethod
     def clear_name(name: str) -> str:
@@ -430,56 +308,11 @@ class Column():
     def get_table(self):
         return self.table
 
-    def __eq__(self, other):
-        # zet om in sql
-        return Condition(self.name, '=', other, table=self.table)
-
-    def __ne__(self, other):
-        # zet om in sql
-        return Condition(self.name, '!=', other, table=self.table)
-        # return Condition('({} != {})'.format(self.name,other))
-
-    def __gt__(self, other):
-        # zet om in sql
-        return Condition(self.name, '>', other, table=self.table)
-        # return Condition('({} > {})'.format(self.name,other))
-
-    def __ge__(self, other):
-        # zet om in sql
-        return Condition(self.name, '>=', other, table=self.table)
-        # return Condition('({} >= {})'.format(self.name,other))
-
-    def __lt__(self, other):
-        # zet om in sql
-        return Condition(self.name, '<', other, table=self.table)
-        # return Condition('({} < {})'.format(self.name,other))
-
-    def __le__(self, other):
-        # zet om in sql
-        return Condition(self.name, '<=', other, table=self.table)
-        # return Condition('({} <= {})'.format(self.name,other))
-
-    def is_in(self, item):
-
-        return Condition(self.name, 'in', item, table=self.table)
-
-    def between(self, item1, item2):
-        item = '{} AND {}'.format(item1, item2)
-        return Condition(self.name, 'between', item, table=self.table)
-
-    def join(self, item):
-        sql = self.name + '||' + item.name
-        if isinstance(item, (list, tuple)):
-            sql = self.name + '||' + '||'.join(item)
-        return SqlSnippet(sql, table=self.table)
-
-
-
 
 class Columns():
     class TextColumn(Column):
-        def __init__(self, name:str = '', default_value='', fhir_name=''):
-            super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
+        def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
+            super().__init__(name, 'text', default_value=default_value, pk=pk, unique=unique, indexed=indexed, nullable=nullable, fhir_name=fhir_name)
 
     class TextArrayColumn(Column):
         #voorlopig deze gewoon op type text laten staan. Misschien later aanpassen naar text[]
@@ -487,29 +320,33 @@ class Columns():
             super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
 
     class RefColumn(Column):
-        def __init__(self,  valueset_name:str,name:str = '', default_value='', fhir_name=''):
-            super().__init__(name, 'text', default_value=default_value, fhir_name=fhir_name)
+        def __init__(self,  valueset_name:str,name:str = '', default_value='', nullable=True, fhir_name=''):
+            super().__init__(name, 'text', default_value=default_value, indexed=True, nullable=nullable, fhir_name=fhir_name)
             self.valueset_name = valueset_name
 
     class DateTimeColumn(Column):
-        def __init__(self, name:str = '', default_value='', fhir_name=''):
-            super().__init__(name, 'timestamp', default_value=default_value, fhir_name=fhir_name)
+        def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
+            super().__init__(name, 'timestamp', default_value=default_value, pk=pk, unique=unique, indexed=indexed, nullable=nullable, fhir_name=fhir_name)
 
     class DateColumn(Column):
-        def __init__(self, name:str = '', default_value='', fhir_name=''):
+        def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
             super().__init__(name, 'date', default_value=default_value, fhir_name=fhir_name)
 
     class IntColumn(Column):
-        def __init__(self, name:str = '', default_value='', fhir_name=''):
-            super().__init__(name, 'integer', default_value=default_value, fhir_name=fhir_name)
+        def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
+            super().__init__(name, 'integer', default_value=default_value, pk=pk, unique=unique, indexed=indexed, nullable=nullable, fhir_name=fhir_name)
+
+    class SerialColumn(Column):
+        def __init__(self, name:str = ''):
+            super().__init__(name, 'SERIAL', pk=True)
 
     class FloatColumn(Column):
-        def __init__(self, name:str = '', default_value='', fhir_name=''):
-            super().__init__(name, 'numeric', default_value=default_value, fhir_name=fhir_name)
+        def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
+            super().__init__(name, 'numeric', default_value=default_value, pk=pk, unique=unique, indexed=indexed, nullable=nullable, fhir_name=fhir_name)
 
     class BoolColumn(Column):
-        def __init__(self, name:str = '' , default_value='', fhir_name=''):
-            super().__init__(name, 'bool', default_value=default_value, fhir_name=fhir_name)
+        def __init__(self, name:str = '' , default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
+            super().__init__(name, 'bool', default_value=default_value, pk=pk, unique=unique, indexed=indexed, nullable=nullable, fhir_name=fhir_name)
 
     class JsonColumn(Column):
         def __init__(self, name:str = '' , default_value={}, fhir_name=''):
@@ -532,59 +369,19 @@ class Columns():
                 super().__init__(name, 'text', default_value=default_value)
                 # super().__init__(name, 'fhir.codeable_concept', default_value=default_value)
 
+class FkReference:
+    """Class wordt gebruikt voor foreign keys """
+    def __init__(self, ref_cls: Table, fk_col: Column = None):
+        self.ref_table = ref_cls
+        self.fk = ''
+        if fk_col:
+            self.fk = fk_col.name
 
+    def set_fk_name(self, fk):
+        """wordt aangeroepen vanuit meta class. Hier wordt de fk aan de hand van de propname gemaakt."""
+        if not self.fk:
+            self.fk = fk
 
-####################################
-class Condition():
-    def __init__(self, field_name='', operator='', value=None, table=None):
-        self.table = table
-        if operator:
-            if isinstance(value, str):
-                sql_condition = "{} {} '{}'".format(field_name, operator, value)
-            elif isinstance(value, list):
-                value = str(value)
-                value = value.replace('[', '(').replace(']', ')')
-                sql_condition = "{} {} {}".format(field_name, operator, value)
-            else:
-                sql_condition = "{} {} {}".format(field_name, operator, value)
-        else:
-            sql_condition = field_name
-        sql_condition = sql_condition.replace(' = None', ' IS NULL')
-        sql_condition = sql_condition.replace(' != None', ' IS NOT NULL')
-        self.name = sql_condition
-
-    def __and__(self, other):
-        # zet om in sql
-        if isinstance(other, Condition):
-            return Condition('({} AND {})'.format(self.name, other.name), table=self.table)
-        else:
-            return Condition('({} AND {})'.format(self.name, other), table=self.table)
-
-    def __or__(self, other):
-        # zet om in sql
-        if isinstance(other, Condition):
-            return Condition('({} OR {})'.format(self.name, other.name), table=self.table)
-        else:
-            return Condition('({} OR {})'.format(self.name, other), table=self.table)
-
-    def get_table(self):
-        return self.table
-
-class SqlSnippet():
-    def __init__(self, sql='', table=None):
-        self.table = table
-        self.sql = sql
-
-    def get_table(self):
-        return self.table
-################
-# class DatabaseFunction():
-#     def __init__(self, name: str) -> None:
-#         self.name = name #type: str
-#         self.lang = '' #type: str
-#         self.return_type = None #type: bool
-#         self.body = '' #type: str
-#         self.parameters = [] #type: List[str]
 
 
 class DbFunctionParameter:
@@ -598,7 +395,6 @@ class DbFunction:
     def __init__(self, *args):
         self.name = camelcase_to_underscores(self.__class__.__name__)
         self.func_params = []
-        # self.func_declares = []
         for arg in args:
             self.func_params.append(arg)
         self.sql_body = ''
@@ -618,12 +414,6 @@ class DbFunction:
         func_params = ''
         for func_param in self.func_params:
             func_params += '{} {}, '.format(func_param.name, func_param.type)
-        # sql_declares = ''
-        # for func_declare in self.func_declares:
-        #     if not func_declare.endswith(';'):
-        #         sql_declares += '{};\r\n '.format(func_declare)
-        #     else:
-        #         sql_declares += '{}\r\n '.format(func_declare)
         func_params = func_params[:-2]
         params = {'schema': self.schema.name, 'name': self.name, 'params': func_params, 'return_type': self.return_type, 'sql_body': self.sql_body, 'lang': self.lang}
 

@@ -1,18 +1,20 @@
-import datetime
+from pyelt.datalayers.database import Columns
+from pyelt.datalayers.dv import AbstractOrderderTable
 
-from pyelt.datalayers.database import Schema, Table
 
+class Sys():
+    class Runs(AbstractOrderderTable):
+        __dbschema__ = 'sys'
+        runid = Columns.FloatColumn(pk=True)
+        rundate = Columns.DateTimeColumn(nullable=False)
+        finish_date = Columns.DateTimeColumn(indexed=True)
+        exceptions = Columns.BoolColumn()
+        sor_versions = Columns.TextColumn()
+        dv_version = Columns.FloatColumn()
+        pyelt_version = Columns.TextColumn()
 
-class Sys(Schema):
-    pass
-    # def __init__(self) -> None:
-    #     self.runs = Table('runs')
-    #
-    # def insert_new_run(self) -> None:
-    #     #get last run
-    #
-    #     run = None
-    #     if run.date == datetime.datetime.now().date():
-    #         run.runid += 0.01
-    #     else:
-    #         run.runid = int(run.runid) + 1
+    class Currentversion(AbstractOrderderTable):
+        __dbschema__ = 'sys'
+        schemaname = Columns.TextColumn(pk=True,unique=True)
+        version = Columns.FloatColumn(unique=True)
+        date = Columns.DateTimeColumn()

@@ -6,17 +6,19 @@ from typing import List
 
 from main import get_root_path
 # from sample_domains import _ensemble_views
-from pyelt.datalayers.database import Schema, DbFunction
-from pyelt.datalayers.dm import Dim, Fact
-from pyelt.datalayers.dv import DvEntity, Link, EnsembleView, HybridLink, DvValueset
+from pyelt.datalayers.database import * #Schema, DbFunction
+# from pyelt.datalayers.dm import Dim, Fact
+from pyelt.datalayers.dv import * #HubEntity, Link, EnsembleView, HybridLink, DvValueset
 from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
+from pyelt.datalayers.sys import *
+from pyelt.datalayers.valset import DvValueset
 
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
 from pyelt.helpers.validations import DomainValidator, MappingsValidator
 from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, EntityViewToEntityMapping, EntityViewToLinkMapping, SorToEntityMapping, SorToLinkMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.mappings.validations import SorValidation, DvValidation, Validation
-from pyelt.process.ddl import DdlSor, DdlDv, Ddl, DdlDatamart
+from pyelt.process.ddl import * # DdlSor, DdlDv, Ddl, DdlDatamart
 from pyelt.process.etl import EtlSourceToSor, EtlSorToDv
 from pyelt.sources.databases import SourceDatabase
 
@@ -116,10 +118,12 @@ Voorbeeld::
         """
         self.send_start_mail()
         self.dwh.create_schemas_if_not_exists()
+        for schema in self.dwh.schemas.values():
+            if schema.schema_type == DwhLayerTypes.SYS:
+                self.create_sys_tables(schema)
         self.runid = self.create_new_runid()
         self.logger = Logger.create_logger(LoggerTypes.MAIN, self.runid, self.config)
         self.sql_logger = Logger.create_logger(LoggerTypes.SQL, self.runid, self.config, to_console=False)
-
 
         if not self.validate_domains():
             return
@@ -128,12 +132,12 @@ Voorbeeld::
 
         self.logger.log('<b>START RUN {0:.2f}</>'.format(self.runid))
         self.logger.log('<b>START DDL</>')
-        for dv_schema in self.dwh.schemas.values():
-            if dv_schema.schema_type == DwhLayerTypes.VALSET:
-                self.create_valueset_from_domain(dv_schema)
-        for dv_schema in self.dwh.schemas.values():
-            if dv_schema.schema_type == DwhLayerTypes.DV:
-                self.create_dv_from_domain(dv_schema)
+        for schema in self.dwh.schemas.values():
+            if schema.schema_type == DwhLayerTypes.VALSET:
+                self.create_valueset_from_domain(schema)
+        for schema in self.dwh.schemas.values():
+            if schema.schema_type == DwhLayerTypes.DV:
+                self.create_dv_from_domain(schema)
 
         for pipe in self.pipes.values():
             self.logger.log('DDL PIPE ' + pipe.source_system, indent_level=1)
@@ -147,12 +151,11 @@ Voorbeeld::
 
         for name, module in self.datamart_modules.items():
             self.dwh.create_schemas_if_not_exists(name)
-
-
         self.create_datamarts()
 
         self.logger.log('FINISH DDL')
         self.logger.log('')
+
         is_valid = self.validate_mappings_after_ddl()
         if not is_valid:
             return
@@ -262,7 +265,7 @@ Voorbeeld::
 
         sql = 'SELECT max(runid) as max_runid, max(rundate) as max_rundate from sys.runs'
         rows = self.dwh.execute_read(sql, 'get max run id')
-        if len(rows) > 0:
+        if len(rows) > 0 and rows[0][0]:
             row = rows[0]
             max_runid = float(row[0])
             max_rundate = row[1]
@@ -302,6 +305,8 @@ Voorbeeld::
 
         exceptions = len(self.logger.errors) > 0
         dv_version = self.dwh.get_layer_version(self.dwh.dv.name)
+        if not dv_version:
+            dv_version = 'NULL'
         sor_versions = ''
         for pipe in self.pipes.values():
             sor_version = self.dwh.get_layer_version(pipe.sor.name)
@@ -358,22 +363,59 @@ Voorbeeld::
 
         module_name = "{}.{}".format(schema_name, module.__name__)
         self.domain_modules[module_name] = module
+        self.dwh.set_schema(schema_name, DwhLayerTypes.DV)
         # init module
         for name, cls in inspect.getmembers(module,  inspect.isclass):
-            if hasattr(cls, 'cls_init') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
-                cls.cls_init()
-                if not cls._schema_name:
-                    cls._schema_name = schema_name
+            if HubEntity in cls.__mro__:
+                cls.__dbschema__ = schema_name
+                cls.Hub.__dbschema__ = schema_name
+                for sat in cls.__sats__.values():
+                    sat.__dbschema__ = schema_name
+
+            if LinkEntity in cls.__mro__:
+                cls.__dbschema__ = schema_name
+                cls.Link.__dbschema__ = schema_name
+                for sat in cls.__sats__.values():
+                    sat.__dbschema__ = schema_name
+
+
+    def register_valset_domain(self, module, schema_name = 'valset'):
+        """
+        Registreert de module met het domein.
+
+        :param module: de module met daarin de domein classes; bijvoorbeeld: "domain_huisartsen"
+
+        Je kunt meerdere modules registreren door de functie vaker aan te roepen::
+
+            pipeline.register_domain(domain_huisartsen)
+            pipeline.register_domain(domain_ziekenhuizen)
+
+        Tijdens de dll zullen alle tabellen uit beide domeinen aangemaakt worden.
+        """
+
+        module_name = "{}.{}".format(schema_name, module.__name__)
+        self.domain_modules[module_name] = module
+        self.dwh.set_schema(schema_name, DwhLayerTypes.VALSET)
+        # init module-classes: zet dbschema
+        for name, cls in inspect.getmembers(module,  inspect.isclass):
+            if DvValueset in cls.__mro__ :
+                if cls.__dbschema__  != schema_name:
+                    cls.__dbschema__ = schema_name
+
 
     def register_datamart(self, module, schema_name = ''):
         if not schema_name:
             schema_name = module.__name__
         self.datamart_modules[schema_name] = module
         self.dwh.get_or_create_sor_schema(schema_name)
-        # init module
         for name, cls in inspect.getmembers(module, inspect.isclass):
-            if hasattr(cls, 'init_cls') and cls != DvEntity and cls != Link:  # geen superclasses zelf meenemen
-                cls.cls_init()
+            if AbstractOrderderTable in cls.__mro__ :
+                cls.__dbschema__ = schema_name
+
+    def create_sys_tables(self, schema):
+        ddl = Ddl(self, schema)
+        ddl.create_or_alter_table(Sys.Runs)
+        ddl.create_or_alter_table(Sys.Currentversion)
 
     def create_valueset_from_domain(self, schema):
         """
@@ -381,16 +423,15 @@ Voorbeeld::
 
         """
         self.logger.log('START CREATE VALSET'.format(self.runid), indent_level=2)
-        ddl = DdlDv(self, schema)
+        ddl = DdlValset(self, schema)
 
         ddl.create_or_alter_table_exceptions(schema)
         domain_modules = {k:v for k,v in self.domain_modules.items() if k.startswith(schema.name + '.')}
 
         # VALUESETS
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
         for module_name, module in domain_modules.items():
             for name, cls in inspect.getmembers(module, inspect.isclass):
-                if cls.__base__ == DvValueset:
+                if DvValueset in cls.__mro__:
                     ddl.create_or_alter_valueset(cls)
 
     def create_dv_from_domain(self, schema):
@@ -409,28 +450,22 @@ Voorbeeld::
             # if not module_name.startswith(schema.name + '.'):
             #     continue
             for name, cls in inspect.getmembers(module, inspect.isclass):
-                if DvEntity in cls.__bases__:
+                if HubEntity in cls.__mro__:
                     ddl.create_or_alter_entity(cls)
 
         # LINKS
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
         for module_name, module in domain_modules.items():
             for name, cls in inspect.getmembers(module, inspect.isclass):
-                if cls.__base__ == Link and cls != HybridLink:
+                if LinkEntity in cls.__mro__:
                     ddl.create_or_alter_link(cls)
 
-        # # VALUESETS
-        # # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle hubs zijn aangemaakt voordat de links aangemaakt kunnen worden met ref. integriteit op de database
-        # for module_name, module in domain_modules.items():
-        #     for name, cls in inspect.getmembers(module, inspect.isclass):
-        #         if cls.__base__ == DvValueset:
-        #             ddl.create_or_alter_valueset(cls)
-
+        return
         #CREATE VIEWS
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
         for module_name,module in domain_modules.items():
             for name, cls in inspect.getmembers(module, inspect.isclass):
-                if DvEntity in cls.__mro__ and cls != DvEntity:
+                if HubEntity in cls.__mro__ and cls != HubEntity:
                     ddl.create_or_alter_view(cls)
 
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden

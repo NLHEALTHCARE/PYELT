@@ -1,7 +1,7 @@
 from typing import Union
 
-from pyelt.datalayers.database import Database, Schema, Table, Column, Condition
-from pyelt.datalayers.dv import DvEntity
+from pyelt.datalayers.database import Schema, Table, Column
+from pyelt.orm.database_orm import Condition
 
 
 class Validation():

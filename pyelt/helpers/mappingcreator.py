@@ -2,12 +2,12 @@ from sqlalchemy.engine import reflection
 
 from pyelt.datalayers.database import Table
 from pyelt.datalayers.dm import Dim
-from pyelt.datalayers.dv import DvEntity, HybridSat
+from pyelt.datalayers.dv import HubEntity, HybridSat
 
 
 class MappingWriter():
     @staticmethod
-    def create_python_code_mappings(sor_table: 'Table', entity: DvEntity) -> None:
+    def create_python_code_mappings(sor_table: 'Table', entity: HubEntity) -> None:
         """helper functie om mappings aan te maken in string format"""
         if len(sor_table.columns) == 0: sor_table.reflect()
         s = """def init_sor_{}_to_{}_mappings(sor):\r\n""".format(sor_table.name, entity.__name__.lower())
@@ -75,9 +75,8 @@ class MappingWriter():
         s += '    \r\n'
         s += '    source_sql = "SELECT * FROM {}.{}"\r\n'.format(source_schema, source_name)
         s += '    mapping = DvToDimMapping(source_sql, {})\r\n'.format(dim.__name__)
-        dim.cls_init_cols()
-        for col_name in dim.cls_get_column_names():
-            s += """    mapping.map_field('', {}.{})\r\n""".format(dim.__name__, col_name)
+        for col in dim.__cols__:
+            s += """    mapping.map_field('', {}.{})\r\n""".format(dim.__name__, col.name)
         s += """    return mapping\r\n"""
         s += """\r\n"""
         print(s)

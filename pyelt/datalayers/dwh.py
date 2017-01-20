@@ -42,17 +42,8 @@ class Dwh(Database):
         self.schemas['dv'] = Schema('dv', self, DwhLayerTypes.DV)  # type: Schema
         self.schemas['valset'] = Schema('valset', self, DwhLayerTypes.VALSET)  # type: Schema
         self.schemas['sys'] = Schema('sys', self, DwhLayerTypes.SYS)  # type: Schema
-        # self.sys = Schema('sys', self)  # type: Schema
-        # self.sors = {}  #type: Dict[str, Schema]
-        # self.dvs = {}  #type: Dict[str, Schema]
-        # self.valsets = {}  # type: Dict[str, Schema]
-        # self.datamarts = {}  #type: Dict[str, Schema]
-        # self.dvs['dv'] = Schema('dv', self)  # type: Schema
-        # self.valsets['valset'] = Schema('valset', self)  # type: Schema
 
     def get_or_create_sor_schema(self, name) -> 'Schema':
-        # if not 'sor_schema' in config:
-        #     return self.get_sor_schema()
         if name in  self.schemas:
             return self.schemas[name]
         else:
@@ -60,21 +51,23 @@ class Dwh(Database):
             self.schemas[name] = sor
         return sor
 
-    # def get_sor_schema(self, name=''):
-    #     found = None
-    #     if name in self.sors:
-    #         found = self.sors[name]
-    #     return found
-
     def get_schema(self, name=''):
         found = None
         if name in self.schemas:
             found = self.schemas[name]
         return found
 
+    def set_schema(self, name, layer_type = DwhLayerTypes.DV):
+        schema = Schema(name, self, layer_type)
+        self.schemas[name] = schema
+
     @property
     def sors(self):
         return {k:v for k,v in self.schemas.items() if v.schema_type == DwhLayerTypes.SOR}
+
+    @property
+    def sys(self):
+        return self.get_schema('sys')
 
     @property
     def dv(self):
@@ -88,10 +81,6 @@ class Dwh(Database):
     def valset(self):
         return self.get_schema('valset')
 
-    @property
-    def sys(self):
-        return self.get_schema('sys')
-
     def get_or_create_datamart_schema(self, dm_name: str) -> 'Schema':
         if dm_name in self.schemas:
             return self.schemas[dm_name]
@@ -102,6 +91,11 @@ class Dwh(Database):
 
     def create_schemas_if_not_exists(self, schema_name: str ='') -> None:
         self.reflect_schemas()
+        for schema_name in self.schemas.keys():
+            if not schema_name in self.reflected_schemas:
+                sql = """CREATE SCHEMA {};""".format(schema_name)
+                self.confirm_execute(sql, 'nieuw ' + schema_name + ' schema aanmaken')
+        return
         if schema_name and not schema_name in self.reflected_schemas:
             sql = """CREATE SCHEMA {};""".format(schema_name)
             self.confirm_execute(sql, 'nieuw schema aanmaken')
@@ -172,6 +166,14 @@ class Dwh(Database):
             self.execute(sql, 'insert version')
         return new_version_number
 
+    def confirm_execute(self, sql: str, log_message: str='') -> None:
+        ask_confirm = False
+        if 'ask_confirm_on_db_changes' in self.config:
+            ask_confirm = self.config['ask_confirm_on_db_changes']
+        else:
+            ask_confirm = 'debug' in self.config and self.config['debug']
+        super().confirm_execute(sql, log_message, ask_confirm)
 
-    def log(self, msg: str) -> None:
-        pass
+
+
+

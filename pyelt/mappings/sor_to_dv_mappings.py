@@ -3,9 +3,10 @@ from collections import OrderedDict
 from typing import Union, List, Dict
 
 from pyelt.datalayers.database import Column, Table, Database, View, Schema, DbFunction
-from pyelt.datalayers.dv import DvEntity, Link, HybridSat, LinkReference, Sat, DynamicLinkReference, DvValueset
+from pyelt.datalayers.dv import * # HubEntity, Link, HybridSat, LinkReference, Sat, DynamicLinkReference, DvValueset
 from pyelt.datalayers.dwh import Dwh
 from pyelt.datalayers.sor import SorTable, SorQuery
+from pyelt.datalayers.valset import DvValueset
 from pyelt.helpers.exceptions import PyeltException
 from pyelt.mappings.base import BaseTableMapping, FieldMapping, ConstantValue
 from pyelt.mappings.transformations import FieldTransformation
@@ -13,8 +14,8 @@ from pyelt.mappings.transformations import FieldTransformation
 # backup gemaakt op 21062016: "sor_to_dv_mappings_old21062016.py"
 
 class SorToEntityMapping(BaseTableMapping):
-    def __init__(self, source: str, target: DvEntity, sor: Schema = None, filter: str = '', type: str = '') -> None:
-        target.cls_init_sats()
+    def __init__(self, source: str, target: HubEntity, sor: Schema = None, filter: str = '', type: str = '') -> None:
+        # target.cls_init_sats()
 
         # if not sor:
         #     sor_name = source.split('.')[0]
@@ -32,21 +33,11 @@ class SorToEntityMapping(BaseTableMapping):
         super().__init__(source, target, filter)
         self.entity = target
         self.type = type
-        if not type and not target.__base__ == DvEntity:
-            self.type = target.__name__.lower()
+        if not type and not target.__base__ == HubEntity:
+            self.type = target.__subtype__
         self.sat_mappings = {} #type: Dict[str, SorSatMapping]
         self.bk_mapping = None #type: str
         self.key_mappings = []  # type: str
-
-        self.try_append_default_value_mappings()
-
-    def try_append_default_value_mappings(self):
-        for sat in self.entity.cls_get_sats().values():
-            sat_has_default_values = False
-            sat.cls_init_cols()
-            for col in sat.cls_get_columns():
-                if col.default_value:
-                    self.map_field(ConstantValue(col.default_value), col)
 
     def map_field(self, source: Union[str, 'ConstantValue', list, dict], target: 'Column' = None, transform_func: 'FieldTransformation'=None, ref: str = '', type: str = '') -> None:
         if not source:
@@ -185,17 +176,17 @@ class SorSatMapping(BaseTableMapping):
 class SorToLinkMapping(BaseTableMapping):
     auto_generated_sor_fk = 'auto'
 
-    def __init__(self, source: Union[str, 'Table', 'View'], target: 'Link', sor: Schema, filter: str = '', type: str = '') -> None:
+    def __init__(self, source: Union[str, 'Table', 'View'], target: 'LinkEntity', sor: Schema, filter: str = '', type: str = '') -> None:
         if isinstance(source, str):
             source = SorTable(source, sor)
         super().__init__(source, target, filter)
         self.sor_table_name = str(source)
         if isinstance(type, str):
             self.type = type
-        elif type == DvEntity:
-            self.type = type.__name__
+        elif type == HubEntity:
+            self.type = type.__subtype__
         self.target = target
-        self.target.cls_init()
+        # self.target.cls_init()
         self.hubs = {} #type: Dict[str, Table]
         self.sat_mappings = {}  # type: Dict[str, Sat]
 
@@ -208,27 +199,27 @@ class SorToLinkMapping(BaseTableMapping):
                 return fk
         raise Exception('Entity niet gevonden in Link')
 
-    def map_bk(self, source_bk, target_link_ref: Union[LinkReference, DynamicLinkReference], join: str = '', type: Union[str, 'DvEntity'] = ''):
+    def map_bk(self, source_bk, target_link_ref: Union[LinkReference, DynamicLinkReference], join: str = '', type: Union[str, 'HubEntity'] = ''):
         if not (isinstance(target_link_ref, LinkReference) or isinstance(target_link_ref, DynamicLinkReference)):
             raise PyeltException('Link moet verwijzen naar veld van type LinkReference of DynamicLinkReference')
 
         if isinstance(target_link_ref, LinkReference):
-            hub_name = target_link_ref.entity_cls.cls_get_hub_name()
-            hub = target_link_ref.entity_cls.cls_get_hub()
+            hub_name = target_link_ref.hub.__dbname__
+            hub = target_link_ref.hub
 
         elif isinstance(target_link_ref, DynamicLinkReference):
             # type verwijst hier naar de entity die dynamisch gelinkt wordt in de fk
             if not type or isinstance(type, str):
-                raise PyeltException('Bij DynamicLinkReference moet type verwijzen naar een afgeleide van DvEntity')
+                raise PyeltException('Bij DynamicLinkReference moet type verwijzen naar een afgeleide van HubEntity')
             hub_name = type.cls_get_hub_name()
             hub = type.cls_get_hub()
 
             self.type = type.__name__.lower()
-        hub_alias = target_link_ref.name
+        hub_alias = target_link_ref.fk.replace('fk_', '')
 
         source_field = '_id' #type: str
         source_col = Column(source_field, 'integer', tbl=hub) #type: Column
-        target_fk = target_link_ref.get_fk()
+        target_fk = target_link_ref.fk
         target_col = Column(target_fk, 'integer', tbl=hub)
         field_mapping = LinkFieldMapping(source_col, target_col)
         field_mapping.join = join
@@ -239,33 +230,36 @@ class SorToLinkMapping(BaseTableMapping):
         self.hubs[target_fk] = hub
         self.field_mappings.append(field_mapping)
 
-    def map_sor_fk(self, source_fk: str = '', target_link_ref: Union[LinkReference, DynamicLinkReference] = None, join: str = '', type: Union[str, 'DvEntity'] = ''):
+    def map_sor_fk(self, source_fk: str = '', target_link_ref: Union[LinkReference, DynamicLinkReference] = None, join: str = '', type: Union[str, 'HubEntity'] = ''):
         if not (isinstance(target_link_ref, LinkReference) or isinstance(target_link_ref, DynamicLinkReference)):
             raise PyeltException('Link moet verwijzen naar veld van type LinkReference of DynamicLinkReference')
         if isinstance(target_link_ref, LinkReference):
-            hub_name = target_link_ref.entity_cls.cls_get_hub_name()
-            hub = target_link_ref.entity_cls.cls_get_hub()
-            if not type and not target_link_ref.entity_cls.__base__ == DvEntity:
-                type = target_link_ref.entity_cls.__name__.lower()
+            hub_name = target_link_ref.hub.__dbname__
+            hub = target_link_ref.hub
+            # if not type and target_link_ref.sub_entity_type != hub_name.replace('_hub', ''):
+            #     type = target_link_ref.sub_entity_type
+            # if not type and not target_link_ref.hub.__base__ == HubEntity:
+            #     type = target_link_ref.hub.__dbname__.replace('_hub', '')
 
             if not source_fk or source_fk == SorToLinkMapping.auto_generated_sor_fk:
-                source_fk = 'fk_{}{}'.format(type, hub_name)
+                # source_fk = target_link_ref.fk
+                source_fk = 'fk_{}{}'.format(target_link_ref.sub_entity_type, hub_name)
         elif isinstance(target_link_ref, DynamicLinkReference):
             # type verwijst hier naar de entity die dynamisch gelinkt wordt in de fk
             if not type or isinstance(type, str):
-                raise PyeltException('Bij DynamicLinkReference moet type verwijzen naar een afgeleide van DvEntity')
+                raise PyeltException('Bij DynamicLinkReference moet type verwijzen naar een afgeleide van HubEntity')
             hub = type.cls_get_hub()
             self.type = type.__name__.lower()
         source_col = Column(source_fk, 'integer', tbl=self.sor_table_name)
 
-        target_fk = target_link_ref.get_fk()
+        target_fk = target_link_ref.fk
         target_col = Column(target_fk, 'integer', tbl=hub)
         field_mapping = LinkFieldMapping(source_col, target_col)
         field_mapping.join = join
         self.hubs[target_fk] = hub
         self.field_mappings.append(field_mapping)
 
-    def map_entity(self, target_link_ref: Union[LinkReference, DynamicLinkReference] = None, bk: Union[List[str], str] = '', join: str = '', type: Union[str, 'DvEntity'] = ''):
+    def map_entity(self, target_link_ref: Union[LinkReference, DynamicLinkReference] = None, bk: Union[List[str], str] = '', join: str = '', type: Union[str, 'HubEntity'] = ''):
         if isinstance(target_link_ref, DynamicLinkReference) and not bk:
             hub_name = type.cls_get_hub_name()
             sor_fk = 'fk_{}'.format(hub_name)
@@ -275,7 +269,7 @@ class SorToLinkMapping(BaseTableMapping):
         else:
             self.map_sor_fk('', target_link_ref, join, type)
 
-    # def map_dynamic_entity(self, source_entity: DvEntity, target_link_ref: DynamicLinkReference,  type: str = '', bk: str = '', join: str = ''):
+    # def map_dynamic_entity(self, source_entity: HubEntity, target_link_ref: DynamicLinkReference,  type: str = '', bk: str = '', join: str = ''):
     #     if bk:
     #         self.map_bk(bk, target_link_ref, join, type)
     #     else:
@@ -297,7 +291,7 @@ class SorToLinkMapping(BaseTableMapping):
         sat_mapping.map_field(source, target, transform_func, ref)
         sat_mapping.type = type
 
-    def map_entity_old(self, entity_cls: DvEntity,  bk: str = '', join: str = '', type: str = ''):
+    def map_entity_old(self, entity_cls: HubEntity,  bk: str = '', join: str = '', type: str = ''):
         # is_hybrid = False
         hub_name = entity_cls.cls_get_hub_name()
         hub = entity_cls.cls_get_hub()
@@ -325,7 +319,7 @@ class SorToLinkMapping(BaseTableMapping):
         self.hubs[target_field] = hub
         self.field_mappings.append(field_mapping)
 
-    # def map_source(self, source, target: 'DvEntity'):
+    # def map_source(self, source, target: 'HubEntity'):
     #     source_col = Column(source, 'integer', tbl=self.sor_table)
     #     target_field = """_fk_source_{}""".format(target.get_hub_name())
     #     target_col = Column(target_field, 'integer', tbl=target.hub)
@@ -333,7 +327,7 @@ class SorToLinkMapping(BaseTableMapping):
     #     self.hubs[target_field] = target.hub
     #     self.field_mappings.append(field_mapping)
     #
-    # def map_target(self, source, target: 'DvEntity'):
+    # def map_target(self, source, target: 'HubEntity'):
     #     source_col = Column(source, 'integer', tbl=self.sor_table)
     #     target_field = """_fk_target_{}""".format(target.get_hub_name())
     #     target_col = Column(target_field, 'integer', tbl=target.hub)
@@ -448,7 +442,7 @@ class LinkFieldMapping(FieldMapping):
         if self.join:
             return self.join.split('.')[0]
         else:
-            return self.source.table
+            return self.source.table.name
 
 # class SorToRefMapping(BaseTableMapping):
 #     def __init__(self, source: Union[str, Dict[str, str]], ref_type: str)-> None:
@@ -481,7 +475,6 @@ class SorToValueSetMapping(BaseTableMapping):
     def __init__(self, source: str, target: DvValueset, sor: Schema = None ) -> None:
         if isinstance(source, str):
             source = SorTable(source, sor)
-        target.cls_init_cols()
         super().__init__(source, target)
         self.sor_table = source
         self.valueset = target

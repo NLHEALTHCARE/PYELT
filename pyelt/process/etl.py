@@ -109,7 +109,6 @@ class EtlSourceToSor(BaseEtl):
             params['fields_compare'] = mappings.get_fields_compare(source_alias='tmp', target_alias='hstg')
             params['keys_compare'] = mappings.get_keys_compare(source_alias='tmp', target_alias='hstg')
             params['encoding'] = mappings.get_source_encoding()
-            # TODO delimiter toegevoegd
             params['delimiter'] = mappings.get_delimiter()
 
             # STAP 1
@@ -633,7 +632,7 @@ AND {filter} AND {filter_runid};""".format( **params)
             params.update(self._get_fixed_params())
             dv_schema = mappings.target.cls_get_schema(self.dwh)
             params['dv_schema'] = dv_schema.name
-            params['link'] = mappings.target.cls_get_name()
+            params['link'] = mappings.target.Link.cls_get_name()
             params['link_type'] = mappings.type
             params['sor_table'] = mappings.source.name
             params['source_fks'] = self.__get_link_source_fks(mappings)
@@ -688,6 +687,7 @@ AND hstg._valid AND {filter};""".format(
         for field_mapping in mappings.field_mappings:
             if field_mapping.source.table == mappings.sor_table_name:
                 fks += '{}, '.format(field_mapping.source)
+                # fks += 'hstg.{}, '.format(field_mapping.source)
             else:
                 # fks += '{}.{}, '.format(field_mapping.source.table, field_mapping.source)
                 fks += '{}.{}, '.format(field_mapping.source_alias, field_mapping.source)

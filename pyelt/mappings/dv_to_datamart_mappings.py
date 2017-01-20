@@ -1,15 +1,15 @@
 from pyelt.datalayers.database import Column
 from pyelt.datalayers.dm import Dim, DmReference
-from pyelt.datalayers.dv import DvEntity, Hub
+from pyelt.datalayers.dv import HubEntity, Hub
 from pyelt.mappings.base import BaseTableMapping, FieldMapping
 from pyelt.mappings.transformations import FieldTransformation
 
 
 class DvToDimMapping(BaseTableMapping):
     def __init__(self, source, target):
-        if not isinstance(source, str) and issubclass(source, DvEntity):
-            source.cls_init_sats()
-        target.cls_init_cols()
+        # if not isinstance(source, str) and issubclass(source, HubEntity):
+        #     source.cls_init_sats()
+        # target.cls_init_cols()
         super().__init__(source, target)
 
     def map_field(self, source: str, target: str = '', transform_func: 'FieldTransformation'=None, type = '') -> None:
@@ -29,9 +29,9 @@ class DvToDimMapping(BaseTableMapping):
         return d
 
     def generate_sql(self, dwh):
-        if not issubclass(self.source, DvEntity):
+        if not issubclass(self.source, HubEntity):
             return ""
-        entity = self.source #type: DvEntity
+        entity = self.source #type: HubEntity
         # entity.cls_init_sats()
         params = {}
         params['fields'] = self.__get_fields()
@@ -51,7 +51,8 @@ class DvToDimMapping(BaseTableMapping):
                 continue
             source_table = map.source.get_table()
             source_field = map.source  # type: Column
-            if type(source_table) is Hub:
+            # if type(source_table) is Hub:
+            if 'hub' in source_table.__dbname__:
                 fields += "hub.{} AS {}, \n".format(source_field.name, map.target.name)
             else:
                 sat_name = map.source.get_table().name
@@ -91,7 +92,8 @@ class DvToDimMapping(BaseTableMapping):
             if not map.source:
                 continue
             source_table = map.source.get_table()
-            if type(source_table) is Hub:
+            # if type(source_table) is Hub:
+            if '_hub' in source_table.__dbname__:
                 continue
             sat_name = source_table.name
             key = sat_name
@@ -133,7 +135,7 @@ class DvToFactMapping(BaseTableMapping):
         return d
 
     def map_lookup_field(self, source: str, dim_reference: DmReference):
-        dim = dim_reference.dim_cls
+        dim = dim_reference.ref_table
         dim._lookup_fields
 
     def map_function(self, get_bronsysteem_id, fk_grouperdatum):

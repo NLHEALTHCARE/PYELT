@@ -1,19 +1,9 @@
-import time
-from typing import Dict, Any, Union
-from sqlalchemy.engine import reflection
-
-# from sample_domains._ensemble_views import get_ensemble
-
-from pyelt.datalayers.database import Column, Columns, Schema, Table, DbFunction
-from pyelt.datalayers.dm import DmReference
-from pyelt.datalayers.dv import DvEntity, HybridSat, LinkReference, Link, DynamicLinkReference, DvValueset
-from pyelt.datalayers.dwh import Dwh, DwhLayerTypes
-from pyelt.datalayers.sor import Sor, SorTable, SorQuery
-
-from pyelt.datalayers.dv import EnsembleView
+from pyelt.datalayers.dm import *
+from pyelt.datalayers.dv import *
+from pyelt.datalayers.sor import *
+from pyelt.datalayers.valset import *
 from pyelt.helpers.pyelt_logging import Logger, LoggerTypes
-from pyelt.mappings.base import ConstantValue
-from pyelt.mappings.sor_to_dv_mappings import EntityViewToEntityMapping, SorToEntityMapping, SorToLinkMapping
+from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping, SorToLinkMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.process.base import BaseProcess
 
@@ -34,6 +24,9 @@ class Ddl(BaseProcess):
 
     def increase_version(self):
         layer_name = self.layer.name
+        if layer_name == 'sys':
+            #wijzigingen in sys zelf niet meenemen, want daarvoor heb je immers sys nodig
+            return
         dwh = self.pipeline.dwh
         old_version_number = dwh.get_layer_version(layer_name)  # Type: float
         new_version_number = dwh.increase_layer_version(layer_name)
@@ -41,32 +34,6 @@ class Ddl(BaseProcess):
         --DDL aanpassing aan {}: {} --> {}
         --===========================
         """.format(layer_name, old_version_number, new_version_number))
-        # if 'sor' in layer_name:
-        #     self.pipe.sor.version = new_version_number
-        # elif 'dv' in layer_name:
-        #     self.pipe.pipeline.dwh.dv.version = new_version_number
-
-    def get_version_old(self) -> None:
-        layer_name = self.layer.name #self.pipe.get_layer_name_by_type(self.layer_type)
-        sql = """SELECT version FROM sys.currentversion WHERE schemaname = '{}'""".format(layer_name)
-        rows = self.dwh.execute_read(sql, 'get version')
-        if len(rows) > 0:
-            return float(rows[0][0])
-        else:
-            return None
-
-    def increase_version_old(self) -> None:
-        layer_name = self.layer.name
-        self.old_version_number = self.get_version()
-        if self.old_version_number:
-            self.new_version_number = self.old_version_number + 0.01
-            sql = """UPDATE sys.currentversion SET version = {} WHERE schemaname = '{}'""".format(self.new_version_number,
-                                                                                                  layer_name)
-            self.dwh.execute(sql, 'insert version')
-        else:
-            sql = """INSERT INTO sys.currentversion (schemaname, version, date) VALUES ('{}', 1, now());""".format(layer_name)
-            self.dwh.execute(sql, 'update version')
-
 
     def init_logger(self) -> None:
         self.sql_logger = Logger.create_logger(LoggerTypes.DDL, self.pipeline.runid, self.pipeline.config, to_console=False)
@@ -81,20 +48,23 @@ rows: {}
 """.format(log_message, sql, rowcount)
         self.sql_logger.log_simple(msg)
 
-    def execute(self, sql: str, log_message: str) -> None:
+    def execute(self, sql: str, log_message: str = '') -> None:
         if not self.is_initialised:
             self.init()
+        while '  ' in sql:
+            sql = sql.replace('\t', ' ').replace('  ', ' ')
+        sql = sql.replace('\n ', '\n').replace('\n', '\n    ')
         self.sql_logger.log_simple(sql + '\r\n')
         try:
             rowcount = self.dwh.execute(sql, log_message)
-            self.logger.log(log_message, rowcount=rowcount, indent_level=4)
-            self.__log_sql(log_message, sql, rowcount)
+            if log_message and self.logger:
+                self.logger.log(log_message, rowcount=rowcount, indent_level=4)
+                self.__log_sql(log_message, sql, rowcount)
             self.layer.is_reflected = False
         except Exception as err:
-            self.logger.log_error(log_message, sql, err.args[0])
-            # print(err.args)
-            # print(sql)
-            # even wachten, want anders raakt error-msg verward met sql
+            if self.logger:
+                self.logger.log_error(log_message, sql, err.args[0])
+                # even wachten, want anders raakt error-msg verward met sql
             time.sleep(0.1)
             raise Exception(err)
 
@@ -113,6 +83,136 @@ rows: {}
             time.sleep(0.1)
             raise Exception(err)
 
+    def create_or_alter_table(self, table_cls: AbstractOrderderTable):
+        schema = table_cls.cls_get_schema(self.dwh)
+        if not schema.is_reflected:
+            schema.reflect()
+        table_name = table_cls.cls_get_name()
+
+        params = {}
+        params.update(self._get_fixed_params())
+        params['table_name'] = table_name
+        params['schema'] = schema.name
+        params['columns_def'] = self.__get_columns_def(table_cls)
+        params['constraints'] = ''
+        constraints = self.__get_constraints(table_cls)
+        for constraint_sql in constraints.values():
+            params['constraints'] += constraint_sql + ',\r\n'
+        params['constraints'] = params['constraints'][:-3]
+        params['indexes'] = ''
+        indexes = self.__get_indexes(table_cls)
+        for index_sql in indexes.values():
+            params['indexes'] += index_sql + ';\r\n'
+        params['indexes'] = params['indexes'][:-3]
+        if not table_name in schema:
+            if params['constraints']:
+                sql = """CREATE TABLE IF NOT EXISTS {schema}.{table_name} (
+                  {columns_def},
+                  {constraints}
+                ) WITH (OIDS=FALSE, autovacuum_enabled=true);
+
+                {indexes}""".format(**params)
+            else:
+                sql = """CREATE TABLE IF NOT EXISTS {schema}.{table_name} (
+                  {columns_def}
+                 ) WITH (OIDS=FALSE, autovacuum_enabled=true);
+
+                 {indexes}""".format(**params)
+            self.execute(sql, 'create <blue>{}</>'.format(table_name))
+        else:
+            #ALTER
+            db_tbl = Table(table_name, schema=schema)
+            db_tbl.reflect()
+            add_fields = ''
+            for col in table_cls.__cols__:
+                if not col.name in db_tbl:
+                    add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
+            for constraint_name, constraint_sql in constraints.items():
+                if not constraint_name in db_tbl:
+                    add_fields += 'ADD {}, '.format(constraint_sql)
+
+            add_fields = add_fields[:-2]
+            if add_fields:
+                params['add_fields'] = add_fields
+                sql = """ALTER TABLE {schema}.{table_name} {add_fields}; """.format(**params)
+                self.execute(sql, 'alter <cyan>{}</> '.format(params['table_name']))
+            add_indexes = ''
+            for index_name, index_sql in indexes.items():
+                if not index_name in db_tbl:
+                    add_indexes += '{};\r\n '.format(index_sql)
+            if add_indexes:
+                self.execute(add_indexes, 'alter <cyan>{}</> add indexes '.format(params['table_name']))
+
+    def __get_columns_def(self, table_cls):
+        sql = ''
+        for col in table_cls.cls_get_columns():
+            sql += """{} {}""".format(col.name, col.type)
+            if not col.nullable:
+                sql += ' NOT NULL '
+            if col.default_value:
+                sql += " DEFAULT {}".format(col.default_value)
+            sql += ',\r\n'
+
+        sql = sql[:-3]
+        return sql
+
+    def __get_constraints(self, table_cls: AbstractOrderderTable) -> str:
+        constraints = {}
+        pk_fields = ''
+        unique_fields = ''
+
+        for col in table_cls.cls_get_columns():
+            if col.is_key:
+                pk_fields += "{},".format(col.name)
+            if col.is_unique:
+                unique_fields += "{},".format(col.name)
+        pk_fields = pk_fields[:-1]
+        unique_fields = unique_fields[:-1]
+        params = {}
+        params['schema'] = table_cls.__dbschema__
+        params['table_name'] = table_cls.__dbname__
+        params['pk_fields'] = pk_fields
+        params['unique_fields'] = unique_fields
+        if pk_fields:
+            constraint_name = "{table_name}_pk".format(**params)
+            params['constraint_name'] = constraint_name
+            constraints[table_cls.__dbname__ + '_pk'] = "CONSTRAINT {constraint_name} PRIMARY KEY ({pk_fields})".format(**params)
+        if unique_fields:
+            constraint_name = "{table_name}_unique".format(**params)
+            params['constraint_name'] = constraint_name
+            constraints[table_cls.__dbname__ + '_unique'] = "CONSTRAINT {constraint_name} UNIQUE ({unique_fields})".format(**params)
+        constraints.update(self.__get_fk_constraints(table_cls))
+        return constraints
+
+    def __get_fk_constraints(self, table_cls: AbstractOrderderTable) -> str:
+        constraints = {}
+        for name, ref in table_cls.__ordereddict__.items():
+            if isinstance(ref, FkReference):
+                params = {}
+                params['schema'] = table_cls.__dbschema__
+                params['table_name'] = table_cls.__dbname__
+                params['ref_table_name'] = ref.ref_table.__dbname__
+                params['ref_pk'] = ','.join(ref.ref_table.cls_get_key())
+                params['fk'] = ref.fk
+                params['fk'] = ref.fk
+                constraint_name = "fk_{table_name}_{fk}".format(**params)
+                params['constraint_name'] = constraint_name
+                constraints[constraint_name] = "CONSTRAINT {constraint_name} FOREIGN KEY ({fk}) REFERENCES {schema}.{ref_table_name} ({ref_pk})".format(**params)
+        return constraints
+
+    def __get_indexes(self,table_cls: AbstractOrderderTable):
+        indexes = {}
+        for col in table_cls.cls_get_columns():
+            if col.is_indexed:
+                params = {}
+                params['schema'] = table_cls.__dbschema__
+                params['table_name'] = table_cls.__dbname__
+                params['field'] = col.name
+                index_name = "ix_{table_name}_{field}".format(**params)
+                params['index_name'] = index_name
+                indexes[index_name] = "CREATE INDEX {index_name} ON {schema}.{table_name}({field})".format(**params)
+        return indexes
+
     def create_or_alter_functions(self, db_functions: Dict[str, DbFunction]) -> None:
         if not self.layer.is_reflected:
             self.layer.reflect()
@@ -129,9 +229,6 @@ rows: {}
                 sql = db_func.to_create_sql()
                 self.execute(sql, 'CREATE FUNCTION ' + complete_name)
             elif db_func.get_stripped_body() != self.layer.functions[complete_name].get_stripped_body():
-                # print(db_func.get_stripped_body())
-                # print('--------------')
-                # print(self.layer.functions[complete_name].get_stripped_body())
                 sql = db_func.to_create_sql()
                 self.execute(sql, 'ALTER FUNCTION ' + complete_name)
 
@@ -162,10 +259,6 @@ rows: {}
                 );""".format(**params)
             self.execute(sql, 'create exception table in ' + schema.name)
 
-class DdlSys(Ddl):
-    pass
-    #zie dwh.py voor aanmaken van sys tabellen
-
 class DdlSor(Ddl):
     def __init__(self, pipe: 'Pipe') -> None:
         super().__init__(pipe, pipe.sor)
@@ -190,9 +283,6 @@ class DdlSor(Ddl):
         params['fixed_columns_def'] = self.__get_fixed_sor_columns_def()
         params['columns_def'] = self.__mappings_to_sor_columns_def(mappings)
         params['key_columns_def'] = self.__mappings_to_sor_key_columns_def(mappings)
-
-        # for step in self.steps:
-        #     step(mappings)
 
         temp_table_name = mappings.temp_table
         if temp_table_name not in sor:
@@ -282,8 +372,6 @@ class DdlSor(Ddl):
         else:
             return
 
-        # if not isinstance(mapping.source, SorTable):
-        #     return
         sor = self.pipe.sor
         if not sor.is_reflected:
             sor.reflect()
@@ -308,8 +396,8 @@ class DdlSor(Ddl):
             sor.is_reflected = False
 
     def try_add_fk_sor_link(self, mapping: SorToLinkMapping) -> None:
-        link = mapping.target
-        if len(link.cls_get_sats()) == 0:
+        link_entity = mapping.target
+        if len(link_entity.cls_get_sats()) == 0:
             return
 
         sor = self.pipe.sor
@@ -355,378 +443,25 @@ class DdlDv(Ddl):
         if isinstance(owner,pyelt.pipeline.Pipe):
             self.ddl_sor = DdlSor(owner)
 
-
-
-    #####################################
-    # DV
-    #####################################
-    def create_or_alter_entity(self, entity: DvEntity) -> None:
-        # schema_name = entity._schema_name
-        # if schema_name == 'dv':
-        #     schema = self.dwh.dv
-        # elif schema_name == 'valset':
-        #     schema = self.dwh.valset
-        dv_schema = entity.cls_get_schema(self.dwh)
-        entity_is_changed = False
-        if not dv_schema.is_reflected:
-            dv_schema.reflect()
-        hub_name = entity.cls_get_hub_name()
-        params = {}
-        params.update(self._get_fixed_params())
-        params['hub'] = hub_name
-        params['dv_schema'] = dv_schema.name
-        if not hub_name in dv_schema:
-            params['fixed_hub_columns_def'] = self.__get_fixed_hub_columns_def()
-
-            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.{hub} (
-                          {fixed_hub_columns_def},
-                          type text,
-                          bk text NOT NULL,
-                          CONSTRAINT {hub}_pkey PRIMARY KEY (_id),
-                          CONSTRAINT {hub}_bk_unique UNIQUE (bk)
-                    )
-                    WITH (
-                      OIDS=FALSE,
-                      autovacuum_enabled=true
-                    );""".format(**params)
-            self.execute(sql, 'create <blue>{}</>'.format(hub_name))
-            entity_is_changed = True
+    def create_or_alter_entity(self, entity: HubEntity) -> None:
+        if entity == HubEntity:
+            #een rechtstreekse HubEntity hoeft niet, alleen afgeleide (overgerfde)
+            return
+        super().create_or_alter_table(entity.Hub)
         sats = entity.cls_get_sats()
         for sat in sats.values():
-            self.__create_or_alter_sat(sat, entity, dv_schema)
+            super().create_or_alter_table(sat)
+        return
 
-        # entity_is_changed = True
-        # if entity_is_changed:
-        #     self.create_or_alter_view(entity)
-
-    def __create_or_alter_sat(self, sat, hub_or_link, schema):
-        # dv = self.dwh.dv
-        params = {}
-        params.update(self._get_fixed_params())
-        params['dv_schema'] = schema.name
-        if DvEntity in hub_or_link.__bases__ :
-            hub_name = hub_or_link.cls_get_hub_name()
-            params['hub_or_link'] = hub_name
-        elif hub_or_link.__base__ == Link:
-            link_name = hub_or_link.cls_get_name()
-            params['hub_or_link'] = link_name
-        sat_name = sat.cls_get_name()
-        params['sat'] = sat_name
-        if not sat_name in schema:
-            params['fixed_sat_columns_def'] = self.__get_fixed_sat_columns_def()
-            params['sat_columns_def'] = self.__get_sat_column_names_with_types(sat)
-            if not params['sat_columns_def']:
-                return
-            params['sat_pk_fields'] = '_id, _runid'
-            params['create_indexes'] = self.__get_sat_indexes(sat, params)
-
-
-            if sat.__base__ == HybridSat:
-                params['sat_pk_fields'] = '_id, _runid, type'
-                params['fixed_sat_columns_def'] = self.__get_fixed_sat_columns_def(True)
-
-            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.{sat} (
-  {fixed_sat_columns_def},
-  {sat_columns_def},
-  CONSTRAINT {sat}_pkey PRIMARY KEY ({sat_pk_fields}),
-  CONSTRAINT fk_{sat}_{hub_or_link} FOREIGN KEY (_id) REFERENCES {dv_schema}.{hub_or_link} (_id) MATCH SIMPLE)
-  WITH (OIDS=FALSE, autovacuum_enabled=true);
-{create_indexes}
-""".format(**params)
-            self.execute(sql, 'create <cyan>{}</>'.format(params['sat']))
-            entity_is_changed = True
-        else:
-            sat_tbl = Table(sat_name, schema)
-            sat_tbl.reflect()
-            add_fields = ''
-            for col_name, col in sat.__dict__.items():
-                if isinstance(col, Column):
-                    if not col.name:
-                        col.name = col_name
-                    if not col.name in sat_tbl:
-                        add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
-            add_fields = add_fields[:-2]
-            if add_fields:
-                params['add_fields'] = add_fields
-                sql = """ALTER TABLE {dv_schema}.{sat} {add_fields}; """.format(**params)
-                self.dwh.confirm_execute(sql, 'alter <cyan>{}</> '.format(params['sat']))
-                entity_is_changed = True
-                # result = input('\r\nWil je de volgende wijzigingen aanbrengen in de database? (j=ja;n=negeer)\r\n{}\r\n'.format(sql))
-                # if result.strip().lower()[:1] == 'j' or result.strip().lower()[:1] == 'y':
-                #     self.execute(sql, 'alter sat table ' + params['sat'])
-                #     entity_is_changed = True
-
-    def __get_sat_column_names_with_types_old(self, sat_cls):
-        fields = ''
-        import inspect
-        for attr in inspect.getmembers(sat_cls):
-            col_name = attr[0]
-            col = attr[1]
-            if col == Column:
-                if not col.name:
-                    col.name = col_name
-                fields += '{} {}, '.format(col.name, col.type)
-        fields = fields[:-2]
-        return fields
-
-    def __get_sat_column_names_with_types(self, sat_cls):
-        fields = ''
-        for col_name, col in sat_cls.__ordereddict__.items():
-            if isinstance(col, Column):
-                if not col.name:
-                    col.name = col_name
-                fields += '{} {}, '.format(col.name, col.type)
-        fields = fields[:-2]
-        return fields
-
-    def __get_sat_indexes(self, sat_cls, params):
-        indexes = "CREATE INDEX {dv_schema}_{sat}_active_idx ON {dv_schema}.{sat}  USING btree (_active);\n".format(**params)
-        if sat_cls.__base__ == HybridSat:
-            indexes += "CREATE INDEX {dv_schema}_{sat}_type_idx ON {dv_schema}.{sat}  USING btree (type);\n".format(**params)
-
-        for col_name, col in sat_cls.__ordereddict__.items():
-            if isinstance(col, Columns.RefColumn):
-                params['col_name'] = col.name
-                indexes += "CREATE INDEX {dv_schema}_{sat}_{col_name}_idx ON {dv_schema}.{sat}  USING btree ({col_name});\n".format(**params)
-        return indexes
-
-    def create_or_alter_link(self, cls_link: Link) -> None:
-        schema = cls_link.cls_get_schema(self.dwh)
-        if not schema.is_reflected:
-            schema.reflect()
-
-        link_name = cls_link.cls_get_name()
-        params = {}
-        params['link'] = link_name
-        params.update(self._get_fixed_params())
-        params['dv_schema'] = schema.name
-        if not link_name in schema:
-            params['fixed_link_columns_def'] = self.__get_fixed_link_columns_def()
-            params['link_columns_def'] = self.__get_link_column_names(cls_link)
-            params['foreign_key_constraints'] = self.__get_link_fk_constraints(cls_link, params)
-            params['link_indexes'] = self.__get_link_indexes(cls_link, params)
-
-            sql = """CREATE TABLE IF NOT EXISTS {dv_schema}.{link} (
-                          {fixed_link_columns_def},
-                          type text,
-                          {link_columns_def},
-                          CONSTRAINT {link}_pkey PRIMARY KEY (_id),
-                          {foreign_key_constraints}
-                    )
-                    WITH (
-                      OIDS=FALSE,
-                      autovacuum_enabled=true
-                    );
-
-                    {link_indexes}""".format(**params)
-            self.execute(sql, 'create <blue>{}</>'.format(link_name))
-        else:
-            # Kijken naar wijzigingen
-            link_tbl = Table(link_name, schema)
-            if not link_tbl.is_reflected:
-                link_tbl.reflect()
-            add_fields = ''
-            sql_indexes = ''
-            for prop_name, link_ref in cls_link.__dict__.items():
-                if isinstance(link_ref, LinkReference):
-                    fk = link_ref.get_fk()
-                    fk_params = {'dv_schema': params['dv_schema'], 'hub': link_ref.entity_cls.cls_get_hub_name(), 'fk': link_ref.get_fk(), 'link': cls_link.cls_get_name()}
-                    if not fk in link_tbl:
-                        add_fields += """ADD COLUMN {fk} integer, ADD CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv_schema}.{hub} (_id) MATCH SIMPLE,\r\n""".format(**fk_params)
-                    index_name = "ix_{dv_schema}_{link}{fk}".format(**fk_params)
-                    if not index_name in link_tbl:
-                        sql_indexes += """CREATE INDEX ix_{dv_schema}_{link}{fk} ON {dv_schema}.{link} USING btree ({fk});\r\n""".format(**fk_params)
-            add_fields = add_fields[:-3]
-            sql_indexes = sql_indexes[:-3]
-            if add_fields:
-                params['add_fields'] = add_fields
-                sql = """ALTER TABLE {dv_schema}.{link} {add_fields};\r\n""".format(**params)
-                sql += sql_indexes + ';'
-                # result = input('\r\nWil je de volgende wijzigingen aanbrengen in de database (j=ja;n=negeer)?\r\n{}\r\n'.format(sql))
-                # if result.strip().lower()[:1] == 'j' or result.strip().lower()[:1] == 'y':
-                self.confirm_execute(sql, 'alter <blue>{}</>'.format(link_name))
-        sats = cls_link.cls_get_sats()
+    def create_or_alter_link(self, link_entity: Link) -> None:
+        if link_entity == LinkEntity:
+            return
+        super().create_or_alter_table(link_entity.Link)
+        sats = link_entity.cls_get_sats()
         for sat in sats.values():
-            self.__create_or_alter_sat(sat, cls_link, schema )
+            super().create_or_alter_table(sat)
 
-
-
-
-    def __get_link_column_names(self, link_cls):
-        sql = ''
-        for prop_name, link_ref in link_cls.__dict__.items():
-            if isinstance(link_ref, LinkReference) or isinstance(link_ref, DynamicLinkReference):
-                sql += """{} integer,\r\n""".format(link_ref.get_fk())
-        sql = sql[:-3]
-        return sql
-
-    def __get_link_fk_constraints(self, link_cls, params):
-        sql = ''
-        for prop_name, link_ref in link_cls.__dict__.items():
-            if isinstance(link_ref, LinkReference):
-                # fk = """_fk_{}""".format(link_ref.name.lower())
-                # params.update({'hub': link_ref.entity_cls.get_hub_name(), 'fk': link_ref.get_fk()})#.replace('_fk_parent_', '').replace('_fk_', '')}
-                params['hub'] = link_ref.entity_cls.cls_get_hub_name()
-                params['fk'] = link_ref.get_fk()
-                sql += """CONSTRAINT {fk}_constraint FOREIGN KEY ({fk}) REFERENCES {dv_schema}.{hub} (_id) MATCH SIMPLE,\r\n""".format(
-                    **params)
-        sql = sql[:-3]
-        return sql
-
-    def __get_link_indexes(self, link_cls, params):
-        sql = ''
-        for prop_name, link_ref in link_cls.__dict__.items():
-            if isinstance(link_ref, LinkReference) or isinstance(link_ref, DynamicLinkReference):
-                # params = {'dv': self.dwh.dv.name, 'fk': link_ref.get_fk(), 'link': link_cls.get_name()}
-                params['link'] = link_cls.cls_get_name()
-                params['fk'] = link_ref.get_fk()
-                sql += """CREATE INDEX ix_{dv_schema}_{link}{fk} ON {dv_schema}.{link} USING btree ({fk});\r\n""".format(**params)
-        sql = sql[:-3]
-        return sql
-
-    def __get_fixed_hub_columns_def(self):
-        sql = """
-        _id serial NOT NULL,
-        _runid numeric(8,2) NOT NULL,
-        _source_system character varying,
-        _insert_date timestamp without time zone,
-        _valid boolean DEFAULT TRUE,
-        _validation_msg character varying
-        """
-        return sql
-
-    def __get_fixed_sat_columns_def(self, is_hybrid= False):
-        sql = """
-        _id serial NOT NULL,
-        _runid numeric(8,2) NOT NULL,
-        _active boolean DEFAULT TRUE,
-        _source_system character varying,
-        _insert_date timestamp without time zone,
-        _finish_date timestamp without time zone,
-        _revision integer,
-        _valid boolean NOT NULL DEFAULT TRUE,
-        _validation_msg character varying,
-        _hash character varying
-        """
-        if is_hybrid:
-            sql = """
-        _id serial NOT NULL,
-        _runid numeric(8,2) NOT NULL,
-        _active boolean DEFAULT TRUE,
-        _source_system character varying,
-        _insert_date timestamp without time zone,
-        _finish_date timestamp without time zone,
-        _revision integer,
-        _valid boolean NOT NULL DEFAULT TRUE,
-        _validation_msg character varying,
-        _hash character varying,
-        type text NOT NULL
-        """
-        return sql
-
-    def __get_fixed_link_columns_def(self):
-        sql = """
-        _id serial NOT NULL,
-        _runid numeric(8,2) NOT NULL,
-        _source_system character varying,
-        _insert_date timestamp without time zone,
-        _valid boolean DEFAULT TRUE,
-        _validation_msg character varying
-        """
-        return sql
-
-    def create_or_alter_valueset(self, valueset_cls: DvValueset):
-        schema = valueset_cls.cls_get_schema(self.dwh)
-        if not schema.is_reflected:
-            schema.reflect()
-        table_name = valueset_cls.cls_get_name()
-
-        params = {}
-        params.update(self._get_fixed_params())
-        params['table_name'] = table_name
-        params['schema'] = schema.name
-        params['columns_def'] = self.__get_valueset_columns_def(valueset_cls)
-        if not table_name in schema:
-            sql = """CREATE TABLE IF NOT EXISTS {schema}.{table_name} (
-              _id SERIAL,
-              _runid numeric(8,2) NOT NULL,
-            _active boolean DEFAULT TRUE,
-            _source_system character varying,
-            _insert_date timestamp without time zone,
-            _finish_date timestamp without time zone,
-            _revision integer,
-            _valid boolean NOT NULL DEFAULT TRUE,
-            _validation_msg character varying,
-              {columns_def},
-
-              CONSTRAINT {table_name}_pkey PRIMARY KEY (_id),
-              CONSTRAINT {table_name}_code_unique UNIQUE (valueset_naam, code, _runid)
-        ) WITH (OIDS=FALSE, autovacuum_enabled=true);
-
-        CREATE INDEX ix_{table_name}_code ON {schema}.{table_name}(code);
-        CREATE INDEX ix_{table_name}_valueset_naam ON {schema}.{table_name}(valueset_naam);
-        """.format(**params)
-            self.execute(sql, 'create <blue>{}</>'.format(table_name))
-
-    def __get_valueset_columns_def(self, valueset_cls):
-        sql = ''
-        for name, col in valueset_cls.cls_get_columns().items():
-            if isinstance(col, Column):
-                sql += """{} {},\r\n""".format(col.name, col.type)
-        sql = sql[:-3]
-        return sql
-
-
-    # def __mappings_to_sat_columns_def(self, mappings):
-    #     sql = ''
-    #     temp_fields_dict = {}
-    #     for field_map in mappings.field_mappings:
-    #         if field_map.target.name not in temp_fields_dict:
-    #             sql += """{} {},\r\n""".format(field_map.target.name, field_map.target.type)
-    #             temp_fields_dict[field_map.target.name] = field_map.target
-    #     sql = sql[:-3]
-    #     return sql
-    #
-    # def __mappings_sat_fields(self, mappings, alias):
-    #     sql = ''
-    #     for field_map in mappings.field_mappings:
-    #         # sql += """{0}.{1} AS {2}_{1}, """.format(alias, field_map.target.name, mappings.target.replace('_sat', ''))
-    #         sql += """{0}.{1} AS {1}, """.format(alias, field_map.target.name)
-    #         if field_map.ref:
-    #             # sql += """{0}.descr AS {2}_{1}_descr, """.format(field_map.ref, field_map.target.name, mappings.target.replace('_sat', ''))
-    #             sql += """{0}.descr AS {1}_descr, """.format(field_map.ref, field_map.target.name)
-    #     sql = sql[:-2]
-    #     return sql
-    #
-    # def __mappings_to_link_columns_def(self, mappings):
-    #     sql = ''
-    #
-    #     for field_mapping in mappings.field_mappings:
-    #         sql += """{} {},\r\n""".format(field_mapping.target.name, field_mapping.target.type)
-    #     sql = sql[:-3]
-    #     return sql
-    #
-    # def __mappings_to_link_fk_constraints(self, mappings):
-    #     sql = ''
-    #     for field_mapping in mappings.field_mappings:
-    #         if isinstance(field_mapping.source, ConstantValue): continue
-    #         params = {'dv': self.dwh.dv.name, 'hub': field_mapping.target.table.name, 'fk': field_mapping.target} #.replace('_fk_parent_', '').replace('_fk_', '')}
-    #         sql += """CONSTRAINT fk_{fk} FOREIGN KEY ({fk}) REFERENCES {dv}.{hub} (_id) MATCH SIMPLE,\r\n""".format(
-    #             **params)
-    #     sql = sql[:-3]
-    #     return sql
-    #
-    # def __mappings_to_link_indexes(self, mappings):
-    #     sql = ''
-    #     # for hub in mappings.hubs:
-    #     #     params = {'dv': self.dwh.dv.name, 'link': mappings.link, 'hub': hub}
-    #     #
-    #     #     sql += """-- CREATE INDEX ix_{link}_fk_{hub} ON {dv}.{link} USING btree (_fk_{hub});\r\n""".format(**params)
-    #     sql = sql[:-3]
-    #     return sql
-
-    def create_or_alter_view(self, entity_cls: 'DvEntity'):
-        # schema = self.dwh.dv
+    def create_or_alter_view(self, entity_cls: 'HubEntity'):
         schema = entity_cls.cls_get_schema(self.dwh)
         if not schema.is_reflected:
             schema.reflect()
@@ -734,7 +469,6 @@ class DdlDv(Ddl):
         params.update(self._get_fixed_params())
         params['dv_schema'] = schema.name
 
-        view_name = entity_cls.cls_get_hub_name().replace('_hub', '_view')
         view_name = entity_cls.cls_get_view_name()
         params['view_name'] = view_name
         params['hub'] = entity_cls.cls_get_hub_name()
@@ -747,11 +481,8 @@ class DdlDv(Ddl):
         sql_join = ''
         sql_join_refs = ''
         index = 1
-        all_sats = {}
-        base_class_sats = entity_cls.cls_get_base_class_sats()
-        this_class_sats = entity_cls.cls_get_this_class_sats()
-        all_sats.update(base_class_sats)
-        all_sats.update(this_class_sats)
+
+        all_sats = entity_cls.__sats__
 
         for sat_cls in all_sats.values():
             params['sat'] = sat_cls.cls_get_name()
@@ -762,13 +493,13 @@ class DdlDv(Ddl):
                     params['sat_alias'] = 'sat' + str(index)
                     params['type'] = type
                     for col in sat_cls.cls_get_columns():
-                        if not col.name.startswith('_'):
+                        if not col.name.startswith('_') and col.name != 'type':
                             alias = sat_cls.cls_get_short_name() + '_' + type + '_' + col.name
                             alias = alias.replace(' ', '_')
                             if col.name == 'type':
                                 idx = sat_cls.name.index('_sat') + 5
                                 alias = sat_cls.name[idx:] + '_type'
-                        sql_sat_fields += "sat{}.{} AS {}, ".format(index, col.name, alias)
+                            sql_sat_fields += "sat{}.{} AS {}, ".format(index, col.name, alias)
 
                     sql_join += """LEFT OUTER JOIN {dv_schema}.{sat} AS {sat_alias} ON {sat_alias}._id = hub._id AND {sat_alias}._active AND ({sat_alias}.type = '{type}' OR {sat_alias}.type IS NULL)\r\n        """.format(
                         **params)
@@ -939,61 +670,23 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
                 CREATE INDEX valueset_code_valueset_naam_index ON {dv_schema}.valueset_code USING btree (valueset_naam );""".format(**params)
             self.execute(sql, 'create valuesets tables')
 
-
+class DdlValset(Ddl):
+    def create_or_alter_valueset(self, valueset_cls: DvValueset):
+        if valueset_cls is DvValueset:
+            return
+        super().create_or_alter_table(valueset_cls)
 
 
 class DdlDatamart(Ddl):
     def __init__(self, pipeline, schema) -> None:
         super().__init__(pipeline, schema)
 
-    def create_or_alter_dim(self, cls):
-        dm = self.layer
-        if not dm.is_reflected:
-            dm.reflect()
-        dim_name = cls.cls_get_name()
-        params = {}
-        params['dim'] = dim_name
-        params['dm'] = self.layer.name
-        params['dim_columns_def'] = self.__get_dim_column_names_with_types(cls)
-        if not dim_name in dm:
-            sql = """CREATE TABLE IF NOT EXISTS {dm}.{dim} (
-                          id serial,
-                          {dim_columns_def},
-                          CONSTRAINT {dim}_pkey PRIMARY KEY (id)
-                    )
-                    WITH (
-                      OIDS=FALSE,
-                      autovacuum_enabled=true
-                    );""".format(**params)
-            self.execute(sql, 'create <blue>{}</>'.format(dim_name))
-        else:
-            dim_table = Table(dim_name, dm)
-            dim_table.reflect()
-            add_fields = ''
-            refected_column_names = [col.name for col in dim_table.columns]
-
-            for col_name, col in cls.__ordereddict__.items():
-                if isinstance(col, Column):
-                    if not col_name in refected_column_names:
-                        add_fields += 'ADD COLUMN {} {}, '.format(col.name, col.type)
-            add_fields = add_fields.rstrip(', ')
-            params['add_fields'] = add_fields
-
-            if add_fields:
-                sql = """ALTER TABLE {dm}.{dim} {add_fields};""".format(**params)
-                self.execute(sql, 'alter <blue>{}</>'.format(dim_name))
-
-    def __get_dim_column_names_with_types(self, dim_cls):
-        fields = ''
-        for col_name, col in dim_cls.__ordereddict__.items():
-            if isinstance(col, Column):
-                if not col.name:
-                    col.name = col_name
-                fields += '{} {}, '.format(col.name, col.type)
-        fields = fields[:-2]
-        return fields
+    def create_or_alter_dim(self, dim_cls):
+        super().create_or_alter_table(dim_cls)
 
     def create_or_alter_fact(self, fact_cls):
+        super().create_or_alter_table(fact_cls)
+        return
         dm = self.layer
         if not dm.is_reflected:
             dm.reflect()
@@ -1004,8 +697,6 @@ class DdlDatamart(Ddl):
         params['fact_columns_def'] = self.__get_fact_column_names_with_types(fact_cls)
         params['indexes'] = self.__get_indexes(fact_cls,params)
         params['constraints'] = self.__get_constraints(fact_cls,params)
-
-
 
         if not facttable_name in dm:
             sql = """CREATE TABLE IF NOT EXISTS {dm}.{facttable} (
@@ -1040,17 +731,10 @@ class DdlDatamart(Ddl):
                 self.execute(sql, 'alter <blue>{}</>'.format(facttable_name))
 
 
-    # hier kun je naam zetten om de goede fK_Startdatum terug te krijgen
     def __get_fact_column_names_with_types(self, fact_cls):
         fields = ''
-        for name, field in fact_cls.__ordereddict__.items():
-            if isinstance(field, DmReference):
-                fields += '{} integer, '.format(name)          #field.get_fk_field_name())
-        for col_name, col in fact_cls.__ordereddict__.items():
-            if isinstance(col, Column):
-                if not col.name:
-                    col.name = col_name
-                fields += '{} {}, '.format(col_name, col.type)
+        for col in fact_cls.__cols__:
+            fields += '{} {}, '.format(col.name, col.type)
         fields = fields[:-2]
         return fields
 
