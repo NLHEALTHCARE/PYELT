@@ -460,7 +460,6 @@ Voorbeeld::
                 if LinkEntity in cls.__mro__:
                     ddl.create_or_alter_link(cls)
 
-        return
         #CREATE VIEWS
         # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
         for module_name,module in domain_modules.items():
