@@ -40,6 +40,8 @@ class File():
 class CsvFile(File):
     def __init__(self, file_name, **kwargs):
         super().__init__(file_name )
+        self.quote = '|'
+        self.delimiter = ';'
         self.file_kwargs = {}
         self.csv_kwargs = {}
         for k,v in kwargs.items():
@@ -49,6 +51,9 @@ class CsvFile(File):
             elif k == 'delimiter':
                 self.csv_kwargs[k] = v
                 self.delimiter = v
+            elif k == 'quote':
+                self.csv_kwargs[k] = v
+                self.quote = v
         self.kwargs = kwargs
 
     def reflect(self):

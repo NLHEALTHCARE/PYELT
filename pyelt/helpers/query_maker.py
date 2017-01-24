@@ -208,3 +208,51 @@ class QueryMaker2():
 
     def orderby(self, *args):
         pass
+
+    def to_sql2(self, param):
+        select = ''
+        for alias, field in self.__fields.items():
+            sql = '{}.{} as {}'.format(field.table.__dbname__, field.name, alias)
+            select += sql + ',\n'
+        select = select[:-2]
+
+        frm = ''
+        for alias, tbl in self.__tables.items():
+            first = alias, tbl
+            frm += self.get_joins(alias, tbl)
+            break
+
+            if isinstance(tbl, dict):
+                hub = tbl['hub']
+
+                hub_alias = hub.__dbname__
+                if not frm:
+                    frm += '{}.{} as {}\n'.format(hub.__dbschema__, hub.__dbname__, hub_alias)
+                else:
+                    link_ref = self.__get_link_ref_by_hub(hub)
+                    params = {}
+                    params['schema'] = 'dv'
+                    params['link'] = 'link'
+                    params['link_alias'] = 'lnk'
+                    params['fk'] = link_ref.fk
+                    params['hub_alias'] = hub_alias
+                    frm += ' LEFT JOIN {schema}.{link} as {link_alias} ON {link_alias}.{fk} = {hub_alias}._id\n'.format(**params)
+                for sat_alias, sat in tbl['sats'].items():
+                    frm += ' LEFT JOIN {0}.{1} as {1} ON {1}._id = {2}._id and {1}._active\n'.format(sat.__dbschema__, sat.__dbname__, hub_alias)
+            elif isinstance(tbl, Link):
+                pass
+
+        where = ''
+        sql = 'SELECT ' + select + ' \nFROM ' + frm + ' \nWHERE ' + where
+        return sql
+
+    def __get_link_ref_by_hub(self, hub) -> LinkReference:
+        for name, join in self.__joins.items():
+            ref = join #type: LinkReference
+            if ref.ref_table.__dbname__ == hub.__dbname__:
+                return ref
+
+    def get_joins(self, alias, tbl):
+        frm = ''
+        for alias, tbl in self.__tables.items():
+            frm += self.get_joins(alias, tbl)

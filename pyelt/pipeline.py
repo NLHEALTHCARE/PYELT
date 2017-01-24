@@ -460,18 +460,19 @@ Voorbeeld::
                 if LinkEntity in cls.__mro__:
                     ddl.create_or_alter_link(cls)
 
-        #CREATE VIEWS
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
-        for module_name,module in domain_modules.items():
-            for name, cls in inspect.getmembers(module, inspect.isclass):
-                if HubEntity in cls.__mro__ and cls != HubEntity:
-                    ddl.create_or_alter_view(cls)
+        if 'create_views' in self.config and self.config['create_views']:
+            #CREATE VIEWS
+            # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle parent hubs zijn aangemaakt voordat de vies met child hubs kunnen worden aangemaakt
+            for module_name,module in domain_modules.items():
+                for name, cls in inspect.getmembers(module, inspect.isclass):
+                    if HubEntity in cls.__mro__ and cls != HubEntity:
+                        ddl.create_or_alter_view(cls)
 
-        # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden
-        for module_name,module in domain_modules.items():
-            for name, cls in inspect.getmembers(module, inspect.isclass):
-                if cls.__base__ == EnsembleView:
-                    ddl.create_or_alter_ensemble_view(cls)
+            # Dezelfde for-loop wordt hieronder herhaald, want eerst moeten alle views en links zijn aangemaakt voordat de ensemble_view gemaakt kan worden
+            for module_name,module in domain_modules.items():
+                for name, cls in inspect.getmembers(module, inspect.isclass):
+                    if cls.__base__ == EnsembleView:
+                        ddl.create_or_alter_ensemble_view(cls)
 
         self.logger.log('FINISH CREATE DV'.format(self.runid), indent_level=2)
 

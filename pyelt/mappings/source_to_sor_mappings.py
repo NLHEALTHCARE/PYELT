@@ -102,9 +102,15 @@ class SourceToSorMapping(BaseTableMapping):
                 file_encoding = 'LATIN1'
         return file_encoding
 
-    #TODO delimiter ingevoegd
     def get_delimiter(self):
         delimiter = ';'
         if isinstance(self.source, File):
             delimiter = self.source.delimiter.lower() or ';'
         return delimiter
+
+    def get_quote(self):
+        quote = '|'
+        if isinstance(self.source, File):
+            quote = self.source.quote.lower() or '|'
+        return quote
+

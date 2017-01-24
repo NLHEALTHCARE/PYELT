@@ -110,6 +110,7 @@ class EtlSourceToSor(BaseEtl):
             params['keys_compare'] = mappings.get_keys_compare(source_alias='tmp', target_alias='hstg')
             params['encoding'] = mappings.get_source_encoding()
             params['delimiter'] = mappings.get_delimiter()
+            params['quote'] = mappings.get_quote()
 
             # STAP 1
             if isinstance(mappings.source, SourceTable):
@@ -124,7 +125,7 @@ class EtlSourceToSor(BaseEtl):
             # STAP 3 Bron data naar temp
             # we faken de quote voor textvelden opdat json velden (met dubbele quotes) goed worden ingelezen en later eenvoudig zijn te parsen naar jsonb
             # TODO delimiter toegevoegd!
-            sql = "COPY {sor}.{temp_table} ({fields}) FROM  '{file_name}' DELIMITER '{delimiter}' CSV HEADER ENCODING '{encoding}' QUOTE '|';".format(**params)
+            sql = "COPY {sor}.{temp_table} ({fields}) FROM  '{file_name}' DELIMITER '{delimiter}' CSV HEADER ENCODING '{encoding}' QUOTE '{quote}';".format(**params)
             self.execute(sql, 'copy into {}'.format(params['temp_table']))
 
             # STAP 4a
