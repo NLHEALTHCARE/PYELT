@@ -400,13 +400,15 @@ class EtlSorToDv(BaseEtl):
             if 'zorgactiviteit' in str(mappings):
                 debug = True
             params['hub_type'] = mappings.target.cls_get_hub_type()
+            params['filter_type'] = '1=1'
             if mappings.type:
                 params['hub_type'] = mappings.type
+                params['filter_type'] = "type = '{}'".format(mappings.type)
             params['sor_table'] = mappings.source.name
             params['relation_type'] = mappings.type
             # params['filter_hub'] = params['filter']
 
-            sql = "SELECT COUNT(*) FROM {dv_schema}.{hub};".format(**params)
+            sql = "SELECT COUNT(*) FROM {dv_schema}.{hub} WHERE {filter_type};".format(**params)
             result = self.execute_read(sql, 'get rowcount')
             rowcount_hub = result[0][0]
 
@@ -644,11 +646,20 @@ AND {filter} AND {filter_runid};""".format( **params)
             params['join'] = self.__get_link_join(mappings, schema_name=self.pipe.sor.name)
             params['fks_compare'] = self.__get_link_fks_compare(mappings, source_alias='hstg', target_alias='link')
 
+            sql = "SELECT COUNT(*) FROM {dv_schema}.{link};".format(**params)
+            result = self.execute_read(sql, 'get rowcount')
+            rowcount_link = result[0][0]
+
+            if rowcount_link == 0:
+                params['filter'] = 'hstg._active'
+            else:
+                params['filter'] = 'floor(hstg._runid) = floor({runid})'.format(**params)
+
             sql = """
             INSERT INTO {dv_schema}.{link} (_runid, _source_system, _insert_date, type, {target_fks})
             SELECT DISTINCT {runid}, '{source_system}', now(), '{link_type}', {source_fks}
             FROM {sor}.{sor_table} hstg {join}
-            WHERE floor(hstg._runid) = floor({runid})
+            WHERE {filter}
             AND NOT ({source_fks_is_null})
             AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{link} link WHERE {fks_compare} AND link.type='{link_type}') AND {filter};""".format(**params)
             self.execute(sql,  'insert new links')

@@ -540,6 +540,10 @@ class DdlDv(Ddl):
         sql_sat_fields = sql_sat_fields[:-2]
         params['sat_fields'] = sql_sat_fields
         params['join'] = sql_join + sql_join_refs
+        params['filter'] = '1=1'
+        if entity_cls.__subtype__:
+            params['filter'] = "hub.type = '{}'".format(entity_cls.__subtype__)
+
 
         if params['sat_fields']:
             sql = """--DROP VIEW {dv_schema}.{view_name};
@@ -547,14 +551,17 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
     SELECT hub._id, hub.bk, hub.type, hub._runid, hub._source_system, True as _valid,
         {sat_fields}
     FROM {dv_schema}.{hub} hub
-        {join}""".format(**params)
+        {join}
+    WHERE {filter}""".format(**params)
+
             self.execute(sql, 'create <darkcyan>{}</>'.format(view_name))
         else:
             sql = """CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
                 SELECT hub._id, hub.bk, hub.type,
                     hub._runid as _runid, hub._source_system as hub_source_system, True as _valid
                 FROM {dv_schema}.{hub} hub
-                    {join}""".format(**params)
+                    {join}
+                WHERE {filter}""".format(**params)
             self.execute(sql, 'create <darkcyan>{}</>'.format(view_name))
         # schema.is_reflected = False
 
