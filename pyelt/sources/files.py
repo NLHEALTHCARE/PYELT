@@ -52,7 +52,6 @@ class CsvFile(File):
                 self.csv_kwargs[k] = v
                 self.delimiter = v
             elif k == 'quote':
-                self.csv_kwargs[k] = v
                 self.quote = v
         self.kwargs = kwargs
 

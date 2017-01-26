@@ -789,6 +789,9 @@ AND hstg._valid AND {filter};""".format(
             params['sor_fields'] = mappings.get_source_fields('hstg')
             params['from'] = "{sor}.{sor_table} AS hstg".format(**params)
 
+            if isinstance(mappings.source, SorQuery):
+                params['from'] = "({}) as hstg".format(mappings.source.sql)
+
             insert_sql = """INSERT INTO {valset_schema}.{valset_table} (_runid, _source_system, _insert_date, _revision, {valset_fields})
                                 SELECT  {runid}, '{source_system}', now(), 0, {sor_fields}
                                 FROM {from} WHERE hstg._valid AND hstg._active

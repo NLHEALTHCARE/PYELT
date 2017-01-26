@@ -545,7 +545,8 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         self.sor = pipeline.dwh.get_or_create_sor_schema(config['sor_schema'])
 
         self.db_functions = {}
-        self.extra_sql_statements = []  # type: List[str]
+        self.extra_ddl_statements = []  # type: List[str]
+        self.run_after_sor = []
 
 
     @property
@@ -582,14 +583,14 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
                     function.schema = schema
                 self.register_db_function(function)
 
-    def register_extra_sql(self, extra_sql: List[str]) -> None:
+    def register_extra_ddl(self, extra_ddl: List[str]) -> None:
         """
         Registreert  additionele uit te voeren (eenmalige) sql code die op de database wordt uitgevoerd
 
         :param extra_sql: een lijst met strings  van geldige sql code
 
         """
-        self.extra_sql_statements.extend(extra_sql)
+        self.extra_ddl_statements.extend(extra_ddl)
 
     def register_db_function(self, func: 'DbFunction') -> None:
         """
@@ -598,6 +599,15 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         :param func: de functie die geregistreert wordt
         """
         self.db_functions[func.name] = func
+
+    def register_run_after_sor(self, func) -> None:
+        """
+        Registreert  additionele uit te voeren (eenmalige) sql code die op de database wordt uitgevoerd
+
+        :param extra_sql: een lijst met strings  van geldige sql code
+
+        """
+        self.run_after_sor.append(func)
 
     def create_sor_from_mappings(self):
         """
@@ -625,7 +635,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         Runt de aanwezige extra sql code.
         """
         ddl = Ddl(self, self.sor)
-        for sql in self.extra_sql_statements:
+        for sql in self.extra_ddl_statements:
             if sql[0]:
                 ddl.execute(sql[1], "EXTRA SQL STATEMENT")
 
@@ -649,6 +659,9 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             for validation in self.validations:
                 if isinstance(validation, SorValidation):
                     etl.validate_sor(validation)
+
+            for func in self.run_after_sor:
+                func(self)
 
             self.pipeline.logger.log('FINISH FROM SOURCE TO SOR', newline=True, indent_level=1)
 

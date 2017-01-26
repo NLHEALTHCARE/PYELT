@@ -473,7 +473,9 @@ class LinkFieldMapping(FieldMapping):
 
 class SorToValueSetMapping(BaseTableMapping):
     def __init__(self, source: str, target: DvValueset, sor: Schema = None ) -> None:
-        if isinstance(source, str):
+        if isinstance(source, str) and 'SELECT' in source.upper() and ' ' in source:
+            source = SorQuery(source, sor)
+        elif isinstance(source, str):
             source = SorTable(source, sor)
         super().__init__(source, target)
         self.sor_table = source
