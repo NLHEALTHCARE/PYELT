@@ -342,12 +342,12 @@ class EtlSourceToSor(BaseEtl):
             params['keys'] = validation.get_keys()
             params['sor_table'] = validation.tbl.name
 
-            sql = """UPDATE {sor}.{sor_table} set _validation_msg = '{msg}'
+            sql = """UPDATE {sor}.{sor_table} set _validation_msg = '{msg}', _valid = FALSE
                 where (_runid, {keys}) in (select _runid, {keys} from {sor}.{sor_table} GROUP BY _runid, {keys} HAVING count(*) > 1);""".format(
                 **params)
             self.execute(sql, 'validate sor: mark duplicate keys')
 
-            sql = """update {sor}.{sor_table} set _valid = FALSE, _validation_msg = '{msg}-first item'
+            sql = """update {sor}.{sor_table} set _valid = TRUE, _validation_msg = '{msg}-first item'
                 where _validation_msg = '{msg}' AND floor(_runid) = floor({runid}) AND _id in (select DISTINCT ON ({keys}) _id from {sor}.{sor_table} WHERE floor(_runid) = floor({runid}) ORDER BY {keys}, _id);""".format(
                 **params)
             self.execute(sql, 'validate sor: mark first items of duplicate keys')
