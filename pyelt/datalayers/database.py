@@ -330,7 +330,7 @@ class Columns():
 
     class DateColumn(Column):
         def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):
-            super().__init__(name, 'date', default_value=default_value, fhir_name=fhir_name)
+            super().__init__(name, 'date', default_value=default_value, pk=pk, unique=unique, indexed=indexed, nullable=nullable, fhir_name=fhir_name)
 
     class IntColumn(Column):
         def __init__(self, name:str = '', default_value='', pk = False, unique = False, indexed=False, nullable=True, fhir_name=''):

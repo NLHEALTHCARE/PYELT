@@ -679,7 +679,7 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
 
 class DdlValset(Ddl):
     def create_or_alter_valueset(self, valueset_cls: DvValueset):
-        if valueset_cls is DvValueset:
+        if valueset_cls is DvValueset or valueset_cls is DvPeriodicalValueset:
             return
         super().create_or_alter_table(valueset_cls)
 

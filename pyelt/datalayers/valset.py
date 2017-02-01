@@ -19,5 +19,7 @@ class DvValueset(AbstractOrderderTable):
     code = Columns.TextColumn(unique=True, indexed=True)
     omschrijving = Columns.TextColumn()
 
-
+class DvPeriodicalValueset(DvValueset):
+    ingangsdatum = Columns.DateColumn(unique=True, indexed=True)
+    einddatum = Columns.DateColumn(indexed=True)
 
