@@ -301,7 +301,9 @@ class Column():
         name = name.replace(',', '')
         name = name.replace('.', '')
         name = name.replace(':', '')
+        name = name.replace('"', '')
         name = name.replace(' ', '_')
+        name = name.replace('/', '_')
         name = name.lower()
         return name
 

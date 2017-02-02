@@ -47,6 +47,8 @@ class CsvFile(File):
         for k,v in kwargs.items():
             if k == 'encoding':
                 self.file_kwargs[k] = v
+                if v == 'utf-8-sig':
+                    v = 'utf8'
                 self.encoding = v
             elif k == 'delimiter':
                 self.csv_kwargs[k] = v
