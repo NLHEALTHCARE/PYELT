@@ -600,7 +600,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         """
         self.db_functions[func.name] = func
 
-    def register_run_after_sor(self, func) -> None:
+    def register_extra_func_after_sor(self, func) -> None:
         """
         Registreert  additionele uit te voeren (eenmalige) sql code die op de database wordt uitgevoerd
 
