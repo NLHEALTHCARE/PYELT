@@ -1,258 +1,198 @@
+import inspect
+from collections import OrderedDict
+
 from pyelt.datalayers.database import *
 from pyelt.datalayers.dv import *
-from pyelt.mappings.transformations import FieldTransformation
+from pyelt.datalayers.dv_metaclasses import *
+from pyelt.datalayers.valset import DvValueset
+
+
+class Join():
+    def __init__(self, sql_snippet):
+        self.sql_snippet = sql_snippet
+        self.own_table_name = sql_snippet.split('=')[0].strip().split('.')[0].strip()
+        self.own_field_name = sql_snippet.split('=')[0].strip().split('.')[1].strip()
+        self.reference_table_name = sql_snippet.split('=')[1].strip().split('.')[0].strip()
+        self.reference_field_name = sql_snippet.split('=')[1].strip().split('.')[1].strip()
+        self.own_table = None
+        self.reference_table = None
+
+    def __str__(self):
+        return self.sql_snippet
+
+    def __repr__(self):
+        return self.sql_snippet
+
+
+
+
 
 class QueryMaker():
-    class Alias():
-        def __init__(self, cls, alias):
-            self.cls = cls
-            self.alias = alias
-
     def __init__(self, name):
         self.name = name
-        self.__fields = {}
-        self.__tables = {}
-        self.__joins = {}
+        self.__fields = OrderedDict()
+        self.__joins = []
+        self.__filter = ''
 
-    def select(self, column, alias = '', type = ''):
-        if not isinstance(column, Column):
-            raise Exception(' gebruik column ref voor select')
-
+    def select(self, val, col_alias='', type=''):
+        if isinstance(val, str):
+            if not col_alias:
+                raise Exception('Bij gebruik van sql in select moet je een alias opgeven')
+            self.__fields[col_alias] = val + ' AS ' + col_alias
+            return
+        elif not isinstance(val, Column):
+            raise Exception(' gebruik column voor select')
+        column = val
+        table = column.table
 
         stack = inspect.stack()
         caller = stack[1].code_context[0]
         caller = caller[caller.find('(') + 1: caller.find(')')]
         if ',' in caller:
             caller = caller.split(',')[0]
-        tbl_alias = caller.split('.')[0].lower()
-        if not alias:
-            alias = caller.lower().replace('.', '_')
-            alias = alias.replace('default_', '')
+        if '_hub' in table.__dbname__:
+            tbl_alias = caller.split('.')[0].lower() + '_hub'
+        elif '_sat' in table.__dbname__:
+            hub_alias = caller.split('.')[0].lower() + '_hub'
+            tbl_alias = caller.split('.')[0].lower() + '_sat_' + caller.split('.')[1].lower() + type
+            tbl_alias = tbl_alias.replace('_default', '')
+        #elif DvValueset in table.__class__.__mro__:
+        else:
+            #valset table
+            #in table.__class__.__mro__:
+            tbl_alias = caller.split('.')[0].lower()
 
-        sat = column.table
-        sat.hub = tbl_alias
-        sat_alias = caller.split('.')[0] + '_' + caller.split('.')[1]
-        sat_alias = sat_alias.lower()
-
-
-        if alias in self.__fields:
-            raise Exception(alias + ' bestaat al in query. Gebruik een andere alias.')
+        if not col_alias:
+            col_alias = caller.lower().replace('.', '_')
+            col_alias = col_alias.replace('default_', '')
+        if col_alias in self.__fields:
+            raise Exception(col_alias + ' bestaat al in query. Gebruik een andere alias.')
         else:
             params = {}
-            params['tbl_alias'] = sat_alias
+            params['tbl_alias'] = tbl_alias
             params['col_name'] = column.name
-            params['column_alias'] = alias
+            params['column_alias'] = col_alias
             sql = '{tbl_alias}.{col_name} as {column_alias}'.format(**params)
-            self.__fields[alias] = sql
+            self.__fields[col_alias] = sql
 
-            self.__tables[sat_alias] = sat
-            self.__tables[tbl_alias] = sat
-            sql = '{0}._id = {1}._id and {0}._active'.format(sat_alias, tbl_alias)
-            self.__joins[tbl_alias + sat_alias] = sql
+            if '_sat' in table.__dbname__:
+                join_sql = '{0}._id = {1}._id AND {0}._active AND {0}._valid'.format(tbl_alias, hub_alias)
+                if type:
+                    join_sql += " AND {}.type = '{}'".format(tbl_alias, type)
+                join = Join(join_sql)
+                join.own_table = table
+                join.reference_table = table.hub.ref_table
+                self.__joins.append(join)
 
 
 
-    def frm(self, entity):
-        stack = inspect.stack()
-        caller = stack[1].code_context[0]
-        tbl_alias = caller[caller.find('(') + 1: caller.find(')')]
-        tbl_alias = tbl_alias.lower()
-        self.__tables[tbl_alias] = entity
+    def join(self, left, right, left_table = None, right_table= None):
 
-    def join(self, link_ref, hub_entity):
+
         stack = inspect.stack()
         caller = stack[1].code_context[0]
         caller = caller[caller.find('(') + 1: caller.find(')')]
         if ',' in caller:
             arg1 = caller.split(',')[0]
             arg2 = caller.split(',')[1].strip()
-        link_alias = arg1.split('.')[0].lower()
-        hub_alias = arg2.lower().strip()
-        fk_name = link_ref.fk
 
-        join_name = caller.replace('.', '_').lower()
-        sql = '{}.{} = {}._id'.format(link_alias, fk_name, hub_alias)
-        self.__joins[join_name] = sql
+
+        left_alias = arg1.split('.')[0].lower()
+        if type(left) is HubEntityMetaClass:
+            left_table= left.Hub
+            left_alias += '_hub'
+            left_field = '_id'
+        elif type(left) is LinkReference:
+            left_table = left.link
+            left_alias = left.link.__dbname__
+            left_field = left.fk
+        elif type(left) is Column or type(left) is Columns.RefColumn:
+            left_table = left.table
+            left_alias = left_alias
+            left_field = left.name
+            if '_sat' in left_table.__dbname__:
+                left_alias = arg1.split('.')[0].lower() + '_sat_' + arg1.split('.')[1].lower()
+                left_alias = left_alias.replace('_default', '')
+        elif isinstance(left, str):
+            left_alias = left
+            left_table = left_table
+            left_field = ''
+
+        right_alias = arg2.lower().strip()
+        if type(right) is HubEntityMetaClass:
+            right_table = right.Hub
+            right_alias += '_hub'
+            right_field = '_id'
+        elif type(right) is LinkReference:
+            right_table = right.link
+            right_alias = right.link.__dbname__
+            right_field = right.fk
+        elif type(right) is Column or type(right) is Columns.RefColumn:
+
+        # elif Column in right.__class__.__mro__:
+            right_table = right.table
+            right_alias = right_alias
+            right_field = right.name
+            if '_sat' in right_table.__dbname__:
+                right_alias = arg2.split('.')[0].lower() + '_sat_' + arg2.split('.')[1].lower()
+                right_alias = right_alias.replace('_default', '')
+
+        sql = '{}.{} = {}.{}'.format(left_alias, left_field, right_alias, right_field)
+        if not left_field:
+            sql = '{} = {}.{}'.format(left_alias, right_alias, right_field)
+        join = Join(sql)
+        join.own_table = left_table
+        join.reference_table = right_table
+        self.__joins.append(join)
 
     def where(self, filter):
+        self.__filter = filter
+
+    def order_by(self, column):
         pass
 
-    def to_sql(self, dwh):
+    def to_sql(self):
         select = ''
-        for alias, sql in self.__fields.items():
-            select += sql + ',\n'
-        select = select[:-2]
-        frm = ''
-        first = True
-        for tbl_alias, ent in self.__tables.items():
-            if HubEntity in ent.__mro__:
-                frm += '{}.{} as {},\n'.format(ent.Hub.__dbschema__, ent.Hub.__dbname__, tbl_alias)
-            elif LinkEntity in ent.__mro__ :
-                frm += '{}.{} as {},\n'.format(ent.Link.__dbschema__, ent.Link.__dbname__, tbl_alias)
-            else:
-                frm += '{}.{} as {},\n'.format(ent.__dbschema__, ent.__dbname__, tbl_alias)
-        frm = frm[:-2]
-        where = ''
-        for join in self.__joins.values():
-            where += join + ' AND \n'
-        where = where[:-5]
-
-
-        sql = 'SELECT ' + select + ' \nFROM ' + frm + ' \nWHERE ' + where
-        return sql
-
-
-    def orderby(self, *args):
-        pass
-
-class QueryMaker2():
-    def __init__(self, name):
-        self.name = name
-        self.__fields = {}
-        self.__tables = {}
-        self.__joins = {}
-
-    def init_test(self, fields, tables, joins):
-        self.__fields = fields
-        self.__tables = tables
-        self.__joins = joins
-
-
-    def select(self, column, alias = '', type = ''):
-        if not isinstance(column, Column):
-            raise Exception(' gebruik column ref voor select')
-
-
-        stack = inspect.stack()
-        caller = stack[1].code_context[0]
-        caller = caller[caller.find('(') + 1: caller.find(')')]
-        if ',' in caller:
-            caller = caller.split(',')[0]
-        tbl_alias = caller.split('.')[0].lower()
-        if not alias:
-            alias = caller.lower().replace('.', '_')
-            alias = alias.replace('default_', '')
-
-        sat = column.table
-        sat.hub = tbl_alias
-        sat_alias = caller.split('.')[0] + '_' + caller.split('.')[1]
-        sat_alias = sat_alias.lower()
-
-
-        if alias in self.__fields:
-            raise Exception(alias + ' bestaat al in query. Gebruik een andere alias.')
+        if not self.__fields.items():
+            select = '*'
         else:
-            params = {}
-            params['tbl_alias'] = sat_alias
-            params['col_name'] = column.name
-            params['column_alias'] = alias
-            sql = '{tbl_alias}.{col_name} as {column_alias}'.format(**params)
-            self.__fields[alias] = sql
-
-            self.__tables[sat_alias] = sat
-            self.__tables[tbl_alias] = sat
-            sql = '{0}._id = {1}._id and {0}._active'.format(sat_alias, tbl_alias)
-            self.__joins[tbl_alias + sat_alias] = sql
-
-
-
-    def frm(self, entity):
-        stack = inspect.stack()
-        caller = stack[1].code_context[0]
-        tbl_alias = caller[caller.find('(') + 1: caller.find(')')]
-        tbl_alias = tbl_alias.lower()
-        self.__tables[tbl_alias] = entity
-
-    def join(self, link_ref, hub_entity):
-        stack = inspect.stack()
-        caller = stack[1].code_context[0]
-        caller = caller[caller.find('(') + 1: caller.find(')')]
-        if ',' in caller:
-            arg1 = caller.split(',')[0]
-            arg2 = caller.split(',')[1].strip()
-        link_alias = arg1.split('.')[0].lower()
-        hub_alias = arg2.lower().strip()
-        fk_name = link_ref.fk
-
-        join_name = caller.replace('.', '_').lower()
-        sql = '{}.{} = {}._id'.format(link_alias, fk_name, hub_alias)
-        self.__joins[join_name] = sql
-
-    def where(self, filter):
-        pass
-
-    def to_sql(self, dwh):
-        select = ''
-        for alias, sql in self.__fields.items():
-            select += sql + ',\n'
-        select = select[:-2]
-        frm = ''
-        first = True
-        for tbl_alias, ent in self.__tables.items():
-            if HubEntity in ent.__mro__:
-                frm += '{}.{} as {},\n'.format(ent.Hub.__dbschema__, ent.Hub.__dbname__, tbl_alias)
-            elif LinkEntity in ent.__mro__ :
-                frm += '{}.{} as {},\n'.format(ent.Link.__dbschema__, ent.Link.__dbname__, tbl_alias)
-            else:
-                frm += '{}.{} as {},\n'.format(ent.__dbschema__, ent.__dbname__, tbl_alias)
-        frm = frm[:-2]
-        where = ''
-        for join in self.__joins.values():
-            where += join + ' AND \n'
-        where = where[:-5]
-
-
-        sql = 'SELECT ' + select + ' \nFROM ' + frm + ' \nWHERE ' + where
-        return sql
-
-
-    def orderby(self, *args):
-        pass
-
-    def to_sql2(self, param):
-        select = ''
-        for alias, field in self.__fields.items():
-            sql = '{}.{} as {}'.format(field.table.__dbname__, field.name, alias)
-            select += sql + ',\n'
+            for field, sql in self.__fields.items():
+                select += '  ' + sql + ',\n'
         select = select[:-2]
 
         frm = ''
-        for alias, tbl in self.__tables.items():
-            first = alias, tbl
-            frm += self.get_joins(alias, tbl)
-            break
+        tables_in_from = {}
+        for join in self.__joins:
+            #we beginnen met een hub
+            if '_hub' in join.own_table.__dbname__ and not frm:
+                frm += ' {}.{} AS {}\n'.format(join.own_table.__dbschema__, join.own_table.__dbname__, join.own_table_name)
+                table_name = join.own_table_name
+                break
+            if '_hub' in join.reference_table.__dbname__ and not frm:
+                frm += ' {}.{} AS {}\n'.format(join.reference_table.__dbschema__, join.reference_table.__dbname__, join.reference_table_name)
+                table_name = join.reference_table_name
+                break
 
-            if isinstance(tbl, dict):
-                hub = tbl['hub']
-
-                hub_alias = hub.__dbname__
-                if not frm:
-                    frm += '{}.{} as {}\n'.format(hub.__dbschema__, hub.__dbname__, hub_alias)
-                else:
-                    link_ref = self.__get_link_ref_by_hub(hub)
-                    params = {}
-                    params['schema'] = 'dv'
-                    params['link'] = 'link'
-                    params['link_alias'] = 'lnk'
-                    params['fk'] = link_ref.fk
-                    params['hub_alias'] = hub_alias
-                    frm += ' LEFT JOIN {schema}.{link} as {link_alias} ON {link_alias}.{fk} = {hub_alias}._id\n'.format(**params)
-                for sat_alias, sat in tbl['sats'].items():
-                    frm += ' LEFT JOIN {0}.{1} as {1} ON {1}._id = {2}._id and {1}._active\n'.format(sat.__dbschema__, sat.__dbname__, hub_alias)
-            elif isinstance(tbl, Link):
-                pass
-
-        where = ''
-        sql = 'SELECT ' + select + ' \nFROM ' + frm + ' \nWHERE ' + where
+        tables_in_from[table_name] = table_name
+        join, table_name, table = self.__find_in_joins(table_name, tables_in_from)
+        while join != None:
+            frm += ' LEFT JOIN {}.{} AS {} ON {}\n'.format(table.__dbschema__, table.__dbname__, table_name, join.sql_snippet)
+            tables_in_from[table_name] = table_name
+            join, table_name, table = self.__find_in_joins(table_name, tables_in_from)
+            if not join:
+                for table_name in tables_in_from.keys():
+                    join, table_name, table = self.__find_in_joins(table_name, tables_in_from)
+                    if join:
+                        break
+        sql = 'SELECT\n' + select + '\nFROM' + frm
+        if self.__filter:
+            sql += '\nWHERE ' + self.__filter
         return sql
 
-    def __get_link_ref_by_hub(self, hub) -> LinkReference:
-        for name, join in self.__joins.items():
-            ref = join #type: LinkReference
-            if ref.ref_table.__dbname__ == hub.__dbname__:
-                return ref
-
-    def get_joins(self, alias, tbl):
-        frm = ''
-        for alias, tbl in self.__tables.items():
-            frm += self.get_joins(alias, tbl)
+    def __find_in_joins(self, table_name, tables_in_from):
+        for join in self.__joins:
+            if table_name == join.own_table_name and join.reference_table_name not in tables_in_from:
+                return join, join.reference_table_name, join.reference_table
+            elif table_name == join.reference_table_name and join.own_table_name not in tables_in_from:
+                return join, join.own_table_name, join.own_table
+        return None, None, None

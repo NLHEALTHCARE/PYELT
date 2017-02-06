@@ -148,12 +148,26 @@ class LinkEntityMetaClass(type):
         new_link_entity_cls = type.__new__(mcs, name, bases, classdict)
         link_cls = new_link_entity_cls.Link
         link_cls.__dbname__ = camelcase_to_underscores(name).replace('_link', '').replace('_entity', '') + '_link'
+        if '__dbschema__' in classdict:
+            link_cls.__dbschema__ = classdict['__dbschema__']
 
         # zoeken naar de entity in de mro met de rechtstreekse overerving van de LinkEntity
         entity_with_link = None
         for base in new_link_entity_cls.__mro__:
             if 'LinkEntity' in str(base.__bases__):
                 entity_with_link = base
+        #schema zetten op link class
+        if entity_with_link:
+            link_cls.__dbschema__ = entity_with_link.__dbschema__
+
+
+
+        # link class in link_refs zetten
+        from pyelt.datalayers.dv import LinkReference
+        for key, link_ref in link_cls.__dict__.items():
+            if type(link_ref) is LinkReference:
+                link_ref.link = link_cls
+
         # satnames zetten
         new_link_entity_cls.__sats__ = OrderedDict()
         from pyelt.datalayers.dv import Sat
