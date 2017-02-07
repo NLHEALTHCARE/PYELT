@@ -77,6 +77,8 @@ class QueryMaker():
 
             if '_sat' in table.__dbname__:
                 join_sql = '{0}._id = {1}._id AND {0}._active AND {0}._valid'.format(tbl_alias, hub_alias)
+                join_sql = '{0}._id = {1}._id AND {0}._active'.format(tbl_alias, hub_alias)
+
                 if type:
                     join_sql += " AND {}.type = '{}'".format(tbl_alias, type)
                 join = Join(join_sql)
