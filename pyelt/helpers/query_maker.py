@@ -33,6 +33,7 @@ class QueryMaker():
         self.__fields = OrderedDict()
         self.__joins = []
         self.__filter = ''
+        self.start_table = None
 
     def select(self, val, col_alias='', type=''):
         if isinstance(val, str):
@@ -164,16 +165,23 @@ class QueryMaker():
 
         frm = ''
         tables_in_from = {}
-        for join in self.__joins:
-            #we beginnen met een hub
-            if '_hub' in join.own_table.__dbname__ and not frm:
-                frm += ' {}.{} AS {}\n'.format(join.own_table.__dbschema__, join.own_table.__dbname__, join.own_table_name)
-                table_name = join.own_table_name
-                break
-            if '_hub' in join.reference_table.__dbname__ and not frm:
-                frm += ' {}.{} AS {}\n'.format(join.reference_table.__dbschema__, join.reference_table.__dbname__, join.reference_table_name)
-                table_name = join.reference_table_name
-                break
+        if self.start_table:
+            alias = self.start_table.__dbname__
+            #onderstaande is te voorkomen als andere aliassen gaan met CamelCaseToUnderscore
+            alias = alias.replace('_hub', '').replace('_', '') + '_hub'
+            table_name = alias
+            frm = ' {}.{} AS {}\n'.format(self.start_table.__dbschema__, self.start_table.__dbname__, alias)
+        else:
+            for join in self.__joins:
+                #we beginnen met een hub
+                if '_hub' in join.own_table.__dbname__ and not frm:
+                    frm += ' {}.{} AS {}\n'.format(join.own_table.__dbschema__, join.own_table.__dbname__, join.own_table_name)
+                    table_name = join.own_table_name
+                    break
+                if '_hub' in join.reference_table.__dbname__ and not frm:
+                    frm += ' {}.{} AS {}\n'.format(join.reference_table.__dbschema__, join.reference_table.__dbname__, join.reference_table_name)
+                    table_name = join.reference_table_name
+                    break
 
         tables_in_from[table_name] = table_name
         join, table_name, table = self.__find_in_joins(table_name, tables_in_from)
