@@ -125,6 +125,7 @@ Voorbeeld::
         self.logger = Logger.create_logger(LoggerTypes.MAIN, self.runid, self.config)
         self.sql_logger = Logger.create_logger(LoggerTypes.SQL, self.runid, self.config, to_console=False)
 
+
         if not self.validate_domains():
             return
         if not self.validate_mappings_before_ddl():
@@ -546,6 +547,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
 
         self.db_functions = {}
         self.extra_ddl_statements = []  # type: List[str]
+        self.run_before_sor = []
         self.run_after_sor = []
 
 
@@ -600,6 +602,15 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         """
         self.db_functions[func.name] = func
 
+    def register_extra_func_before_sor(self, func) -> None:
+        """
+        Registreert  additionele uit te voeren (eenmalige) code die wordt voorafgaande aan een run
+
+        :param extra_sql: een lijst met strings  van geldige sql code
+
+        """
+        self.run_before_sor.append(func)
+
     def register_extra_func_after_sor(self, func) -> None:
         """
         Registreert  additionele uit te voeren (eenmalige) sql code die op de database wordt uitgevoerd
@@ -644,6 +655,9 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         :param parts: lijst van keywords. De eventuele aanwezigheid van een keyword in deze lijst bepaald of het log bestand dat hoort bij dit keyword gemaakt wordt en of de bijhorende DDL uitgevoerd wordt.
 
         """
+
+        for func in self.run_before_sor:
+            func(self)
 
         if 'sor' in parts:
             #SOR
