@@ -239,9 +239,9 @@ class MappingsValidator:
             if '_runid' not in source_col_names or '_active' not in source_col_names or '_valid' not in source_col_names:
                 validation_msg += 'Mapping <red>{}</> is niet geldig. Noodzakelijke vaste velden (_runid, _active en _valid) ontbreken in query. Ook fk naar hub moet reeds aanwezig zijn in hstage tabel. Je moet [tabel]_hstage.* gebruiken voor de sor-tabel die de fk naar de hub bevat. \r\n'.format(
                     mappings.name)
-            if not '.*' in mappings.source.sql:
-                validation_msg += 'Mapping <red>{}</> is niet geldig. Geldige fk naar hub ontbreekt in sql. Je moet [tabel]_hstage.* gebruiken voor de sor-tabel die de fk naar de hub bevat. Deze moet reeds eerder zijn gemapt op de hub als SorTable().\r\n'.format(
-                    mappings.name)
+            # if not '.*' in mappings.source.sql:
+            #     validation_msg += 'Mapping <red>{}</> is niet geldig. Geldige fk naar hub ontbreekt in sql. Je moet [tabel]_hstage.* gebruiken voor de sor-tabel die de fk naar de hub bevat. Deze moet reeds eerder zijn gemapt op de hub als SorTable().\r\n'.format(
+            #         mappings.name)
         for sat_mappings in mappings.sat_mappings.values():
             fld_mappings_names = [fld_mapping.name for fld_mapping in sat_mappings.field_mappings]
             # testen op uniek

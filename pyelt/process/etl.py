@@ -434,14 +434,19 @@ WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {
                 self.execute(sql, 'update fk_hub in sor table')
             elif mappings.bk_mapping and isinstance(mappings.source, SorQuery):
                 params['sql'] = mappings.source.sql
+                params['sor_table'] = mappings.source.main_table
 
                 sql = """INSERT INTO {dv_schema}.{hub} (_runid, _insert_date, _source_system, type, bk)
 SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
 FROM ({sql}) hstg
 WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL
-AND NOT EXISTS (SELECT 1 FROM dv.medewerker_hub hub WHERE hub.bk = {bk_mapping})
+AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{hub} hub WHERE hub.bk = {bk_mapping})
 AND {filter} AND {filter_runid};""".format( **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
+
+                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
+                    **params)
+                self.execute(sql, 'update fk_hub in sor table')
 
             elif mappings.key_mappings:
                 target_key_sat = ''
@@ -456,8 +461,8 @@ AND {filter} AND {filter_runid};""".format( **params)
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
 
-            fk_name = "fk_{relation_type}{hub}".format(**params)
-            EtlSourceToSor(self.pipe).validate_duplicate_fks(mappings.source, dv_schema, fk_name)
+            # fk_name = "fk_{relation_type}{hub}".format(**params)
+            # EtlSourceToSor(self.pipe).validate_duplicate_fks(mappings.source, dv_schema, fk_name)
 
             for sat_mappings in mappings.sat_mappings.values():
                 self.__sor_to_sat(params, sat_mappings)

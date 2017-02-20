@@ -3,16 +3,12 @@ import os
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.engine import reflection
 
-from pyelt.datalayers.database import Database, Schema, Table, Column
+from pyelt.datalayers.database import Database, Schema, Table, Column, DBDrivers
 
 
 # from etl_mappings.general_configs import config as pyelt_config
 
-class DBDrivers():
-    POSTGRESS = 'POSTGRESS'
-    ORACLE = 'ORACLE'
-    SQLSERVER = 'SQLSERVER'
-    MYSQL = 'MYSQL'
+
 
 
 def oracle_type_to_postgres_type(type: str) -> str:

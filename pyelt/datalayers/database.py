@@ -8,7 +8,11 @@ from sqlalchemy.engine import reflection
 from sqlalchemy.sql.sqltypes import NullType
 from pyelt.helpers.global_helper_functions import camelcase_to_underscores
 
-
+class DBDrivers():
+    POSTGRESS = 'POSTGRESS'
+    ORACLE = 'ORACLE'
+    SQLSERVER = 'SQLSERVER'
+    MYSQL = 'MYSQL'
 
 class Database():
     """Deze class representeert een database. Maakt gebruik van sql alchemy. Geef een sqlalchemy connection string mee om te initieren::
@@ -21,7 +25,7 @@ class Database():
         conn_string_parts = conn_string.split('/')
         self.name = conn_string_parts[-1]  # type: str
         self.default_schema = Schema(default_schema, self)
-        self.driver = 'postgres' #type: str
+        self.driver = DBDrivers.POSTGRESS #type: str
         self.reflected_schemas = {} #type: Dict[str, Schema]
 
     def reflect_schemas(self):

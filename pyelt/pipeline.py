@@ -695,7 +695,8 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             self.pipeline.logger.log('START FROM SOR TO HUBS', indent_level=1)
             for mapping in self.mappings:
                 if type(mapping) == SorToEntityMapping:
-                    DdlSor(self).try_add_fk_sor_hub(mapping)
+                    if not isinstance(mapping.source, SorQuery):
+                        DdlSor(self).try_add_fk_sor_hub(mapping)
                     etl.sor_to_entity(mapping)
             for validation in self.validations:
                 if isinstance(validation, DvValidation):
