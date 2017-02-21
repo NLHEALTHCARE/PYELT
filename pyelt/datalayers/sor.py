@@ -17,6 +17,7 @@ class SorQuery(Table):
         super().__init__(name, schema)
         self.sql = sql
         self.main_table = ''
+        self.update_query_fk_hub = '' #bevat een update statement om de fk naar de hub te updaten
 
     def get_main_table(self):
         if not self.main_table:

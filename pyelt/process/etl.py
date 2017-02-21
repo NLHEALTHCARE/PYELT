@@ -444,13 +444,17 @@ AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{hub} hub WHERE hub.bk = {bk_mapping})
 AND {filter} AND {filter_runid};""".format( **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
-                sql = """SELECT * FROM ({sql}) as q""".format(**params)
-                self.execute(sql, 'load in mem performance')
+                if mappings.source.update_query_fk_hub:
+                    sql = mappings.source.update_query_fk_hub
+                    self.execute(sql, 'update fk_hub in sor table')
+                else:
+                    sql = """SELECT * FROM ({sql}) as q""".format(**params)
+                    self.execute(sql, 'load in mem performance')
 
-                sql = """WITH sorquery as (SELECT {bk_mapping} as bk FROM ({sql}) hstg
-WHERE hstg._valid AND {filter} AND {filter_runid})
-UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub JOIN sorquery ON sorquery.bk = hub.bk;""".format(**params)
-                self.execute(sql, 'update fk_hub in sor table')
+                    sql = """WITH sorquery as (SELECT {bk_mapping} as bk FROM ({sql}) hstg
+    WHERE hstg._valid AND {filter} AND {filter_runid})
+    UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub JOIN sorquery ON sorquery.bk = hub.bk""".format(**params)
+                    self.execute(sql, 'update fk_hub in sor table')
 
             elif mappings.key_mappings:
                 target_key_sat = ''
