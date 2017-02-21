@@ -499,7 +499,7 @@ UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_sch
 
         if sat_cls.__base__ == HybridSat:
             sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
-                    SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 0, {sor_fields}
+                    SELECT DISTINCT ON(fk_{relation_type}{hub_or_link})  fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
                     AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
                     AND {filter_runid}
@@ -529,7 +529,7 @@ UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_sch
 
 
             sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
-                    SELECT  fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 0, {sor_fields}
+                    SELECT DISTINCT ON(fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
                     AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
                     AND {filter_runid}
