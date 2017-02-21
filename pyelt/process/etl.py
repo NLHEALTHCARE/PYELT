@@ -444,7 +444,14 @@ AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{hub} hub WHERE hub.bk = {bk_mapping})
 AND {filter} AND {filter_runid};""".format( **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
-                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
+                sql = """SELECT * FROM ({sql}) as q""".format(**params)
+                self.execute(sql, 'load in mem performance')
+
+                sql = """WITH sorquery as (SELECT {bk_mapping} as bk FROM ({sql}) as q)
+UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub JOIN sorquery ON sorquery.bk = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
+
+
+
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
 
