@@ -108,13 +108,14 @@ class HybridLink(Link):
 
 
 class LinkReference(FkReference):
-    def __init__(self, ref_cls: 'Hub', name: str = ''):
+    def __init__(self, ref_cls: 'Hub', name: str = '', fk=''):
         hub = ref_cls
         if HubEntity in ref_cls.__mro__:
             self.sub_entity_type = ref_cls.__subtype__
             hub = ref_cls.Hub
         super().__init__(hub)
         self.name = name
+        self.fk = fk
 
     @property
     def hub(self):
