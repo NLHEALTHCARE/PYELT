@@ -212,6 +212,7 @@ ERROR: {}
         value = value.replace('<darkcyan>', '')
         value = value.replace('<filledred>', '')
         value = value.replace('</>', '')
+        value = value.replace('\ufeff', '')
         return value
 
     def test_show_all_colors(self):

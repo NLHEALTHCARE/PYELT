@@ -66,7 +66,7 @@ rows: {}
                 self.logger.log_error(log_message, sql, err.args[0])
                 # even wachten, want anders raakt error-msg verward met sql
             time.sleep(0.1)
-            raise Exception(err)
+            # raise Exception(err)
 
     def confirm_execute(self, sql: str, log_message: str) -> None:
         if not self.is_initialised:
