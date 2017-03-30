@@ -75,6 +75,8 @@ class SourceDatabase(Database):
         return path
 
     def execute_read(self, sql, log_message=''):
+        if self.driver == DBDrivers.POSTGRESS:
+            return super().execute_read(sql, log_message)
         connection = self.engine.raw_connection()
         cursor = connection.cursor()
         cursor.execute(sql)
