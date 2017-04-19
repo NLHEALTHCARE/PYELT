@@ -733,6 +733,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             if isinstance(mapping, SourceToSorMapping):
                 etl.copy_to_exceptions_table(mapping.sor_table, self.sor)
 
+
         #delete /tmp/datatranfser
         if self.source_db:
             path = self.source_db.get_or_create_datatransfer_path()

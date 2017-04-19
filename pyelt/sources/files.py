@@ -40,10 +40,11 @@ class File():
 class CsvFile(File):
     def __init__(self, file_name, **kwargs):
         super().__init__(file_name )
-        self.quote = '|'
+        self.quote = '"'
         self.delimiter = ';'
         self.file_kwargs = {}
         self.csv_kwargs = {}
+        self.csv_kwargs['delimiter'] = self.delimiter
         for k,v in kwargs.items():
             if k == 'encoding':
                 self.file_kwargs[k] = v

@@ -40,9 +40,21 @@ class BaseEtl(BaseProcess):
         sql = """INSERT INTO {schema}._exceptions (_runid, schema, table_name, message, key_fields, fields )
 SELECT {runid}, '{schema}', '{from_table}', _validation_msg, {key_values}, {field_values}
 FROM {schema}.{from_table}
-WHERE _runid = {runid} AND NOT _valid;""".format(
+WHERE NOT _valid AND  {key_values} NOT IN (SELECT key_fields FROM dv._exceptions);""".format(
             **params)
-        self.execute(sql, 'copy to exceptions_table <blue>' + params['from_table'] + '</>')
+        self.execute(sql, 'copy to exceptions_table from <blue>' + params['from_table'] + '</>')
+
+        sql = """SELECT * FROM {schema}._exceptions WHERE _runid = {runid} ORDER BY schema, TABLE_NAME, message""".format(**params)
+        rows = self.execute_read(sql)
+        if rows:
+            self.pipe.pipeline.logger.log('<red>Er zijn uitzonderingen</>', indent_level=3)
+            msg = ''
+            for row in rows:
+                msg += '     - {} in {}.{} key {}\n'.format(row['message'], row['schema'], row['table_name'], row['key_fields'])
+            self.pipe.pipeline.logger.log(msg)
+        else:
+            self.pipe.pipeline.logger.log('<green>Er zijn geen uitzonderingen</>', indent_level=3)
+
 
 
 
@@ -144,24 +156,23 @@ class EtlSourceToSor(BaseEtl):
             sql = """INSERT INTO {sor}.{sor_table}(_runid, _source_system, _insert_date, _hash, _active, {fields})
             SELECT {runid}, '{source_system}', now(), '', True, {fields}
             FROM {sor}.{temp_table} tmp
+            WHERE ({key_fields}) NOT IN (SELECT {key_fields} FROM {sor}.{sor_table} hstg WHERE not _valid )
             EXCEPT
             SELECT {runid}, '{source_system}', now(), '', True, {fields}
-            FROM {sor}.{sor_table} hstg WHERE _active = True;""".format(**params)
+            FROM {sor}.{sor_table} hstg WHERE _active;""".format(**params)
             self.execute(sql, 'insert new into {}'.format(params['sor_table']))
 
-            # STAP 5
+            # STAP 5 REVISION en ACTIVE
             params['keys_compare'] = mappings.get_keys_compare(source_alias='previous', target_alias='current')
             # oude is nog actief, maar runid is kleiner. Dit is het laatste record
             sql = """update {sor}.{sor_table} current set _revision = previous._revision + 1
-                    from {sor}.{sor_table} previous where current._active = True AND previous._active = True AND ({keys_compare}) and previous._runid < current._runid;""".format(
+                    from {sor}.{sor_table} previous where current._active AND previous._active and previous._valid AND ({keys_compare}) and previous._runid < current._runid;""".format(
                 **params)
             self.execute(sql, 'update revision')
+
             # hierna pas oude inactief zetten
-            # sql = """update {sor}.{sor_table} previous set _active = False, _finish_date = current._insert_date
-            #         from {sor}.{sor_table} current where previous._active = True AND ({keys_compare}) and current._revision = (previous._revision + 1);""".format(
-            #     **params)
             sql = """update {sor}.{sor_table} previous set _active = False, _finish_date = current._insert_date
-                    from {sor}.{sor_table} current where previous._active = True AND ({keys_compare}) and previous._runid < current._runid;""".format(
+                    from {sor}.{sor_table} current where previous._active AND ({keys_compare}) and previous._runid < current._runid;""".format(
                 **params)
             self.execute(sql, 'update set old ones inactive')
 
@@ -346,10 +357,11 @@ class EtlSourceToSor(BaseEtl):
                 **params)
             self.execute(sql, 'validate sor: mark duplicate keys')
 
-            sql = """update {sor}.{sor_table} set _valid = TRUE, _validation_msg = '{msg}-first item'
-                where _validation_msg = '{msg}' AND floor(_runid) = floor({runid}) AND _id in (select DISTINCT ON ({keys}) _id from {sor}.{sor_table} WHERE floor(_runid) = floor({runid}) ORDER BY {keys}, _id);""".format(
-                **params)
-            self.execute(sql, 'validate sor: mark first items of duplicate keys')
+            # 2017-04: uitgezet want anders gaan updates (wijzigingen niet meer goed)
+            # sql = """update {sor}.{sor_table} set _valid = TRUE, _validation_msg = '{msg}-first item'
+            #     where _validation_msg = '{msg}' AND floor(_runid) = floor({runid}) AND _id in (select DISTINCT ON ({keys}) _id from {sor}.{sor_table} WHERE floor(_runid) = floor({runid}) ORDER BY {keys}, _id);""".format(
+            #     **params)
+            # self.execute(sql, 'validate sor: mark first items of duplicate keys')
 
             # self.copy_to_exceptions_table(mappings.source)
 
@@ -501,12 +513,21 @@ AND {filter} AND {filter_runid};""".format( **params)
         if isinstance(sat_mappings.source, SorQuery):
             satparams['from'] = "({}) AS hstg".format(sat_mappings.source.sql)
 
+        # sql = "SELECT COUNT(*) FROM {dv_schema}.{sat};".format(**satparams)
+        # result = self.execute_read(sql, 'get rowcount')
+        # rowcount_sat = result[0][0]
+        #
+        # if rowcount_sat == 0:
+        #     satparams['filter_runid'] = '1=1'
+        # else:
+        #     satparams['filter_runid'] = 'floor(hstg._runid) = floor({runid})'.format(**params)
+
         if sat_cls.__base__ == HybridSat:
             sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, type, _source_system, _insert_date, _revision, {sat_fields})
                     SELECT DISTINCT ON(fk_{relation_type}{hub_or_link})  fk_{relation_type}{hub_or_link}, {runid}, '{type}', '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
-                    AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
-                    AND {filter_runid}
+                    --AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid} AND type = '{type}')
+                    --AND {filter_runid}
                     EXCEPT
                     SELECT _id, {runid}, '{type}', '{source_system}', now(), 0, {sat_fields}
                     FROM {dv_schema}.{sat} sat
@@ -535,8 +556,8 @@ AND {filter} AND {filter_runid};""".format( **params)
             sql = """INSERT INTO {dv_schema}.{sat} (_id, _runid, _source_system, _insert_date, _revision, {sat_fields})
                     SELECT DISTINCT ON(fk_{relation_type}{hub_or_link}) fk_{relation_type}{hub_or_link}, {runid}, '{source_system}', now(), 0, {sor_fields}
                     FROM {from} WHERE hstg._valid AND hstg._active AND hstg.fk_{relation_type}{hub_or_link} IS NOT NULL AND {filter}
-                    AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
-                    AND {filter_runid}
+                    --AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{sat} sat where sat._id = fk_{relation_type}{hub_or_link} and sat._runid = {runid})
+                    -- AND {filter_runid}
                     EXCEPT
                     SELECT _id, {runid}, '{source_system}', now(), 0, {sat_fields}
                     FROM {dv_schema}.{sat} sat
@@ -1026,9 +1047,11 @@ AND hstg._valid AND {filter};""".format(
         try:
             params = validation.__dict__
             params.update(self._get_fixed_params())
+            params['dv_schema'] = validation.table.__dbschema__
             params['table'] = validation.table.name
+
             sql = """UPDATE {dv_schema}.{table} set _valid = False, _validation_msg = COALESCE(_validation_msg, '') || '{msg}; '
-                where _runid = {runid} AND {sql_condition};""".format(
+                where {sql_condition};""".format(
                 **params)
             self.execute(sql, 'validate dv: ' + validation.msg)
 
