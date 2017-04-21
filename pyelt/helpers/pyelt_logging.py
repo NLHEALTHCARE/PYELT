@@ -19,6 +19,7 @@ class LoggerTypes:
     SQL = 'SQL'
     DDL = 'DDL'
     ERROR = 'ERROR'
+    PULL_DATA = 'PULL_DATA'
 
 
 class ConsoleColors:
@@ -46,10 +47,10 @@ class Logger:
         self.filename = ''  # type: str
 
     @staticmethod
-    def create_logger(logger_type: str = LoggerTypes.MAIN, runid: float = 0, configs={}, to_console: bool = True) -> 'Logger':
+    def create_logger(logger_type: str = LoggerTypes.MAIN, runid: float = 0, configs={}, to_console: bool = True, filename_args = '') -> 'Logger':
         logger = logging.getLogger(logger_type)
         # create file
-        path, filename = Logger.__create_path_and_filename_by_type(logger_type, runid, configs)
+        path, filename = Logger.__create_path_and_filename_by_type(logger_type, runid, configs, filename_args)
         if len(logger.handlers) == 0:
             # create formatter
             if logger_type == LoggerTypes.MAIN:
@@ -77,7 +78,7 @@ class Logger:
         return log_obj
 
     @staticmethod
-    def __create_path_and_filename_by_type(logger_type: str = LoggerTypes.MAIN, runid=0.00, configs={}):
+    def __create_path_and_filename_by_type(logger_type: str = LoggerTypes.MAIN, runid=0.00, configs={}, filename_args = ''):
         import os
         from main import get_root_path
         path = get_root_path() + configs['log_path']
@@ -87,7 +88,12 @@ class Logger:
             path = get_root_path() + configs['ddl_log_path']
         if not os.path.exists(path):
             os.makedirs(path)
-        filename = 'LOG {1:%Y-%m-%d %H.%M.%S} RUN{0:07.2f} {2}.log'.format(runid, datetime.now(), logger_type)
+        filename = 'LOG {0:%Y-%m-%d %H.%M.%S} {1}.log'.format(datetime.now(), logger_type)
+        if runid:
+            filename = 'LOG {1:%Y-%m-%d %H.%M.%S} RUN{0:07.2f} {2}.log'.format(runid, datetime.now(), logger_type)
+        if filename_args:
+            filename = filename.replace('.log', '_' + filename_args + '.log')
+
         return path, filename
 
     def log_simple(self, msg: str) -> None:
