@@ -1,7 +1,7 @@
 Domeinmodel
 ===========
 
-De eerste stap ((#todo: van wat?)) is het aanmaken van een domeinmodel. Dit is het model van de entiteiten en hun relaties.
+De eerste stap van het creeren van een datavault is het aanmaken van een domeinmodel. Dit is het model van de entiteiten en hun relaties.
 Een entiteit is in datavault termen een hub met een of meerdere sats; een relatie is een link. Een link is altijd tussen
 twee entiteiten, oftewel tussen twee hubs.
 Door het model (de python module) te registreren bij de pipe en de pipeline te runnen zullen de tabellen in de database
@@ -11,10 +11,9 @@ worden aangemaakt (zie onderaan).
 Definiëren Entiteiten
 =====================
 
-#todo: ik neem aan dat de todo's uit onderstaand voorbeeld voor de definitieve versie weg moeten.
-Het definiëren van een entiteit gaat als volgt::
+Het definiëren van een entiteit gaat als volgt. Maak in de map /domainmodel een bestand aan main_domain.py. Zet hierin de code::
 
-    class Medewerker(DvEntity):
+    class Medewerker(HubEntity):
         class Default(Sat):
             geboortedatum = Columns.DateColumn()
             geslacht_code = Columns.TextColumn()
@@ -36,15 +35,9 @@ Het definiëren van een entiteit gaat als volgt::
             nummer = Columns.TextColumn()
             geldig_tot = Columns.DateColumn()
 
-        #todo: om te initialiseren zijn onderstaande regels nodig, nog uitzoeken of dat anders kan
-        default = Default()
-        naamsgegevens = Naamsgegevens()
-        indentificatie = Indentificatie()
 
 
-
-De class Medewerker erft over van DvEntity en krijgt 3 inner classes als sats.
-In de database zullen dus 4 tabellen worden aangemaakt:
+In de database zullen straks 4 tabellen worden aangemaakt:
 
 - medewerker_hub
 - medewerker_sat (De Default inner class levert een sat op met een naam samengesteld uit de entiteit-naam met het
@@ -52,6 +45,19 @@ In de database zullen dus 4 tabellen worden aangemaakt:
 - medewerker_sat_naamsgegevens
 - medewerker_sat_indentificatie
 
+We kunnen de tabellen aanmaken door de volgende code toe te voegen en te runnen. Maak hiertoe echter eerst een lege database aan in postgres. Gooi het schema public weg.
+Pas vervolgens de connectie string aan in de configs.py::
+
+    from domainmodel import main_domain
+    pipeline.register_domain(main_domain)
+    pipeline.run()
+
+Na het runnen zul je zien dat er 5 schema's zijn aangemaakt en in het dv schema staan de 4 tabellen.
+
+Je kunt vanzelfsprekend meerdere domein-modules maken. Je die elke te registreren bij de pipeline.
+
+Overerving in domein
+--------------------
 Je kunt overerven van de Medewerker class::
 
     class Arts(Medewerker):
@@ -59,11 +65,9 @@ Je kunt overerven van de Medewerker class::
             agbcode = Columns.TextColumn()
             specialisatie = Columns.TextColumn()
 
-        artsgegevens = Artsgegevens()
-
-De arst krijgt hierdoor ook de 3 hubs van de medewerker.
-Er zal geen arts_hub verschijnen in de database, want deze erft niet rechtstreeks over van DvEntity. De sat zal wel
-verschijnen. Er komen dus de volgende tabellen:
+De arst krijgt hierdoor ook de hub en de 3 sat van de medewerker.
+Er zal dus geen arts_hub verschijnen in de database, want deze erft niet rechtstreeks over van HubEntity. De extra sat zal wel
+verschijnen. Na opnieuw runnen zullen zich de volgende tabellen in de database bevinden:
 
 - medewerker_hub
 - medewerker_sat
@@ -77,15 +81,19 @@ Links
 
 Het definiëren van een link gaat als volgt::
 
-    class Medewerker_Werkgever_Link(Link):
-        medewerker = LinkReference(Medewerker)
-        werkgever = LinkReference(Organisatie)
+    class MedewerkerWerkgeverLinkEntity(LinkEntity):
+        class Link(Link):
+            medewerker = LinkReference(Medewerker)
+            werkgever = LinkReference(Organisatie)
 
 Deze class zal een link maken tussen de Medewerker en de Werkgever(Organisatie). Er komt 1 tabel, met de naam
 medewerker_werkgever_link, in de database te staan en deze bevat 2 foreign keys::
 
-  - _fk_medewerker_hub (reference -> medewerker_hub)
-  - _fk_werkgever_hub (reference -> organisatie_hub)
+  - fk_medewerker_hub (reference -> medewerker_hub)
+  - fk_werkgever_organisatie_hub (reference -> organisatie_hub)
+
+Opmerking: de naam van de fk wordt automatisch aangemaakt. Hierbij krijgt het alleen de naam van de hub waarnaar die verwijst in zich als het veld afwijkt van die naam.
+Met andere woorden: medewerker = LinkReference(Medewerker) wordt fk_medewerker_hub, omdat medewerker niet afwijkt van LinkReference(Medewerker), terwijl werkgever = LinkReference(Organisatie) de naam fk_werkgever_organisatie_hub geeft
 
 
 Hiërarchische link (link met zichzelf)
@@ -93,9 +101,10 @@ Hiërarchische link (link met zichzelf)
 
 Voorbeeld::
 
-    class Medewerker_Medewerker_Link(Link):
-        manager = LinkReference(Medewerker)
-        werknemer = LinkReference(Medewerker)
+    class MedewerkerMedewerkerLinkEntity(LinkEntity):
+        class Link(Link):
+            manager = LinkReference(Medewerker)
+            werknemer = LinkReference(Medewerker)
 
 
 
@@ -105,13 +114,13 @@ Opmerking: Zorg ervoor dat alle velden (klasse-variabelen) een unieke naam krijg
 HybridSats
 ==========
 
-Hybrid sats zijn sats die als sleutel een combinatie van 3 ipv 2 velden hebben. Dus naast de standaard id en runid
-(datum) velden hebben ze een 3de sleutelveld; namelijk het veld 'type'.
+Hybrid sats zijn sats die als sleutel een combinatie van 3 ipv 2 velden hebben. Dus naast de standaard _id en _runid
+hebben ze een 3de sleutelveld, namelijk het veld 'type'.
 Je kunt dit bijvoorbeeld toepassen op telefoonnummers::
 
-    class Persoon(DvEntity):
+    class Persoon(HubEntity):
         class Telefoonnummers(HybridSat):
-            class Types:
+            class Types (HybridSat.Types):
                 vast = 'vast'
                 mobiel = 'mobiel'
                 fax = 'fax'
@@ -119,11 +128,10 @@ Je kunt dit bijvoorbeeld toepassen op telefoonnummers::
             geldig_tot = Columns.DateColumn()
 
 De class erft over van HybridSat. Hierdoor krijgt het al het extra veld 'type'
-De inner class Types is een handigheid (niet verplicht) en bevat alleen strings. Deze waardes worden in de database
-opgeslagen in het veld type.
-Om de standaard databaseview (query) aan te maken voor deze entititeit, met daarin voor elke telefoonnummer-type de twee
-kolommen 'nummer' en 'geldig_tot' is het wel nodig van te voren te definiëren welke types er kunnen zijn in de inner class
-Types.
+De inner class Types bevat alleen strings. Deze waardes worden in de database
+opgeslagen in het veld type, afhankelijk van hoe er wordt gemapt.
+
+Je kunt nu in een tabel 3 soorten telefoonnummer met hun geldigheidsdatum kwijt en hoeft niet per type een eigen veld aan te maken.
 
 
 HybridLinks
@@ -135,16 +143,35 @@ In plaats van drie links te definieren tussen de organisatie en de adres entitei
 
 Een hybrid link wordt gelijk aan een gewone link gedefinieerd, erft over van Link. Je kun eventueel types in constanten stoppen::
 
-    class Medewerker_Adres_Link(Link):
-        class Types:
-            post = 'post'
-            bezoek = 'bezoek'
-            woon = 'woon'
-        medewerker = LinkReference(Medewerker)
-        adres = LinkReference(Medewerker)
+    class MedewerkerAdresLink(LinkEntity):
+        class Link(HybridLink):
+            class Types:
+                post = 'post'
+                bezoek = 'bezoek'
+                woon = 'woon'
+
+            medewerker = LinkReference(Medewerker)
+            adres = LinkReference(Adres)
+
+Link met een sat
+================
+
+Het is toegestaan bij een link een sat toe te voegen. Hierin dien alleen informatie te staan die echt over de link gaat en niet over een van de hubs. De link moet geen verkapte hub worden. In de praktijk zal dit maar weinig voorkomen.
+
+Voorbeeld::
+
+    class MedewerkerWerkgeverLinkEntity(LinkEntity):
+        class Link(Link):
+            medewerker = LinkReference(Medewerker)
+            werkgever = LinkReference(Organisatie)
+
+        class Geldigheid(Sat):
+            vanaf = Columns.DateColumn()
+            tot = Columns.DateColumn()
 
 DynamicLinks
 ===========
+OUT OF ORDER. Hier wordt voorlopig niet aan gewerkt
 Een dynamic link is een link waarbij dezelfde fk naar verschillende hubs kan verwijzen. Je definieert hem als volgt::
 
     class PatientHandelingLink(Link):
@@ -165,48 +192,9 @@ Laatste regel bevat de dynamische link ref. De tabel zal oa. de volgende velden 
   - _fk_handeling_hub (met index en fk constraint naar handeling_hub._id)
   - _fk_dynamic_hub (met index maar zonder fk constraint)
 
-Referenties
-===========
-
-Een sat mag geen links (foreign keys) bevatten naar andere tabellen. Hierop bestaat 1 uitzondering: er mag een join zijn
-met de referentietabel.
-Standaard wordt een dv schema uitgerust met een referentie tabel. Dat is 1 tabel met daarin alle referentie velden.
-
-De referentie tabel heeft de volgende stuctuur:
-
-- type (text, key)
-- code (text, key)
-- description (text)
-- description2 (text)
-
-De sleutel is de combinatie van type met code. Bij deze combinatie kan vervolgens de omschrijving gevonden worden.
-
-Je definieert in de Sat een RefColumn als volgt::
-
-    class RefTypes:
-        # aanmaken van enkele gebundelde string constanten
-        geslacht = 'geslacht'
-        specialisme_codes = 'specialisme'
-
-    class Medewerker(DvEntity):
-        class Default(Sat):
-            geboortedatum = Columns.DateColumn()
-            geslacht_code = Columns.RefColumn(RefTypes.geslacht)
-
-Geslachtcode is hier een ref-column. Deze heeft dus een code-omschrijving combinatie in de referentie tabel en zal in de
-standaard view te zien zijn.
-
-Wanneer de database wordt aangemaakt, worden behalve de tabellen ook views aangemaakt. Per entity 1 view.
-Bovenstaand voorbeeld zal een medewerker_view aanmaken met de velden:
-
-- bk
-- geboortedatum
-- geslacht_code
-- geslacht_desc
-
 Ensemble_view
 =============
-
+OUT OF ORDER. Hier wordt voorlopig niet aan gewerkt
 Een ensemble_view is een view van een verzameling etiteiten met de daarbij horende link(s). Voordat een ensemble_view gemaakt kan worden is het wel noodzakelijk dat de views van gebruikte
 entiteiten en van de links tussen die entiteiten al gemaakt zijn. De klasse van de gewenste ensemble_view maak je als
 volgt::
@@ -225,16 +213,3 @@ daarbijhorende link(s) deze ensemble bevat. In plaats van alleen de entiteit naa
 entititeiten of links ook een alias gegeven worden zoals bijvoorbeeld de veel kortere alias 'link' in plaats van
 'Zorgverlener_Zorginstelling_Link'.
 
-
-Aanmaken tabellen
-=================
-
-Door het domeinmodel (de python module) te registreren bij de pipe en vervolgens de pipeline te runnen zullen de
-tabellen in de database worden aangemaakt::
-
-    from domainmodels from main import get_root_path_domain
-
-    pipeline = Pipeline(config)
-    pipe = pipeline.get_or_create_pipe('test')
-    pipe.register_domain(main_domain)
-    pipeline.run()

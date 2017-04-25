@@ -4,7 +4,7 @@ import math
 from collections import OrderedDict
 from typing import List
 
-from main import get_root_path
+# from main import get_root_path
 # from sample_domains import _ensemble_views
 from pyelt.datalayers.database import * #Schema, DbFunction
 # from pyelt.datalayers.dm import Dim, Fact
@@ -67,9 +67,10 @@ Voorbeeld::
             # singleton implementatie
             cls._instance = super(Pipeline, cls).__new__(
                 cls)
+            config = None
             if args:
                 config = args[0]
-            else:
+            elif 'config' in kwargs:
                 config = kwargs['config']
 
             # cls._instance.pyelt_config = config #: pyelt_config
@@ -286,6 +287,7 @@ Voorbeeld::
     def __get_git_hashes(self):
         git_hashes = {}
         import subprocess, os
+        from main import get_root_path
         for name in os.listdir(get_root_path()):
             if os.path.isdir(name):
                 subdirs = os.listdir(name)
@@ -336,6 +338,7 @@ Voorbeeld::
         elif 'send_log_mail_after_run' in self.config['email_settings'] and self.config['email_settings']['send_log_mail_after_run']:
             params = self.config['email_settings']
             params['to'] = params['to'].replace(';', ',')
+            from main import get_root_path
             params['attachments_command'] = ' -a "' + get_root_path() + self.config['log_path'] + self.logger.filename + '"'
 
             if self.logger.errors:

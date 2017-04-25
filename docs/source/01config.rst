@@ -1,24 +1,34 @@
 Config
 ======
 
-Pyelt wordt opgeleverd met twee mappen:
+Om Pyelt te gebruiken is een config bestand nodig.
 
-- pyelt:             
-  De map met de core van pyelt. Deze map wordt onderhouden door het pyelt core ontwikkelteam.
-- etl_processes:     
-  De map waarin de etl-processen van je eigen project staan. Per bronsysteem maak je een submap aan,
-  waarin je in python code je eigen pyelt etl-proces definieert.
+Maak een nieuw project aan bijvoorbeeld myDatavault en definieer hierin twee mappen::
 
-In de root van etl_processes staat het bestand config.py. Hierin zet je o.a. de verbinding(en) naar de database(s)::
+ \domainmodel
+ \mappings
 
-    config = {
-        'log_path': '\\logs\\',
-        'conn_dwh': 'postgresql:/user:pwd@server/database',
-        'debug': False, #Zet debug op true om een gelimiteerd aantal rijen op te halen
-        'datatransfer_path': '/tmp/pyelt/datatransfer' #voor linux server: datatransfer pad mag niet in /home folder
-                                                       # zijn, want anders kan postgres er niet bij.
+In de root maak je een bestand aan configs.py::
+
+
+    general_config = {
+        'log_path': '/logs/',
+        'ddl_log_path': '/logs/ddl/',
+        'sql_log_path': '/logs/sql/',
+        'conn_dwh': 'postgresql://user:pass@127.0.0.1:5432/dwh2',
+        'debug': True,
+        'ask_confirm_on_db_changes': False,
+        'on_errors': 'log',
+        'datatransfer_path': '/tmp',
+        'data_root': '/var/data',
+        'create_views': False,
+        'email_settings': {
+        'send_mail_before_run': True,
+            'send_log_mail_after_run': True,
+            'from': 'server <henk-jan.van.reenen@nlhealthcareclinics.com>',
+            'to': 'henk-jan.van.reenen@nlhealthcareclinics.com;',
+            'subject': 'PYELT DEV-TEST RUN ',
+            'msg': 'Beste mensen,//n//nHierbij de pyelt log(s)//n//n//nGroet Claude S.//n'
+        }
     }
-
-De database bestaat uit meerdere schema's. Per laag is er een eigen schema (zoals bijvoorbeeld sor, dv, sys). Iedere laag maakt
-gebruik van dezelfde database verbinding.
 
