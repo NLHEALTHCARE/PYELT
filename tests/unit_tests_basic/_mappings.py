@@ -41,7 +41,7 @@ def init_tabsource_to_sor_mappings():
 def init_sor_to_dv_mappings(sor):
     mappings = []
     mapping = SorToEntityMapping('patient_hstage', Patient, sor)
-    mapping.map_field("patientnummer || '_test'", Patient.bk)
+    mapping.map_bk("patientnummer || '_test'")
     mapping.map_field('achternaam', Patient.Personalia.achternaam)
     mapping.map_field('tussenvoegsels', Patient.Personalia.tussenvoegsels)
     mapping.map_field('voornaam', Patient.Personalia.voornaam)
@@ -57,12 +57,12 @@ def init_sor_to_dv_mappings(sor):
     mapping.map_field('bsn', Patient.Inschrijving.bsn)
     mapping.map_field('inschrijvingsdatum::date', Patient.Inschrijving.inschrijfdatum)
     # hybrid sat mapping
-    mapping.map_field('telefoon', Patient.ContactGegevens.telnummer, type=Patient.ContactGegevens.Types.telefoon)
-    mapping.map_field('mobiel', Patient.ContactGegevens.telnummer, type=Patient.ContactGegevens.Types.mobiel)
+    mapping.map_field('telefoon', Patient.Contactgegevens.telnummer, type=Patient.Contactgegevens.Types.telefoon)
+    mapping.map_field('mobiel', Patient.Contactgegevens.telnummer, type=Patient.Contactgegevens.Types.mobiel)
     mappings.append(mapping)
 
     mapping = SorToEntityMapping('traject_hstage', SubTraject, sor)
-    mapping.map_field("patientnummer || '_test' || trajectnummer", SubTraject.bk)
+    mapping.map_field("patientnummer || '_test' || trajectnummer", SubTraject.Hub.bk)
     mapping.map_field('trajectnummer::integer', SubTraject.Default.nummer)
     mapping.map_field('start_datum::timestamp', SubTraject.Default.start)
     mapping.map_field('einde_datum::timestamp', SubTraject.Default.eind)
@@ -70,8 +70,8 @@ def init_sor_to_dv_mappings(sor):
     mappings.append(mapping)
 
     link_mapping = SorToLinkMapping('traject_hstage', Patient_Traject_Link, sor, type='subtraject')
-    link_mapping.map_bk("patientnummer || '_test'", Patient_Traject_Link.Patient)
-    link_mapping.map_sor_fk('', Patient_Traject_Link.Traject, type='subtraject')
+    link_mapping.map_entity(Patient_Traject_Link.Link.patient, bk="patientnummer || '_test'")
+    link_mapping.map_entity(Patient_Traject_Link.Link.traject, bk="patientnummer || '_test' || trajectnummer")
     mappings.append(link_mapping)
 
     ######################
@@ -101,18 +101,18 @@ def init_sor_to_dv_mappings(sor):
     mapping.map_field("hulpverlener_naam", Hulpverlener.Default.naam)
     mappings.append(mapping)
 
-    link_mapping = SorToLinkMapping('handeling_hstage', PatientHandelingLink, sor)
-    link_mapping.map_bk("patientnummer || '_test'", PatientHandelingLink.Patient)
-    link_mapping.map_entity(PatientHandelingLink.Handeling)
-    link_mapping.map_entity(PatientHandelingLink.Dynamic, bk="hulpverlener_agb", type=PatientHandelingLink.Types.hulpverlener)
-    # link_mapping.map_bk("hulpverlener_agb", PatientHandelingLink.Dynamic, type=PatientHandelingLink.Types.hulpverlener)
-    # link_mapping.map_sor_fk('_fk_hulpverlener_hub', PatientHandelingLink.Dynamic, type=PatientHandelingLink.Types.hulpverlener)
-    mappings.append(link_mapping)
+    # link_mapping = SorToLinkMapping('handeling_hstage', PatientHandelingLink, sor)
+    # link_mapping.map_bk("patientnummer || '_test'", PatientHandelingLink.Link.Patient)
+    # link_mapping.map_entity(PatientHandelingLink.Link.Handeling)
+    # link_mapping.map_entity(PatientHandelingLink.Link.Dynamic, bk="hulpverlener_agb", type=PatientHandelingLink.Link.Types.hulpverlener)
+    # # link_mapping.map_bk("hulpverlener_agb", PatientHandelingLink.Dynamic, type=PatientHandelingLink.Types.hulpverlener)
+    # # link_mapping.map_sor_fk('_fk_hulpverlener_hub', PatientHandelingLink.Dynamic, type=PatientHandelingLink.Types.hulpverlener)
+    # mappings.append(link_mapping)
 
-    link_mapping = SorToLinkMapping('handeling_hstage', PatientHandelingLink, sor)
-    link_mapping.map_bk("patientnummer || '_test'", PatientHandelingLink.Patient)
-    link_mapping.map_entity(PatientHandelingLink.Handeling)
-    link_mapping.map_sor_fk('fk_locatie_hub', PatientHandelingLink.Dynamic, type=PatientHandelingLink.Types.locatie)
-    mappings.append(link_mapping)
+    # link_mapping = SorToLinkMapping('handeling_hstage', PatientHandelingLink, sor)
+    # link_mapping.map_bk("patientnummer || '_test'", PatientHandelingLink.Link.Patient)
+    # link_mapping.map_entity(PatientHandelingLink.Link.Handeling)
+    # link_mapping.map_sor_fk('fk_locatie_hub', PatientHandelingLink.Link.Dynamic, type=PatientHandelingLink.Link.Types.locatie)
+    # mappings.append(link_mapping)
 
     return mappings

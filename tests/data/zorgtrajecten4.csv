@@ -1,0 +1,4 @@
+patientnummer;trajectnummer;start_datum;einde_datum;status
+100;1;1-1-2014;1-1-2015;closed
+100;2;15-5-2015;;open
+101;2;27-8-2015;;open

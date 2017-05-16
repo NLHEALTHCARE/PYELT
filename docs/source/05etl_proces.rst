@@ -23,7 +23,10 @@ Achter de schermen gebeuren dan globaal de volgende stappen:
         - etl van bron naar sor
         - validaties van sor data
         - aanmaken nieuwe sor tabellen
-    B. van sor naar dv:
+    B. van sor naar valsets:
+        - etl van sor naar dv
+        - validaties van dv data
+    C. van sor naar dv:
         - etl van sor naar dv
         - validaties van dv data
 5. Controle en afsluiting

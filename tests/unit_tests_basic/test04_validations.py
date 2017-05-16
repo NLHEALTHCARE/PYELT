@@ -39,7 +39,7 @@ class TestCase_Validations(unittest.TestCase):
 
         validation = DvValidation()
         validation.msg = '102 is ongeldig'
-        validation.set_condition(Patient.hub.bk == '102_test')
+        validation.set_condition(Patient.Hub.bk == '102_test')
         validations.append(validation)
 
         validation = DvValidation()

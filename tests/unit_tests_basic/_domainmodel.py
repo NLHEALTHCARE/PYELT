@@ -2,11 +2,11 @@ from typing import List
 
 
 from pyelt.datalayers.database import Column, Columns
-from pyelt.datalayers.dv import Sat, DvEntity, Link, Hub, HybridSat, LinkReference, DynamicLinkReference
+from pyelt.datalayers.dv import *
 
 
 
-class Patient(DvEntity):
+class Patient(HubEntity):
     """Patienten zijn alle personen in de rol van patient.
     bk: registratie_syteem + inschrijvingsnummer"""
 
@@ -33,7 +33,7 @@ class Patient(DvEntity):
         plaats = Columns.TextColumn()
         land = Columns.TextColumn()
 
-    class ContactGegevens(HybridSat):
+    class Contactgegevens(HybridSat):
         class Types(HybridSat.Types):
             telefoon = 'telefoon'
             mobiel = 'mobiel'
@@ -50,13 +50,16 @@ class Patient(DvEntity):
 
 
 
-class Traject(DvEntity):
+class Traject(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         start = Columns.DateTimeColumn()
         eind = Columns.DateTimeColumn('sluit_datum')
         nummer = Columns.IntColumn()
         status =  Columns.TextColumn()
+
+    class RecordStatus(RecordStatusSat):
+        pass
 
 
 
@@ -66,17 +69,21 @@ class SubTraject(Traject):
 
 
 
-class Patient_Traject_Link(Link):
-    Patient = LinkReference(Patient)
-    Traject = LinkReference(Traject)
+class Patient_Traject_Link(LinkEntity):
+    class Link(Link):
+        patient = LinkReference(Patient)
+        traject = LinkReference(Traject)
 
     class Default(Sat):
         start = Columns.DateTimeColumn()
         eind = Columns.DateTimeColumn('sluit_datum')
         status = Columns.TextColumn()
 
+    class RecordStatus(RecordStatusSat):
+        pass
 
-class Organisatie(DvEntity):
+
+class Organisatie(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
 
@@ -91,33 +98,34 @@ class Zorginstelling(Organisatie):
         agbnummer = Columns.TextColumn()
 
 
-class Hulpverlener(DvEntity):
+class Hulpverlener(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         agbnummer = Columns.TextColumn()
 
 
-class Locatie(DvEntity):
+class Locatie(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         kamernummer = Columns.TextColumn()
         lat_long = Columns.TextColumn()
 
 
-class Handeling(DvEntity):
+class Handeling(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         dbc_activiteit_code = Columns.TextColumn()
         datum = Columns.DateTimeColumn()
 
 
-class PatientHandelingLink(Link):
-    class Types():
-        hulpverlener = Hulpverlener
-        zorginstelling = Zorginstelling
-        zorgverzekeraar = Zorgverzekeraar
-        locatie = Locatie
+class PatientHandelingLink(LinkEntity):
+    class Link(HybridLink):
+        class Types():
+            hulpverlener = Hulpverlener
+            zorginstelling = Zorginstelling
+            zorgverzekeraar = Zorgverzekeraar
+            locatie = Locatie
 
-    Patient = LinkReference(Patient)
-    Handeling = LinkReference(Handeling)
-    Dynamic = DynamicLinkReference()
+        Patient = LinkReference(Patient)
+        Handeling = LinkReference(Handeling)
+        Dynamic = DynamicLinkReference()

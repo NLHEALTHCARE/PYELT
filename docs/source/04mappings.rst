@@ -13,7 +13,6 @@ veldnamen::
     pipeline = Pipeline()
     pipe = pipeline.get_or_create_pipe('timeff', timeff_config)
     source_db = pipe.source_db
-
     source_tbl = SourceTable('V_INTF_CONTACT', source_db.default_schema, source_db )
     source_tbl.set_primary_key(['id'])
     mapping = SorMapping(source_tbl,'persoon_hstage', auto_map = True)

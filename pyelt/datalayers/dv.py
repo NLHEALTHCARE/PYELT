@@ -40,7 +40,7 @@ class DvTable(AbstractOrderderTable):
     _id = Columns.SerialColumn()
     _runid = Columns.FloatColumn()
     _source_system = Columns.TextColumn()
-    _valid = Columns.BoolColumn()
+    _valid = Columns.BoolColumn(default_value=True)
     _validation_msg = Columns.TextColumn()
     _insert_date = Columns.DateTimeColumn()
 
@@ -82,6 +82,8 @@ class HybridSat(Sat):
                 types.append(val)
         return types
 
+class RecordStatusSat(Sat):
+    deleted = Columns.DateTimeColumn()
 
 class Link(DvTable):
     type = Columns.TextColumn()
@@ -141,6 +143,7 @@ class HubEntity(metaclass=HubEntityMetaClass):
     class Hub(Hub):
         pass
 
+
     @classmethod
     def cls_get_sats(cls) -> Dict[str, Sat]:
         """:returns __sats__
@@ -171,6 +174,17 @@ class HubEntity(metaclass=HubEntityMetaClass):
     def cls_get_hub_name(cls) -> str:
         return cls.Hub.__dbname__
 
+    @classmethod
+    def cls_get_record_status_sat(cls) -> RecordStatusSat:
+        for key, sat in cls.__sats__.items():
+            if sat.__base__ == RecordStatusSat:
+                return sat
+
+    @classmethod
+    def cls_has_record_status_sat(cls) -> bool:
+        sat = cls.cls_get_record_status_sat()
+        return sat != None
+
     def __str__(self):
         return self.__class__.__name__.lower + '_entity'
 
@@ -181,6 +195,9 @@ class LinkEntity(metaclass=LinkEntityMetaClass):
     __dbname__= ''
     class Link(Link):
         pass
+
+    # class RecordTracking(RecordStatusSat):
+    #     pass
 
     @classmethod
     def cls_get_schema(cls, dwh) -> 'Schema':
@@ -194,6 +211,19 @@ class LinkEntity(metaclass=LinkEntityMetaClass):
     @classmethod
     def cls_get_sats(cls) -> Dict[str, Sat]:
         return cls.__sats__
+
+    @classmethod
+    def cls_get_record_status_sat(cls) -> RecordStatusSat:
+        for key, sat in cls.__sats__.items():
+            if sat.__base__ == RecordStatusSat:
+                return sat
+
+    @classmethod
+    def cls_has_record_status_sat(cls) -> bool:
+        sat = cls.cls_get_record_status_sat()
+        return sat != None
+
+
 
 class EnsembleView():
     pass

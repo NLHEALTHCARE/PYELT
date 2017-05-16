@@ -33,7 +33,7 @@ class TestCase_mappings2(unittest.TestCase):
     def test_sor_to_dv_mappings(self):
         sor = self.pipe.sor
         mapping = SorToEntityMapping('patient_hstage', Patient, sor)
-        mapping.map_field("patientnummer || '_test'", Patient.bk)
+        mapping.map_field("patientnummer || '_test'", Patient.Hub.bk)
         mapping.map_field('achternaam', Patient.Personalia.achternaam)
         mapping.map_field('tussenvoegsels', Patient.Personalia.tussenvoegsels)
         mapping.map_field('voornaam', Patient.Personalia.voornaam)

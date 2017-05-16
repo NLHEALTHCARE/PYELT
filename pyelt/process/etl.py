@@ -176,10 +176,11 @@ class EtlSourceToSor(BaseEtl):
                 **params)
             self.execute(sql, 'update set old ones inactive')
 
-            # sql = """update {sor}.{sor_table} current set _revision = previous._revision + 1
-            #         from {sor}.{sor_table} previous where current._active = True AND ({keys_compare}) and previous._runid < current._runid;""".format(
-            #     **params)
-            # self.execute(sql,  'update sor set old ones inactive')
+            # STAP 6 DELETED Markeren
+            sql = """update {sor}.{sor_table} set _deleted_runid = {runid}, _active = FALSE, _finish_date = now()
+                    WHERE _active AND ({key_fields}) NOT IN (SELECT {key_fields} FROM {sor}.{temp_table})""".format(
+                **params)
+            self.execute(sql,  'update sor set deleted ones')
 
         except Exception as ex:
             self.logger.log_error(mappings.name, ex=ex)
@@ -486,6 +487,19 @@ AND {filter} AND {filter_runid};""".format( **params)
 
             for sat_mappings in mappings.sat_mappings.values():
                 self.__sor_to_sat(params, sat_mappings)
+
+            # deletes
+            hub_entity = mappings.target  # type: HubEntity
+            if hub_entity.cls_has_record_status_sat():
+                params['record_satus_sat'] = hub_entity.cls_get_record_status_sat().__dbname__
+                sql = """INSERT INTO {dv_schema}.{record_satus_sat} (_id, _runid, _source_system, _insert_date, deleted)
+                                    SELECT _id, {runid}, '{source_system}', now(), now()
+                                    FROM {dv_schema}.{hub}
+        WHERE _id NOT IN (SELECT _id FROM {dv_schema}.{record_satus_sat}) AND
+              _id IN (SELECT fk_{relation_type}{hub}
+                        FROM sor_test_system.traject_hstage hstg
+                        WHERE hstg._deleted_runid = {runid})""".format(**params)
+                self.execute(sql, 'update deleted records')
             self.logger.log('FINISH {}'.format(mappings), indent_level=3)
         except Exception as ex:
             self.logger.log_error(mappings.name, err_msg=ex.args[0])
@@ -723,6 +737,24 @@ AND hstg._valid AND {filter};""".format(
 
             for sat_mappings in mappings.sat_mappings.values():
                 self.__sor_to_sat(params, sat_mappings)
+
+            #deletes
+            link_entity = mappings.target #type: LinkEntity
+            if link_entity.cls_has_record_status_sat():
+                params['record_satus_sat'] = link_entity.cls_get_record_status_sat().__dbname__
+                sql = """INSERT INTO {dv_schema}.{record_satus_sat} (_id, _runid, _source_system, _insert_date, deleted)
+                            SELECT _id, {runid}, '{source_system}', now(), now()
+                            FROM {dv_schema}.{link}
+WHERE _id NOT IN (SELECT _id FROM {dv_schema}.{record_satus_sat}) AND
+      ({target_fks}) IN (SELECT {source_fks}
+                            FROM sor_test_system.traject_hstage hstg
+                              {join}
+  WHERE hstg._deleted_runid = {runid})""".format(**params)
+                self.execute(sql, 'update deleted records')
+
+
+
+
             self.logger.log('  FINISH {}'.format(mappings))
         except Exception as ex:
             self.logger.log_error(mappings.name, err_msg=ex.args[0])

@@ -121,11 +121,12 @@ class HubEntityMetaClass(type):
         for base in new_hub_entity_cls.__mro__:
             if 'HubEntity' in str(base.__bases__):
                 entity_with_hub = base
+
         # satnames zetten
         new_hub_entity_cls.__sats__ = OrderedDict()
         from pyelt.datalayers.dv import Sat
         for key, sat_cls in new_hub_entity_cls.__dict__.items():
-            if inspect.isclass(sat_cls) and Sat in sat_cls.__mro__:
+            if inspect.isclass(sat_cls) and Sat in sat_cls.__mro__ :
                 sat_cls.__dbschema__ = entity_with_hub.__dbschema__
                 sat_name = camelcase_to_underscores(key).replace('_sat', '').replace('sat', '')
                 sat_cls.__dbname__ = camelcase_to_underscores(entity_with_hub.__name__) + '_sat_' + sat_name

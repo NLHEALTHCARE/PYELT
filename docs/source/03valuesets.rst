@@ -23,12 +23,15 @@ Voeg deze python module toe aan de pipeline::
     pipeline.register_valset_domain(valsets)
     pipeline.run()
 
-Na het runnen zal er een tabel zijn aangemaakt in het valset schema
+Na het runnen zal er een tabel zijn aangemaakt in het valset schema.
 
-Een valusettable heeft standaard al de volgende velden:
- - valueset_naam (text, key)
- - code (text, key)
+Een valuesettable heeft standaard al de volgende velden:
+
+ - valueset_naam (text, unique)
+ - code (text, unique)
  - omschrijving (text)
+
+(combinatie van valueset_naam en code is uniek)
 
 We hadden de geslachten tabel dus ook punnen definieren als::
 
@@ -48,11 +51,13 @@ Sommige valueset code hebben een periode van geldigheid. Deze definieer je door:
 
 Hierin zitten de volgende vaste standaard velden:
 
- - valueset_naam (text, key)
- - code (text, key)
+ - valueset_naam (text, unique)
+ - code (text, unique)
  - omschrijving (text)
- - ingangsdatum
- - einddatum
+ - ingangsdatum (date, unique)
+ - einddatum (date)
+
+(combinatie van valueset_naam, code en ingangsdatum is uniek)
 
 Maar als je goed kijkt zie je in de tabel ook de standaard systeem velden (beginnend met een underscore). Hierin zitten ook al een _insert_date en _finish_date. Is dat niet dubbel op zul je denken?
 Deze zijn er om de historie van de historie bij te houden. Dus stel dat de ingansdatum van een code een keer wijzigt, dan wil je weten wat de oude ingangsdatum was en wanneer die is gewijzigd. Dat kun je dan zien aan de _finish_date.

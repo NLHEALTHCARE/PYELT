@@ -339,6 +339,7 @@ class DdlSor(Ddl):
         _source_system character varying,
         _insert_date timestamp without time zone,
         _finish_date timestamp without time zone,
+        _deleted_runid numeric(8,2),
         _revision integer DEFAULT 0,
         _valid boolean NOT NULL DEFAULT TRUE,
         _validation_msg character varying,

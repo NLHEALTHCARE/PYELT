@@ -18,10 +18,13 @@ Inhoud:
     01config
     02pipeline
     03domain
-    03mappings
-    04etl_proces
+    03valuesets
+    04mappings
+    04transformaties
+    04validaties
+    05etl_proces
 
-    98blablabl
+    98pijplijn
 
     99api
 
