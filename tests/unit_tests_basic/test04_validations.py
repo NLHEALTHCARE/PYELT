@@ -1,12 +1,8 @@
+from pyelt.mappings.validations import SorValidation, DvValidation
 from tests.unit_tests_basic import _domainmodel
 from tests.unit_tests_basic._domainmodel import Patient
 from tests.unit_tests_basic._mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings
 from tests.unit_tests_basic.global_test_suite import get_global_test_pipeline, exec_sql, test_system_config, init_db
-from main import get_root_path
-from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping
-from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
-from pyelt.mappings.validations import Validation, SorValidation, DvValidation
-from pyelt.sources.files import CsvFile
 
 __author__ = 'hvreenen'
 
@@ -16,7 +12,6 @@ class TestCase_Validations(unittest.TestCase):
     is_init = False
     def setUp(self):
         if not TestCase_Validations.is_init:
-            print('init_db')
             init_db()
             TestCase_Validations.is_init = True
         self.pipeline = get_global_test_pipeline()

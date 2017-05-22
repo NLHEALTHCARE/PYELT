@@ -109,6 +109,7 @@ class SorSatMapping(BaseTableMapping):
 
     def get_source_fields(self, alias: str = '')-> str:
         if not alias: alias = 'hstg'
+        is_hybrid_sat = self.target.__base__ == HybridSat
         # return super().get_source_fields(alias)
         fields = ''  # type: str
         target_json_dict = OrderedDict()
@@ -135,8 +136,11 @@ class SorSatMapping(BaseTableMapping):
                 field = field[:-1]
                 field = "'{" + field + "}',"
             # voorkom eventuele dubbele veldnamen bij hybrid sats
-            if field not in fields:
+            if is_hybrid_sat and field not in fields:
                 fields += field
+            else:
+                fields += field
+
 
         for name, value in target_json_dict.items():
             sql_snippet = """json_build_object("""

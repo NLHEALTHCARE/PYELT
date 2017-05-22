@@ -1,5 +1,7 @@
+import sys
+
 from pyelt.pipeline import Pipeline
-from tests.unit_tests_basic.global_test_suite import *
+from tests.unit_tests_basic.global_test_suite import test_system_config, init_db, get_global_test_pipeline
 __author__ = 'hvreenen'
 
 import unittest
@@ -8,8 +10,10 @@ import unittest
 
 
 class TestCase_Pipeline(unittest.TestCase):
+
     def test_pipeline_exists(self):
-        pipeline = Pipeline({})
+        # logging.basicConfig(stream=sys.stdout)
+        pipeline = get_global_test_pipeline()
         self.assertIsNotNone(pipeline)
         self.assertIsNotNone(pipeline.dwh)
         self.assertIsNotNone(pipeline.dwh.dv)
@@ -39,5 +43,5 @@ class TestCase_Pipeline(unittest.TestCase):
 def run():
     unittest.main()
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()

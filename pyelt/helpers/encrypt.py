@@ -57,13 +57,14 @@ if __name__ == '__main__':
             print('usage: encrypt.py [encode|decode] "[key]" "[string]"')
 
 if __name__ == '__main__':
-    pwd = 'password'
+    pwd = 'xxxxxxxxxxxx'
     if len(sys.argv) > 1:
         pwd = sys.argv[1]
     s = SimpleEncrypt.encode('pwd', pwd)
     print(s)
 
-    d = SimpleEncrypt.decode('key', s)
+    s = 'xxxxxxxxxx'
+    d = SimpleEncrypt.decode('pwd', s)
     print(d)
 
 

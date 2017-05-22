@@ -31,6 +31,7 @@ class Database():
     def reflect_schemas(self):
         """via sqlalchemy inspector worden de schema-namen in de database opgehaald. Hier worden schema objecten van gemaakt.
         """
+        self.reflected_schemas = {}
         inspector = reflection.Inspector.from_engine(self.engine)
         schema_names = inspector.get_schema_names()
         for schema_name in schema_names:
@@ -127,6 +128,10 @@ class Schema():
         self.version = 1.0
 
     def reflect(self):
+        self.tables = {}  # type: Dict[str, Table]
+        self.views = {}  # type: Dict[str, View]
+        self.functions = {}  # type: Dict[str, DbFunction]
+
         inspector = reflection.Inspector.from_engine(self.db.engine)
         table_names = inspector.get_table_names(self.name)
         view_names = inspector.get_view_names(self.name)

@@ -417,6 +417,7 @@ Voorbeeld::
                 cls.__dbschema__ = schema_name
 
     def create_sys_tables(self, schema):
+        schema.reflect()
         ddl = Ddl(self, schema)
         ddl.create_or_alter_table(Sys.Runs)
         ddl.create_or_alter_table(Sys.Currentversion)

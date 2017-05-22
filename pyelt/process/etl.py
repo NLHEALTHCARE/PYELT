@@ -511,6 +511,8 @@ AND {filter} AND {filter_runid};""".format( **params)
         sat_cls = sat_mappings.target
         satparams['dv_schema'] = params['dv_schema']
         satparams['sat'] = sat_cls.cls_get_name()
+        if satparams['sat'] == 'afspraak_sat_identificatie':
+            bedug = True
 
         if 'hub' in params:
             satparams['hub_or_link'] = params['hub']

@@ -4,7 +4,9 @@ general_config = {
     'log_path': '/logs/',
     'conn_dwh': 'postgresql://postgres:pgsuadmin2016@localhost:5432/pyelt_unittests_extra',
     'debug': False,
-    'on_errors': 'throwx'
+    'on_errors': 'throwx',
+    'log_to_console': False
+
 }
 
 test_system_config = {

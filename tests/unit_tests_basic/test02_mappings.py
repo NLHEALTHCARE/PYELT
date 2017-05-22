@@ -1,6 +1,6 @@
 import unittest
 
-from tests.unit_tests_basic.global_test_suite import *
+from tests.unit_tests_basic.global_test_suite import get_global_test_pipeline
 from main import get_root_path
 from tests.unit_tests_basic._domainmodel import Patient
 from pyelt.mappings.sor_to_dv_mappings import SorToEntityMapping
@@ -48,9 +48,9 @@ class TestCase_mappings2(unittest.TestCase):
         mapping.map_field('inschrijvingsnummer', Patient.Inschrijving.inschrijfnummer)
         mapping.map_field('bsn => default.bsn', Patient.Inschrijving.bsn)
         mapping.map_field('inschrijvingsdatum::date')
-        mapping.map_field('telefoon', Patient.ContactGegevens.telnummer, type=Patient.ContactGegevens.Types.telefoon)
-        mapping.map_field('mobiel', Patient.ContactGegevens.telnummer, type=Patient.ContactGegevens.Types.mobiel)
-        mapping.map_field('telefoon', Patient.ContactGegevens.telnummer, type='telefoon')
+        mapping.map_field('telefoon', Patient.Contactgegevens.telnummer, type=Patient.Contactgegevens.Types.telefoon)
+        mapping.map_field('mobiel', Patient.Contactgegevens.telnummer, type=Patient.Contactgegevens.Types.mobiel)
+        mapping.map_field('telefoon', Patient.Contactgegevens.telnummer, type='telefoon')
         self.assertEqual(mapping.name, 'patient_hstage -> patient_entity')
         num_sats = len(mapping.sat_mappings)
         bk = mapping.bk_mapping

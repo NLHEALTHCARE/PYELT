@@ -1,7 +1,7 @@
 from tests.unit_tests_basic import _domainmodel
 from tests.unit_tests_basic.global_test_suite import get_global_test_pipeline, exec_sql, test_system_config, init_db
 from tests.unit_tests_basic._mappings import init_source_to_sor_mappings, init_sor_to_dv_mappings, init_tabsource_to_sor_mappings
-from tests.unit_tests_basic.test02_ref_mappings import init_test_ref_mappings
+from tests.unit_tests_basic.test02_ref_mappings import init_test_valueset_mappings
 from main import get_root_path
 
 __author__ = 'hvreenen'
@@ -20,7 +20,6 @@ class TestCase_RunProces(unittest.TestCase):
 
     def setUp(self):
         if not TestCase_RunProces.is_init:
-            print('init_db')
             init_db()
             TestCase_RunProces.is_init = True
         self.pipeline = get_global_test_pipeline()

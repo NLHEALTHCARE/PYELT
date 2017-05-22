@@ -3,7 +3,7 @@ from typing import List
 
 from pyelt.datalayers.database import Column, Columns
 from pyelt.datalayers.dv import *
-
+from pyelt.datalayers.valset import DvValueset
 
 
 class Patient(HubEntity):
@@ -129,3 +129,8 @@ class PatientHandelingLink(LinkEntity):
         Patient = LinkReference(Patient)
         Handeling = LinkReference(Handeling)
         Dynamic = DynamicLinkReference()
+
+class Valueset(DvValueset):
+    valueset_naam = Columns.TextColumn()
+    code = Columns.TextColumn()
+    omschrijving = Columns.TextColumn()
