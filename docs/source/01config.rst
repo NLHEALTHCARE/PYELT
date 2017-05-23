@@ -3,12 +3,14 @@ Config
 
 Om Pyelt te gebruiken is een config bestand nodig.
 
-Maak een nieuw project aan bijvoorbeeld myDatavault en definieer hierin twee mappen::
+Maak een nieuw project aan bijvoorbeeld myDatavault en definieer hierin drie mappen::
 
+ \configs
  \domainmodel
  \mappings
 
-In de root maak je een bestand aan configs.py::
+
+In de \configs maak je een bestand aan bijvoorbeeld my_configs.py::
 
 
     general_config = {

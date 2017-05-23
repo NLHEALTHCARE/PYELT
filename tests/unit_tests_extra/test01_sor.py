@@ -133,10 +133,11 @@ class TestCase_RunSor(unittest.TestCase):
         exec_sql(source_db_sql[4], test_system_config['source_connection'])
         self.pipeline.run()
         self.assertEqual(get_row_count('sor_extra.handeling_hstage'), 6)
-        revision = get_fields('sor_extra.handeling_hstage', [6], filter='_runid = 0.04')[0][0]
+        fields = get_fields('sor_extra.handeling_hstage', [7], filter='_runid = 1.03')
+        revision = get_fields('sor_extra.handeling_hstage', [7], filter='_runid = 1.03')[0][0]
         self.assertEqual(revision, 3)
         self.assertEqual(get_row_count('sor_extra.handeling2_hstage'), 6)
-        revision = get_fields('sor_extra.handeling2_hstage', [6], filter='_runid = 0.04')[0][0]
+        revision = get_fields('sor_extra.handeling2_hstage', [7], filter='_runid = 1.03')[0][0]
         self.assertEqual(revision, 3)
 
     def test_run5(self):
@@ -156,10 +157,10 @@ class TestCase_RunSor(unittest.TestCase):
         exec_sql(source_db_sql[5], test_system_config['source_connection'])
         self.pipeline.run()
         self.assertEqual(get_row_count('sor_extra.handeling_hstage'), 8)
-        revision = get_fields('sor_extra.handeling_hstage', [6], filter='_runid = 0.06')[0][0]
+        revision = get_fields('sor_extra.handeling_hstage', [7], filter='_runid = 1.05')[0][0]
         self.assertEqual(revision, 0)
         self.assertEqual(get_row_count('sor_extra.handeling2_hstage'), 8)
-        revision = get_fields('sor_extra.handeling2_hstage', [6], filter='_runid = 0.06')[0][0]
+        revision = get_fields('sor_extra.handeling2_hstage', [7], filter='_runid = 1.05')[0][0]
         self.assertEqual(revision, 0)
         self.assertEqual(get_row_count('sor_extra.handeling_met_filter_hstage'), 2)
 

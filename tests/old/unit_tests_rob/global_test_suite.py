@@ -1,8 +1,10 @@
 import unittest
+
 from psycopg2.extras import DictCursor
 from sqlalchemy import create_engine, text
-from tests._configs import general_config
+
 from pyelt.pipeline import Pipeline
+from tests.unit_tests_basic._configs import general_config
 
 __author__ = 'hvreenen'
 

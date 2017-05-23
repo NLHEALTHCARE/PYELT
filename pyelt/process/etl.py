@@ -433,16 +433,19 @@ class EtlSorToDv(BaseEtl):
                 sql = """INSERT INTO {dv_schema}.{hub} (_runid, _insert_date, _source_system, type, bk)
 SELECT DISTINCT {runid}, now(), '{source_system}', '{hub_type}', {bk_mapping}
 FROM {sor}.{sor_table} hstg
-WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{hub} WHERE bk = ({bk_mapping})) AND {filter} AND {filter_runid};""".format(
+WHERE hstg._valid AND ({bk_mapping}) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM {dv_schema}.{hub} WHERE bk = ({bk_mapping})) AND {filter}
+--AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'insert new '.format(params['hub']))
 
                 # onderstaande regels voor performance
-                sql = """SELECT hub._id FROM {dv_schema}.{hub} hub JOIN {sor}.{sor_table} hstg ON {bk_mapping} = hub.bk WHERE hstg._valid AND {filter} AND {filter_runid};""".format(
+                sql = """SELECT hub._id FROM {dv_schema}.{hub} hub JOIN {sor}.{sor_table} hstg ON {bk_mapping} = hub.bk WHERE hstg._valid AND {filter}
+--AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'load hub_ids in mem (performance)')
 
-                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter} AND {filter_runid};""".format(
+                sql = """UPDATE {sor}.{sor_table} hstg SET fk_{relation_type}{hub} = hub._id FROM {dv_schema}.{hub} hub WHERE {bk_mapping} = hub.bk AND hstg._valid AND {filter}
+--AND {filter_runid};""".format(
                     **params)
                 self.execute(sql, 'update fk_hub in sor table')
             elif mappings.bk_mapping and isinstance(mappings.source, SorQuery):

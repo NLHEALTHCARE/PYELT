@@ -2,9 +2,8 @@ import unittest
 
 from sqlalchemy import create_engine, text
 
-# import _domainmodel
-from tests._configs import general_config
 from pyelt.pipeline import Pipeline
+from tests.unit_tests_basic._configs import general_config
 
 __author__ = 'hvreenen'
 

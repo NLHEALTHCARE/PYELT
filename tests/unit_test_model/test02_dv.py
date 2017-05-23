@@ -1,10 +1,10 @@
 import unittest
 
 from pyelt.datalayers.database import Columns
-from pyelt.datalayers.dv import DvEntity, Sat
+from pyelt.datalayers.dv import HubEntity, Sat
 
 
-class Foo(DvEntity):
+class Foo(HubEntity):
     class Default(Sat):
         test1 = Columns.TextColumn()
         test1a = Columns.TextColumn()
@@ -31,7 +31,7 @@ class TestDV(unittest.TestCase):
         self.assertEqual(Foo.Bar.cls_get_name(), 'foo_sat_bar')
         self.assertEqual(Baz.Qux.cls_get_name(), 'foo_sat_qux')
         self.assertEqual(Baz.Default.cls_get_name(), 'foo_sat')
-        self.assertRaises(Exception, Alone.cls_get_name)
+
 
     def test_sat_short_name(self):
         self.assertEqual(Foo.Default.cls_get_short_name(), 'default')
@@ -40,7 +40,7 @@ class TestDV(unittest.TestCase):
         self.assertEqual(Baz.Default.cls_get_short_name(), 'default')
 
     def test_sat_columns(self):
-        Foo.cls_init()
+        # Foo.cls_init()
         cols = Foo.Default.cls_get_columns()
         col1 = cols[0]
         self.assertEqual(col1.name, 'test1')
