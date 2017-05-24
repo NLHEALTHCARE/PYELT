@@ -1,8 +1,8 @@
 from pyelt.datalayers.database import Columns, Column
-from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference
+from pyelt.datalayers.dv import HubEntity, Sat, HybridSat, Link, LinkReference, LinkEntity
 
 
-class Handeling(DvEntity):
+class Handeling(HubEntity):
     class Default(Sat):
         datum = Columns.DateColumn()
         nummer = Columns.IntColumn()
@@ -15,7 +15,7 @@ class Handeling(DvEntity):
         btw = Columns.FloatColumn()
 
 
-class Organisatie(DvEntity):
+class Organisatie(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         specialisatie = Columns.RefColumn('specialisaties')
@@ -32,21 +32,8 @@ class Organisatie(DvEntity):
         plaats = Columns.TextColumn()
         land = Columns.RefColumn('landen')
 
+class OrganisatieHandelingLinkEntity(LinkEntity):
+    class Link(Link):
+        organisatie = LinkReference(Organisatie)
+        handeling = LinkReference(Handeling)
 
-class OrganisatieHandelingLink(Link):
-    Organisatie = LinkReference(Organisatie)
-    Handeling = LinkReference(Handeling)
-
-
-# for k,v in Organisatie.Adres.__dict__.items():
-#     print(k,v)
-
-# import inspect
-#
-# for n in inspect.getmembers(Organisatie.Adres):
-#     if n[1] == Column:
-#         print(n[0], n[1].type)
-# # print(Organisatie.Adres.__dict__)
-
-for k, v in Organisatie.Adres.__ordereddict__.items():
-    print(k, v)

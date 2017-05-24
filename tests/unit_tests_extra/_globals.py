@@ -18,6 +18,7 @@ def init_db():
     DROP SCHEMA IF EXISTS rdv CASCADE;
     DROP SCHEMA IF EXISTS dv CASCADE;
     DROP SCHEMA IF EXISTS sys CASCADE;
+    DROP SCHEMA IF EXISTS valset CASCADE;
     """
 
     query = text(sql)

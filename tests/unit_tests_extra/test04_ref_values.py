@@ -1,7 +1,9 @@
 import unittest
 
+from pyelt.mappings.base import ConstantValue
 from tests.unit_tests_extra import _domeinmodel
 from tests.unit_tests_extra._configs import test_system_config
+from tests.unit_tests_extra._domeinmodel import Valueset
 from tests.unit_tests_extra._globals import *
 from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
@@ -68,16 +70,11 @@ WHERE
 def init_ref_mappings():
     mappings = []
 
-    ref_mapping = SorToValueSetMapping({'M': 'man', 'V': 'vrouw', 'O': 'onbekend'}, 'geslacht_types')
-    mappings.append(ref_mapping)
-
-    ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw'}, 'relatie_soorten')
-    mappings.append(ref_mapping)
-
-    ref_mapping = SorToValueSetMapping('handeling_hstage', 'specialisaties')
-    ref_mapping.map_code_field('fk_spec')
-    ref_mapping.map_descr_field('spec')
-    mappings.append(ref_mapping)
+    mapping = SorToValueSetMapping('handeling_hstage', Valueset)
+    mapping.map_field(ConstantValue('specs'), Valueset.valueset_naam)
+    mapping.map_field("fk_spec", Valueset.code)
+    mapping.map_field("spec", Valueset.omschrijving)
+    mappings.append(mapping)
 
     # ref_mapping = SorToRefMapping('handeling_hstage', 'specialisaties2')
     # ref_mapping.map_code_field('fk_spec')
@@ -97,7 +94,7 @@ class TestCase_RunRef(unittest.TestCase):
             TestCase_RunRef.is_init = True
         self.pipeline = get_global_test_pipeline()
         self.pipe = self.pipeline.get_or_create_pipe('test_system', config=test_system_config)
-        # self.pipe.register_domain(_domeinmodel)
+        self.pipeline.register_valset_domain(_domeinmodel)
         self.pipe.mappings = []
         self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
         self.pipe.mappings.extend(init_ref_mappings())
@@ -112,9 +109,8 @@ class TestCase_RunRef(unittest.TestCase):
         exec_sql(source_db_sql[1], test_system_config['source_connection'])
         exec_sql(source_db_sql[2], test_system_config['source_connection'])
         self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_valuesets'), 3)
-        self.assertEqual(get_row_count('dv._ref_values'), 6)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties'"), 1)
+        self.assertEqual(get_row_count('valset.valueset'), 1)
+        self.assertEqual(get_row_count('valset.valueset', filter="valueset_naam='specs'"), 1)
 
     def test_run2(self):
         print('======================================================')
@@ -123,93 +119,29 @@ class TestCase_RunRef(unittest.TestCase):
         # nog een keer zelfde runnen, moet geen wijziging zijn
 
         self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_valuesets'), 3)
-        self.assertEqual(get_row_count('dv._ref_values'), 6)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties'"), 1)
+        self.assertEqual(get_row_count('valset.valueset'), 1)
+        self.assertEqual(get_row_count('valset.valueset', filter="valueset_naam='specs'"), 1)
 
     def test_run3(self):
         print('======================================================')
         print('===        R U N  3                                ===')
         print('======================================================')
         # relatie_soorten aanpassen: nieuwe
-        ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'mdw', '6': 'artsen'}, 'relatie_soorten')
-        self.pipe.mappings.append(ref_mapping)
+        exec_sql(source_db_sql[3], test_system_config['source_connection'])
         self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_valuesets'), 3)
-        self.assertEqual(get_row_count('dv._ref_values'), 7)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties'"), 1)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='relatie_soorten'"), 3)
+        self.assertEqual(get_row_count('valset.valueset'),2)
+        self.assertEqual(get_row_count('valset.valueset', filter="valueset_naam='specs'"), 2)
 
     def test_run4(self):
         print('======================================================')
         print('===        R U N  4                                ===')
         print('======================================================')
         # relatie_soorten aanpassen: naam wijzigen
-        ref_mapping = SorToValueSetMapping({'9': 'patienten', '7': 'medewerkers', '6': 'artsen'}, 'relatie_soorten')
-        self.pipe.mappings.append(ref_mapping)
-        self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_valuesets'), 3)
-        self.assertEqual(get_row_count('dv._ref_values'), 8)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties'"), 1)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='relatie_soorten'"), 4)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='relatie_soorten' AND _active"), 3)
-
-    def test_run5(self):
-        print('======================================================')
-        print('===        R U N  5                                ===')
-        print('======================================================')
-        # specialisaties aanpassen: nieuwe
-        exec_sql(source_db_sql[3], test_system_config['source_connection'])
-        self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_values'), 9)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties'"), 2)
-
-    def test_run6(self):
-        print('======================================================')
-        print('===        R U N  6                                ===')
-        print('======================================================')
-        # specialisaties aanpassen: update
         exec_sql(source_db_sql[4], test_system_config['source_connection'])
         self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_values'), 10)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties'"), 3)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='specialisaties' AND _active"), 2)
-
-    def test_run7(self):
-        print('======================================================')
-        print('===        R U N  7                                ===')
-        print('======================================================')
-        self.pipe.mappings = []
-        self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
-        ref_mapping = SorToValueSetMapping('handeling_hstage', 'specialisaties2')
-        ref_mapping.map_code_field('fk_spec')
-        ref_mapping.map_descr_field('spec')
-        ref_mapping.map_type_field('spec_type', "'oid'")
-        ref_mapping.map_level_field("'M-1'")
-
-        self.pipe.mappings.extend([ref_mapping])
-        self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_valuesets'), 4)
-        self.assertEqual(get_row_count('dv._ref_values'), 12)
-        self.assertEqual(get_row_count('dv._ref_values', filter="valueset_naam='spec-level1'"), 2)
-        row = get_fields('dv._ref_values', [11, 12, 13], filter="valueset_naam='spec-level1'")[0]
-        self.assertEqual(row[0], 'oid')
-        self.assertEqual(row[1], 'spec-level1')
-        self.assertEqual(row[2], 'M-1')
-
-    def test_run8(self):
-        print('======================================================')
-        print('===        R U N  8                                ===')
-        print('======================================================')
-        # map met alleen code field
-        self.pipe.mappings = []
-        self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
-        ref_mapping = SorToValueSetMapping('handeling_hstage', 'specialisaties3')
-        ref_mapping.map_code_field('fk_spec')
-        self.pipe.mappings.extend([ref_mapping])
-        self.pipeline.run()
-        self.assertEqual(get_row_count('dv._ref_valuesets'), 5)
-        self.assertEqual(get_row_count('dv._ref_values'), 14)
+        self.assertEqual(get_row_count('valset.valueset'), 3)
+        self.assertEqual(get_row_count('valset.valueset', filter="valueset_naam='specs'"), 3)
+        self.assertEqual(get_row_count('valset.valueset', filter="_active"), 2)
 
 
 if __name__ == '__main__':

@@ -1,8 +1,9 @@
 from pyelt.datalayers.database import Columns, Column
-from pyelt.datalayers.dv import DvEntity, Sat, HybridSat, Link, LinkReference
+from pyelt.datalayers.dv import HubEntity, Sat, HybridSat, Link, LinkReference
+from pyelt.datalayers.valset import DvValueset
 
 
-class Handeling(DvEntity):
+class Handeling(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         datum = Columns.DateColumn()
@@ -16,7 +17,7 @@ class Handeling(DvEntity):
         btw = Columns.FloatColumn()
 
 
-class Organisatie(DvEntity):
+class Organisatie(HubEntity):
     class Default(Sat):
         naam = Columns.TextColumn()
         specialisatie = Columns.RefColumn('specialisaties')
@@ -43,12 +44,7 @@ class OrganisatieHandelingLink(Link):
         plek = Columns.TextColumn()
 
 
-# for k,v in Organisatie.Adres.__dict__.items():
-#     print(k,v)
-
-# import inspect
-#
-# for n in inspect.getmembers(Organisatie.Adres):
-#     if n[1] == Column:
-#         print(n[0], n[1].type)
-# # print(Organisatie.Adres.__dict__)
+class Valueset(DvValueset):
+    valueset_naam = Columns.TextColumn()
+    code = Columns.TextColumn()
+    omschrijving = Columns.TextColumn()

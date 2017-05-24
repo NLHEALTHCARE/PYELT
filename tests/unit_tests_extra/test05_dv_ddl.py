@@ -89,11 +89,9 @@ class TestCase_RunDv(unittest.TestCase):
         dv = self.pipeline.dwh.dv
         dv.reflect()
         tables = dv.tables
-        self.assertEqual(len(tables), 3)
-
+        self.assertEqual(len(tables), 1)
         self.assertIn('_exceptions', tables)
-        self.assertIn('_ref_values', tables)
-        self.assertIn('_ref_valuesets', tables)
+
 
     def test_run2(self):
         print('======================================================')
@@ -105,29 +103,28 @@ class TestCase_RunDv(unittest.TestCase):
         dv = self.pipeline.dwh.dv
         dv.reflect()
         tables = dv.tables
-        self.assertEqual(len(tables), 10)
-        self.assertIn('_ref_values', tables)
+        self.assertEqual(len(tables), 8)
         self.assertIn('handeling_hub', tables)
         self.assertIn('handeling_sat', tables)
         self.assertIn('handeling_sat_financieel', tables)
         self.assertIn('organisatie_handeling_link', tables)
         self.assertIn('organisatie_sat', tables)
-        views = dv.views
-        self.assertEqual(len(views), 2)
-        self.assertIn('organisatie_view', views)
-        self.assertIn('handeling_view', views)
+        # views = dv.views
+        # self.assertEqual(len(views), 2)
+        # self.assertIn('organisatie_view', views)
+        # self.assertIn('handeling_view', views)
 
         handeling_tbl = tables['handeling_sat']
         cols = handeling_tbl.columns
-        self.assertEqual(len(cols), 13)
+        self.assertEqual(len(cols), 12)
 
         organisatie_sat_adres = tables['organisatie_sat_adres']
         cols = organisatie_sat_adres.columns
-        self.assertEqual(len(cols), 16)
+        self.assertEqual(len(cols), 15)
         self.assertIn('type', cols)
         self.assertIn('postcode', cols)
         # test op volgorde
-        self.assertEqual(cols[11].name, 'postcode')
+        self.assertEqual(cols[10].name, 'postcode')
 
         # view_cols = views['organisatie_view'].columns
         # self.assertEqual(len(view_cols), 24)
@@ -147,42 +144,40 @@ class TestCase_RunDv(unittest.TestCase):
         dv = self.pipeline.dwh.dv
         dv.reflect()
         tables = dv.tables
-        self.assertEqual(len(tables), 13)
-        self.assertIn('_ref_values', tables)
+        self.assertEqual(len(tables), 9)
         self.assertIn('handeling_hub', tables)
         self.assertIn('handeling_sat_diagnose', tables)
         handeling_sat_diagnose = tables['handeling_sat_diagnose']
         cols = handeling_sat_diagnose.columns
-        self.assertEqual(len(cols), 13)
+        self.assertEqual(len(cols), 11)
         self.assertIn('diagnaam', cols)
         self.assertIn('diagnosecode', cols)
-        col_type = cols[10].type.lower()
+        col_type = cols[9].type.lower()
         self.assertIn(col_type, 'text')
 
     def test_run4(self):
         print('======================================================')
         print('===        R U N  4                                ===')
         print('======================================================')
-        # Extra sat met alle col types
+        # Extra hub en sat met alle col types
         self.pipe.register_domain(_domeinmodel3)
         self.pipeline.run()
 
         dv = self.pipeline.dwh.dv
         dv.reflect()
         tables = dv.tables
-        self.assertEqual(len(tables), 15)
-        self.assertIn('_ref_values', tables)
-        self.assertIn('columntypes_hub', tables)
-        self.assertIn('columntypes_sat', tables)
-        column_types_sat = tables['columntypes_sat']
+        self.assertEqual(len(tables), 11)
+        self.assertIn('column_types_hub', tables)
+        self.assertIn('column_types_sat', tables)
+        column_types_sat = tables['column_types_sat']
         cols = column_types_sat.columns
-        self.assertEqual(len(cols), 16)
-        self.assertIn(cols[10].type.lower(), 'text')
-        self.assertIn(cols[11].type.lower(), 'date')
-        self.assertIn(cols[12].type.lower(), 'timestamp without time zone')
-        self.assertIn(cols[13].type.lower(), 'integer')
-        self.assertIn(cols[14].type.lower(), 'numeric')
-        self.assertIn(cols[15].type.lower(), 'text')
+        self.assertEqual(len(cols), 15)
+        self.assertIn(cols[9].type.lower(), 'text')
+        self.assertIn(cols[10].type.lower(), 'date')
+        self.assertIn(cols[11].type.lower(), 'timestamp without time zone')
+        self.assertIn(cols[12].type.lower(), 'integer')
+        self.assertIn(cols[13].type.lower(), 'numeric')
+        self.assertIn(cols[14].type.lower(), 'text')
 
     def test_run5(self):
         print('======================================================')
@@ -195,11 +190,11 @@ class TestCase_RunDv(unittest.TestCase):
         dv = self.pipeline.dwh.dv
         dv.reflect()
         tables = dv.tables
-        self.assertEqual(len(tables), 15)
+        self.assertEqual(len(tables), 12)
         self.assertIn('handeling_sat_diagnose', tables)
         handeling_sat_diagnose = tables['handeling_sat_diagnose']
         cols = handeling_sat_diagnose.columns
-        self.assertEqual(len(cols), 13)
+        self.assertEqual(len(cols), 12)
         self.assertIn('diagnaam', cols)
         self.assertIn('extraveld', cols)
 

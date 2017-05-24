@@ -107,7 +107,7 @@ class TestCase_RunSor(unittest.TestCase):
         self.pipeline.run()
         self.assertEqual(get_row_count('sor_extra.handeling_hstage'), 3)
         self.assertEqual(get_row_count('sor_extra.handeling_hstage', '_valid = False'), 1)
-        msg = get_fields('sor_extra.handeling_hstage', [8], filter="id = '3'")[0][0]
+        msg = get_fields('sor_extra.handeling_hstage', [9], filter="id = '3'")[0][0]
         self.assertEqual('Kosten mogen niet leeg of negatief zijn; ', msg)
 
     def test_run2(self):
@@ -119,7 +119,7 @@ class TestCase_RunSor(unittest.TestCase):
         self.pipeline.run()
         self.assertEqual(get_row_count('sor_extra.handeling_hstage'), 4)
         self.assertEqual(get_row_count('sor_extra.handeling_hstage', '_valid = False'), 2)
-        msg = get_fields('sor_extra.handeling_hstage', [8], filter="id = '3'")[0][0]
+        msg = get_fields('sor_extra.handeling_hstage', [9], filter="id = '3'")[0][0]
         self.assertEqual('Kosten mogen niet leeg of negatief zijn; ', msg)
 
     def test_run3(self):
@@ -148,11 +148,11 @@ class TestCase_RunSor(unittest.TestCase):
         print('===        R U N  5                                ===')
         print('======================================================')
 
-        # update kosten
+        # insert twee duplicate keys: aantal moet 3 blijven
         exec_sql(source_db_sql[5], test_system_config['source_connection'])
         self.pipeline.run()
         self.assertEqual(get_row_count('sor_extra.handeling_hstage'), 8)
-        self.assertEqual(get_row_count('sor_extra.handeling_hstage', '_valid = False'), 4)
+        self.assertEqual(get_row_count('sor_extra.handeling_hstage', '_valid = True'), 3)
 
 if __name__ == '__main__':
     unittest.main()

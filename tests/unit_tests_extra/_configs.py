@@ -5,7 +5,8 @@ general_config = {
     'conn_dwh': 'postgresql://postgres:pgsuadmin2016@localhost:5432/pyelt_unittests',
     'debug': False,
     'on_errors': 'throwx',
-    'log_to_console': False
+    # 'log_to_console': False
+    'create_views': False
 
 }
 
