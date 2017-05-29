@@ -1,7 +1,6 @@
 from setuptools import setup
 
-# from make_dist import new_version
-from versions import current_version
+from dist.versions import current_version
 
 
 def readme():

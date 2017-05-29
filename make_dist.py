@@ -1,11 +1,7 @@
-import datetime
 import os
-import subprocess
-import zipfile
 
-from versions import current_version, version_archive
+from dist import versions
 
-import versions
 global new_version
 
 """

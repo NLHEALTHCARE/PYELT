@@ -279,8 +279,12 @@ Voorbeeld::
         else:
             self.runid = math.floor(max_runid) + 1
 
-        git_hashes = self.__get_git_hashes()
-        sql = """INSERT INTO sys.runs (runid, rundate, pyelt_version) VALUES ({}, now(), '{}')""".format(self.runid, git_hashes)
+        # uitgezet: we doen op server geen pull meer vanuit git, maar werken nu met deployment vanuit pycharm
+        # git_hashes = self.__get_git_hashes()
+        version = '2.0'
+        if 'current_version' in self.config:
+            version = self.config['current_version']
+        sql = """INSERT INTO sys.runs (runid, rundate, pyelt_version) VALUES ({}, now(), '{}')""".format(self.runid, version)
         self.dwh.execute(sql, 'insert new run id')
         return self.runid
 
