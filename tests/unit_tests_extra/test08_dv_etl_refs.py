@@ -12,7 +12,7 @@ from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.mappings.transformations import FieldTransformation
 from pyelt.sources.databases import SourceQuery, SourceTable
 
-from domainmodels import entity_domain, role_domain, act_domain, participation_domain
+
 
 # Don revision  start bij 0,
 # Done auto cast van types anders dan text
@@ -65,8 +65,8 @@ def lookup():
 def init_ref_mappings():
     mappings = []
 
-    ref_mapping = SorToValueSetMapping({'soort1': 'Soort omschrijving 1', 'soort2': 'Soort omschrijving 2', 'soort 3': 'Soort omschrijving 3'}, 'handeling_soorten')
-    mappings.append(ref_mapping)
+    # ref_mapping = SorToValueSetMapping({'soort1': 'Soort omschrijving 1', 'soort2': 'Soort omschrijving 2', 'soort 3': 'Soort omschrijving 3'}, 'handeling_soorten')
+    # mappings.append(ref_mapping)
     return mappings
 
 
@@ -112,7 +112,7 @@ class TestCase_RunDv(unittest.TestCase):
         self.pipe.register_domain(_domeinmodel)
         self.pipe.mappings = []
         self.pipe.mappings.extend(init_source_to_sor_mappings(self.pipe))
-        self.pipe.mappings.extend(init_ref_mappings())
+        # self.pipe.mappings.extend(init_ref_mappings())
         self.pipe.mappings.extend(init_sor_to_dv_mappings(self.pipe))
 
     # def test00(self):

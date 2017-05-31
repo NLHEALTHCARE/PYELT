@@ -11,7 +11,6 @@ from pyelt.mappings.sor_to_dv_mappings import SorToValueSetMapping, SorToEntityM
 from pyelt.mappings.source_to_sor_mappings import SourceToSorMapping
 from pyelt.sources.databases import SourceQuery, SourceTable
 
-from domainmodels import entity_domain, role_domain, act_domain, participation_domain
 
 # Don revision  start bij 0,
 # Done auto cast van types anders dan text
@@ -212,11 +211,11 @@ class TestCase_RunDv(unittest.TestCase):
         self.assertEqual(get_row_count('dv.handeling_sat'), 3)
         self.assertEqual(get_row_count('dv.handeling_sat_financieel'), 2)
 
-        revision = get_fields('dv.handeling_sat', [6], filter='_runid = 0.04')[0][0]
+        revision = get_fields('dv.handeling_sat', [8], filter='_runid = 1.03')[0][0]
         self.assertEqual(revision, 1)
 
-        actual_row = get_fields('dv.handeling_view', fields=['default_naam'], filter="bk = '1'")[0]
-        self.assertEqual(actual_row[0], 'OK1A')
+        # actual_row = get_fields('dv.handeling_view', fields=['default_naam'], filter="bk = '1'")[0]
+        # self.assertEqual(actual_row[0], 'OK1A')
 
     def test_run5(self):
         print('======================================================')
@@ -239,11 +238,11 @@ class TestCase_RunDv(unittest.TestCase):
         self.assertEqual(get_row_count('dv.handeling_sat'), 4)
         self.assertEqual(get_row_count('dv.handeling_sat_financieel'), 2)
 
-        revision = get_fields('dv.handeling_sat', [6], filter='_runid = 0.05')[0][0]
+        revision = get_fields('dv.handeling_sat', [8], filter='_runid = 1.04')[0][0]
         self.assertEqual(revision, 2)
 
-        actual_row = get_fields('dv.handeling_view', fields=['default_naam'], filter="bk = '1'")[0]
-        self.assertEqual(actual_row[0], 'OK1B')
+        # actual_row = get_fields('dv.handeling_view', fields=['default_naam'], filter="bk = '1'")[0]
+        # self.assertEqual(actual_row[0], 'OK1B')
 
     def test_run6(self):
         print('======================================================')
@@ -266,11 +265,11 @@ class TestCase_RunDv(unittest.TestCase):
         self.assertEqual(get_row_count('dv.handeling_sat'), 5)
         self.assertEqual(get_row_count('dv.handeling_sat_financieel'), 2)
 
-        revision = get_fields('dv.handeling_sat', [6], filter='_runid = 0.06')[0][0]
+        revision = get_fields('dv.handeling_sat', [8], filter='_runid = 1.05')[0][0]
         self.assertEqual(revision, 3)
 
-        actual_row = get_fields('dv.handeling_view', fields=['default_naam'], filter="bk = '1'")[0]
-        self.assertEqual(actual_row[0], 'OK1')
+        # actual_row = get_fields('dv.handeling_view', fields=['default_naam'], filter="bk = '1'")[0]
+        # self.assertEqual(actual_row[0], 'OK1')
 
     def test_run7(self):
         print('======================================================')
@@ -296,15 +295,15 @@ class TestCase_RunDv(unittest.TestCase):
         self.assertEqual(get_row_count('dv.handeling_sat'), 5)
         self.assertEqual(get_row_count('dv.handeling_sat_financieel'), 4)
 
-        revision = get_fields('dv.handeling_sat_financieel', fields=['_revision'], filter='_runid = 0.07')[0][0]
+        revision = get_fields('dv.handeling_sat_financieel', fields=['_revision'], filter='_runid = 1.06')[0][0]
         self.assertEqual(revision, 1)
 
-        actual_row = get_fields('dv.handeling_view', fields=['financieel_kostprijs', 'financieel_vraagprijs', 'financieel_btw', 'financieel_korting'], filter="bk = '2'")[0]
-
-        self.assertEqual(actual_row[0], 500.0)
-        self.assertEqual(actual_row[1], 700.0)
-        self.assertEqual(actual_row[2], 21.0)
-        self.assertEqual(str(actual_row[3] + 1), '10.98')
+        # actual_row = get_fields('dv.handeling_view', fields=['financieel_kostprijs', 'financieel_vraagprijs', 'financieel_btw', 'financieel_korting'], filter="bk = '2'")[0]
+        #
+        # self.assertEqual(actual_row[0], 500.0)
+        # self.assertEqual(actual_row[1], 700.0)
+        # self.assertEqual(actual_row[2], 21.0)
+        # self.assertEqual(str(actual_row[3] + 1), '10.98')
 
 
 if __name__ == '__main__':

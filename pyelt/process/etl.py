@@ -47,11 +47,11 @@ WHERE NOT _valid AND  {key_values} NOT IN (SELECT key_fields FROM dv._exceptions
         sql = """SELECT * FROM {schema}._exceptions WHERE _runid = {runid} ORDER BY schema, TABLE_NAME, message""".format(**params)
         rows = self.execute_read(sql)
         if rows:
-            self.pipe.pipeline.logger.log('<red>Er zijn uitzonderingen</>', indent_level=3)
-            msg = ''
-            for row in rows:
-                msg += '     - {} in {}.{} key {}\n'.format(row['message'], row['schema'], row['table_name'], row['key_fields'])
-            self.pipe.pipeline.logger.log(msg)
+            self.pipe.pipeline.logger.log('<red>Er zijn uitzonderingen</>. Schema: {}, Aantal: {}'.format(params['schema'], len(rows)), indent_level=3)
+            # msg = ''
+            # for row in rows:
+            #     msg += '     - {} in {}.{} key {}\n'.format(row['message'], row['schema'], row['table_name'], row['key_fields'])
+            # self.pipe.pipeline.logger.log(msg)
         else:
             self.pipe.pipeline.logger.log('<green>Er zijn geen uitzonderingen</>', indent_level=3)
 
