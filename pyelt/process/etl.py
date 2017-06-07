@@ -177,10 +177,11 @@ class EtlSourceToSor(BaseEtl):
             self.execute(sql, 'update set old ones inactive')
 
             # STAP 6 DELETED Markeren
-            sql = """update {sor}.{sor_table} set _deleted_runid = {runid}, _active = FALSE, _finish_date = now()
-                    WHERE _active AND ({key_fields}) NOT IN (SELECT {key_fields} FROM {sor}.{temp_table})""".format(
-                **params)
-            self.execute(sql,  'update sor set deleted ones')
+            if 'follow_deletes' in self.pipe.config and self.pipe.config['follow_deletes']:
+                sql = """update {sor}.{sor_table} set _deleted_runid = {runid}, _active = FALSE, _finish_date = now()
+                        WHERE _active AND ({key_fields}) NOT IN (SELECT {key_fields} FROM {sor}.{temp_table})""".format(
+                    **params)
+                self.execute(sql,  'update sor set deleted ones')
 
         except Exception as ex:
             self.logger.log_error(mappings.name, ex=ex)
@@ -318,6 +319,14 @@ class EtlSourceToSor(BaseEtl):
                         FROM {sor}.{sor_table} current WHERE previous._active = True AND ({keys_compare}) AND current._revision = (previous._revision + 1);""".format(
                 **params)
             self.execute(sql, 'update sor set old ones inactive')
+
+            # STAP 6 DELETED Markeren
+            if 'follow_deletes' in self.pipe.config and self.pipe.config['follow_deletes']:
+                sql = """update {sor}.{sor_table} set _deleted_runid = {runid}, _active = FALSE, _finish_date = now()
+                                    WHERE _active AND ({key_fields}) NOT IN (SELECT {key_fields} FROM {sor}.{temp_table}_hash)""".format(
+                    **params)
+                self.execute(sql, 'update sor set deleted ones')
+
 
 
         except Exception as ex:
@@ -493,7 +502,8 @@ AND {filter} AND {filter_runid};""".format( **params)
 
             # deletes
             hub_entity = mappings.target  # type: HubEntity
-            if hub_entity.cls_has_record_status_sat():
+
+            if hub_entity.cls_has_record_status_sat() and 'follow_deletes' in self.pipe.config and self.pipe.config['follow_deletes']:
                 params['record_satus_sat'] = hub_entity.cls_get_record_status_sat().__dbname__
                 sql = """INSERT INTO {dv_schema}.{record_satus_sat} (_id, _runid, _source_system, _insert_date, deleted)
                                     SELECT _id, {runid}, '{source_system}', now(), now()
@@ -745,7 +755,7 @@ AND hstg._valid AND {filter};""".format(
 
             #deletes
             link_entity = mappings.target #type: LinkEntity
-            if link_entity.cls_has_record_status_sat():
+            if link_entity.cls_has_record_status_sat() and 'follow_deletes' in self.pipe.config and self.pipe.config['follow_deletes']:
                 params['record_satus_sat'] = link_entity.cls_get_record_status_sat().__dbname__
                 sql = """INSERT INTO {dv_schema}.{record_satus_sat} (_id, _runid, _source_system, _insert_date, deleted)
                             SELECT _id, {runid}, '{source_system}', now(), now()
