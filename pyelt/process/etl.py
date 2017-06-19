@@ -320,7 +320,7 @@ class EtlSourceToSor(BaseEtl):
                 **params)
             self.execute(sql, 'update sor set old ones inactive')
 
-            # STAP 6 DELETED Markeren
+            # STAP 10 DELETED Markeren
             if 'follow_deletes' in self.pipe.config and self.pipe.config['follow_deletes']:
                 sql = """update {sor}.{sor_table} set _deleted_runid = {runid}, _active = FALSE, _finish_date = now()
                                     WHERE _active AND ({key_fields}) NOT IN (SELECT {key_fields} FROM {sor}.{temp_table}_hash)""".format(

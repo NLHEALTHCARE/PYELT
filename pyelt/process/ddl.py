@@ -284,6 +284,7 @@ class DdlSor(Ddl):
         params['columns_def'] = self.__mappings_to_sor_columns_def(mappings)
         params['key_columns_def'] = self.__mappings_to_sor_key_columns_def(mappings)
 
+
         temp_table_name = mappings.temp_table
         if temp_table_name not in sor:
             sql = """CREATE UNLOGGED TABLE IF NOT EXISTS {sor}.{temp_table} (_hash text, _status text, {columns_def});""".format(**params)

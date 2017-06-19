@@ -20,7 +20,8 @@ testmodules = [
 
 test_system_config = {
     'source_path': '/tests/data/',
-    'sor_schema': 'sor_test_system'
+    'sor_schema': 'sor_test_system',
+    'follow_deletes': True
 }
 
 def init_db():

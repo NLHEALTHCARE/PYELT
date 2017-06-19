@@ -101,6 +101,8 @@ class SourceTable(Table):
         file_name = '{}/{}.csv'.format(path, self.alias)
         if md5_only:
             file_name = '{}/{}_hash.csv'.format(path, self.name)
+            if 'view_pers_hash' in file_name:
+                debug = True
 
         head = [col.name for col in self.columns if col.name not in ignore_fields]
         if md5_only:
