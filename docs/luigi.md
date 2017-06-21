@@ -43,7 +43,9 @@ Via de webinterface wordt een graph getoond van de afhankelijkheden tussen taken
 
 - Bij spotify zijn ze voor deltail taken over gestapt op een andere framework, maar gebruiken ze dit voor de grote onderdelen (bron ?)
 
-- Ik zou zelf taken nog extra andere properties willen geven: is_active, log(history), description, duration (start&end-time), error-description
+- Ik zou zelf taken nog extra andere properties willen geven: is_active, log(history), description, duration (start&end-time), error-description, config
+
+- En specifiek voor pyelt de info uit de config (bron, doel, sql, bestand enz) en de mappings  
 
 
 
@@ -70,7 +72,7 @@ De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven
 4 TO
 ----
 
-Huidige runproces zal moeten worden opgeknipt in stukjes. HIeronder globaal het huidige runproces:
+Huidige runproces zal moeten worden opgeknipt in stukjes. Hieronder globaal het huidige runproces:
 
 send_start_mail -> create_schemas_if_not_exists -> create_sys_tables -> create_new_runid -> create_loggers -> validate_domains (if OK) -> validate_mappings_before_ddl (if OK) -> create_valueset_from_domain (create tables) -> create_dv_from_domain (create tables)  >
 [[[PER PIPE: -> DDL sor (create tables) -> run_extra_sql -> create_db_functions]]]  ->
