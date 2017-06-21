@@ -28,18 +28,30 @@ Bovenstaande zal cyclisch verlopen. Dus telkens weer beginnen bij 1.
 In luigi kun je taken aan elkaar knopen en deze runnen in een skeduler. Via een webinterface wordt inzichtelijk gemaakt welke taken hebben gerund en welke hebben gefaald. Via output files houdt luigi bij wat de status is van de taak (moet je zelf programmeren) waardoor je een proces eenvoudig twee keer kunt opstarten zonder dat de wel geslaagde taken nog een keer runnen.
 Via de webinterface wordt een graph getoond van de afhankelijkheden tussen taken.
 
- - history wordt standaar niet bijgehouden in web interface. Als de server down is geweest is history kwijt. Luigi biedt hiervoor oplossing. Moet ik nog uitzoeken.
+ - history wordt standaard niet bijgehouden in web interface. Als de server down is geweest is history kwijt. Luigi biedt hiervoor oplossing. Kan alleen webdeel niet vinden
  
  - om omschrijvingen aan een taak te geven, kun je een paramater aanmaken met een default waarde. Je kunt hier html in stoppen. De parameter wordt getoond in de log.
  Misschien kunnen we hier een link aanmaken naar de log met substappen van de taak 
 
 - Het is niet mogelijk om taken te nesten in processen en te drilldownen in de webinterface
 
+- Het is niet mogelijk om per run te groeperen. Alle taken worden onder elkaar getoond.
+
+- Debuggen gaat lastig of niet (stap werkt niet...?)
+
+- info op het web is moeilijk te vinden. 
+
+- Bij spotify zijn ze voor deltail taken over gestapt op een andere framework, maar gebruiken ze dit voor de grote onderdelen (bron ?)
+
+- Ik zou zelf taken nog extra andere properties willen geven: is_active, log(history), description, duration (start&end-time), error-description
+
+
+
 
 2 globaal ontwerp
 ----------------
 
-pipeline en pipe stappen opknippen in globale taken
+pipeline en pipe stappen opknippen in globale taken. Dit worden luigi taken
 
 - pipeline voor bereiding
 - per pipe de ddl voor de sor laag
@@ -52,7 +64,7 @@ pipeline en pipe stappen opknippen in globale taken
 
 De detail stappen wat naar welke tabel gaat enz, niet als taken definieren.
 
-De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven, of wordt geopend in de taak. Deze zijn niet te editen via de web interface. De mappings zijn ook niet te editen via de webinterface.
+De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven, of wordt geopend in de taak. Zou misschien mooi zijn deze te kunnen editen via de web interface. Voor mappings idem.
 
 
 4 TO
