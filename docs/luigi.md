@@ -22,7 +22,7 @@ Plan van Aanpak
 
 Bovenstaande zal cyclisch verlopen. Dus telkens weer beginnen bij 1.
 
-1 ontdekkingsfase
+1. ontdekkingsfase
 ----------------
 
 In luigi kun je taken aan elkaar knopen en deze runnen in een skeduler. Via een webinterface wordt inzichtelijk gemaakt welke taken hebben gerund en welke hebben gefaald. Via output files houdt luigi bij wat de status is van de taak (moet je zelf programmeren) waardoor je een proces eenvoudig twee keer kunt opstarten zonder dat de wel geslaagde taken nog een keer runnen.
@@ -51,7 +51,7 @@ Via de webinterface wordt een graph getoond van de afhankelijkheden tussen taken
 
 
 
-2 globaal ontwerp
+2. globaal ontwerp
 ----------------
 
 pipeline en pipe stappen opknippen in globale taken. Dit worden luigi taken
@@ -65,12 +65,21 @@ pipeline en pipe stappen opknippen in globale taken. Dit worden luigi taken
 - per pipe de etl van de dv laag
 - pipeline sluiting
 
-De detail stappen wat naar welke tabel gaat enz, niet als taken definieren.
 
-De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven, of wordt geopend in de taak. Zou misschien mooi zijn deze te kunnen editen via de web interface. Voor mappings idem.
+De detail stappen (wat naar welke tabel gaat enz), zullen we niet als luigi-taken definieren. (?)
+
+De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven, of wordt geopend in de taak. Zou misschien mooi zijn deze te kunnen editen via de web interface. Voor mappings idem. Dat doen we voorlopig niet. (?)
+
+3. detail ontwerp
+----------------
+
+- nadenken over runid. hoe vormgeven?
+- nadenken over logging, in db of niet
+- nadenken parrallel processen
+- enz
 
 
-4 TO
+4. TO
 ----
 
 Huidige runproces zal moeten worden opgeknipt in stukjes. Hieronder globaal het huidige runproces:
