@@ -31,7 +31,9 @@ Bovenstaande zal cyclisch verlopen. Dus telkens weer beginnen bij 1.
 In luigi kun je taken aan elkaar knopen en deze runnen in een skeduler. Via een webinterface wordt inzichtelijk gemaakt welke taken hebben gerund en welke hebben gefaald. Via output files houdt luigi bij wat de status is van de taak (moet je zelf programmeren) waardoor je een proces eenvoudig twee keer kunt opstarten zonder dat de wel geslaagde taken nog een keer runnen.
 Via de webinterface wordt een graph getoond van de afhankelijkheden tussen taken.
 
- - history wordt standaard niet bijgehouden in web interface. Als de server down is geweest is history kwijt. Luigi biedt hiervoor oplossing. Kan alleen webdeel niet vinden. Ook is dit niet stabiel, op een gegeven moment toch weer alle history kwijt
+ - history wordt standaard niet bijgehouden in web interface. Als de server down is geweest is history kwijt. Luigi biedt hiervoor oplossing. Kan alleen webdeel niet vinden. Ook is dit niet stabiel, op een gegeven moment toch weer alle history kwijt.
+
+- je kunt geen schema opgeven in de connectie waar history tabellen moeten worden aangemaakt. postgress lijkt niet te werken (??)
  
  - om omschrijvingen aan een taak te geven, kun je een paramater aanmaken met een default waarde. Je kunt hier html in stoppen. De parameter wordt getoond in de log.
  Misschien kunnen we hier een link aanmaken naar de log met substappen van de taak 
