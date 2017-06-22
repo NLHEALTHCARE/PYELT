@@ -71,16 +71,27 @@ pipeline en pipe stappen opknippen in globale taken. Dit worden luigi taken
 - pipeline sluiting
 
 
-De detail stappen (wat naar welke tabel gaat enz), zullen we niet als luigi-taken definieren. (?)
+De detail stappen (wat naar welke tabel gaat enz), zullen we niet als luigi-taken definieren.
 
-De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven, of wordt geopend in de taak. Zou misschien mooi zijn deze te kunnen editen via de web interface. Voor mappings idem. Dat doen we voorlopig niet. (?)
+De configs (globale en per pipe) zijn dicts, deze wordt als parameter meegegeven, of wordt geopend in de taak. Zou misschien mooi zijn deze te kunnen editen via de web interface. Voor mappings idem. Dat doen we voorlopig niet.
+
+We houden ons in de eerste cycle alleen aan luigi zoals het nu is, aanpassen van het luigi framework zelf doen we niet.
 
 3. detail ontwerp
 ----------------
 
+
 - nadenken over runid. hoe vormgeven?
+Gegeven van luigi is dat runid de taak uniek maakt.
+
+
 - nadenken over logging, in db of niet
+Logging gaat in txt files. Detail logging wordt gedaan door pyelt. Globale logging per task wordt gedaan door luigi.
+TaskId meegeven aan log zou mooi zijn
+
 - nadenken parrallel processen
+Er zullen meerdere crontabs gelijkertijd kunnen worden opgestart
+
 - enz
 
 
@@ -95,3 +106,19 @@ send_start_mail -> create_schemas_if_not_exists -> create_sys_tables -> create_n
 [[[PER PIPE: run_before_sor -> source_to_sor -> validate_duplicate_keys -> validate_sor -> run_after_sor ->
 sor_to_valuesets -> sor_to_entity -> sor_to_link]]] ->
 end_run -> send_log_mail -> END
+
+Dit wordt verdeeld in de volgende stukken:
+
+- pipeline voorbereiding
+- pipeline validaties
+- per pipe de ddl voor de sor laag
+- per pipe de etl voor de sor laag
+- pipeline validaties
+- ddl van de valset laag
+- ddl van de dv laag
+- per pipe de etl van de valset laag
+- per pipe de etl van de dv laag
+- pipeline sluiting
+
+Ieder stuk moet eigen logging krijgen
+
