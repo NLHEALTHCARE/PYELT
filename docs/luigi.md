@@ -1,6 +1,7 @@
 
 
 
+
 Luigi skeduler framework implementeren in pyelt
 ==============================================
 
@@ -11,6 +12,8 @@ Doelstelling
   - flexibiliteit in skeduler: sommige pipes dienen eens per maand te runnen, anderen eens per dag.
   - overzicht creeren in afhankelijkheden, welke taak moet eerst zijn gedaan, voordat andere kan worden gedaan
   - run proces inzichtelijk maken via web user interface 
+  - inzicht in performance
+  - processen parallel kunnen aftrappen
   
 Plan van Aanpak
 --------------
