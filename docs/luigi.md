@@ -84,13 +84,14 @@ We houden ons in de eerste cycle alleen aan luigi zoals het nu is, aanpassen van
 - nadenken over runid. hoe vormgeven?
 Gegeven van luigi is dat runid de taak uniek maakt.
 
+- In de pipeline zitten ook taken die onafhankelijk van een run zijn, zoals eerste initialisatie van de database.sys schema. Moeten we dat in luigi doen?
 
 - nadenken over logging, in db of niet
 Logging gaat in txt files. Detail logging wordt gedaan door pyelt. Globale logging per task wordt gedaan door luigi.
 TaskId meegeven aan log zou mooi zijn
 
 - nadenken parrallel processen
-Er zullen meerdere crontabs gelijkertijd kunnen worden opgestart
+Er zullen meerdere crontabs gelijkertijd kunnen worden opgestart,  dit regelt luigi als het goed is
 
 - enz
 
@@ -107,7 +108,7 @@ send_start_mail -> create_schemas_if_not_exists -> create_sys_tables -> create_n
 sor_to_valuesets -> sor_to_entity -> sor_to_link]]] ->
 end_run -> send_log_mail -> END
 
-Dit wordt verdeeld in de volgende stukken:
+Dit wordt verdeeld in de volgende stukken/taken:
 
 - pipeline voorbereiding
 - pipeline validaties
@@ -120,5 +121,8 @@ Dit wordt verdeeld in de volgende stukken:
 - per pipe de etl van de dv laag
 - pipeline sluiting
 
-Ieder stuk moet eigen logging krijgen
+Ieder stuk moet zelf zijn op te starten; ieder stuk moet eigen logging krijgen.
+
+
+
 
