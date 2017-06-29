@@ -81,11 +81,12 @@ De detail stappen (wat naar welke tabel gaat enz), zullen we **niet** als luigi-
 
   - **runid**:
   in pyelt wordt de bestaat de runid uit twee compontenten: een getal voor de komma en een getal achter de komma (bijv 2.01). Het getal voor de komma wordt iedere dag verhoogd. Het getal achter de komma wordt verhoogd als de run de zelfde dag opnieuw draait.
-  Dus: run 3.00 is de eerste run op dag 3. Run 4.02 is de tweede run op dag 4
-  In luigi maakt de runid de taken uniek en hiermee weet luigi welke taken aan elkaar gekoppeld zijn. We laten hierom de bovenstaande logica intact.
+  Dus: run 3.00 is de eerste run op dag 3. Run 4.02 is de tweede run op dag 4 <br/>
+  In luigi maakt de runid de taken uniek en hiermee weet luigi welke taken aan elkaar gekoppeld zijn. We laten hierom de bovenstaande logica in principe intact. Is er echter een fout opgetreden in het proces dan dient hetzelfde proces met dezelfde runid nog een keer te worden gestart. <br/>
   Wanneer we assyncroon gaan draaien door per dag parallelle processen op te starten zullen deze te zien zijn aan het getal achter de komma. 
 
   - **initialisatie van de runid**: omdat, zoals hierboven is gezegd dat de runid een taak uniek maakt, zal het ophogen van de runid zelf geen luigi taak worden, maar zal de nieuwe runid worden aangemaakt, voordat het luigi-proces wordt aangeroepen.
+  Als er een fout is opgetreden dan dient het proces met dezelfde runi opnieuw te worden gestart. Dit wordt een parameter die handmatig gezet moet worden, omdat het proces bij fouten sowieso handmatig moet worden gestart.
 
   - **eerste initialisatie van de database** In pyelt wordt voordat een nieuwe runid wordt aangemaakt eerst de database geinitialiseerd. Immers, als er nog geen sys.runs tabel bestaat moet deze eerst door het pyelt framework worden aangemaakt. Gezien het bovenstaande valt de eerste initialisatie van de database buiten luigi.
   
@@ -93,8 +94,10 @@ De detail stappen (wat naar welke tabel gaat enz), zullen we **niet** als luigi-
   De sql log en ddl-log mogen wel globaal blijven, mits dat niet bots met parrallelle processen.
   Luigi-taskId meegeven aan pyelt-log zou mooi zijn (indien mogelijk nice to have)
 
-- **parrallel processen**: parallelle processen start je op door meerdere entries in crontab te zetten. Afhankelijkheden onderling regelt luigi zelf al shet goed is. 
+  - **parrallel processen**: parallelle processen start je op door meerdere entries in crontab te zetten. Afhankelijkheden onderling regelt luigi zelf al shet goed is. 
 Database locks zullen in de sor laag niet optreden omdat iedere sorlaag een eigen schema krijgt en de parallelle processen nooit over dezelfde sorlaag zullen gaan.
+
+  - **foutafhandeling**: als er in pyelt een fout optreedt bij een substapje, dan wordt deze gelogd en wordt doorgegaan met devolgende stap. In luigi willen we kunnen zien of een fout is opgetreden. Het pyeltframework zal dus fouten moeten opsparen om aan het einde van de hele taak de fout te kunnen doorgeven aan luigi, zodat deze de taak al fout kan markeren. 
 
 
 
