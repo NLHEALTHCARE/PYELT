@@ -81,22 +81,17 @@ De detail stappen (wat naar welke tabel gaat enz), zullen we **niet** als luigi-
 
   - **runid**:
   in pyelt wordt de bestaat de runid uit twee compontenten: een getal voor de komma en een getal achter de komma (bijv 2.01). Het getal voor de komma wordt iedere dag verhoogd. Het getal achter de komma wordt verhoogd als de run de zelfde dag opnieuw draait.
-  
   Dus: run 3.00 is de eerste run op dag 3. Run 4.02 is de tweede run op dag 4
-  
   In luigi maakt de runid de taken uniek en hiermee weet luigi welke taken aan elkaar gekoppeld zijn. We laten hierom de bovenstaande logica intact.
   Wanneer we assyncroon gaan draaien door per dag parallelle processen op te starten zullen deze te zien zijn aan het getal achter de komma. 
 
   - **initialisatie van de runid**: omdat, zoals hierboven is gezegd dat de runid een taak uniek maakt, zal het ophogen van de runid zelf geen luigi taak worden, maar zal de nieuwe runid worden aangemaakt, voordat het luigi-proces wordt aangeroepen.
 
-
   - **eerste initialisatie van de database** In pyelt wordt voordat een nieuwe runid wordt aangemaakt eerst de database geinitialiseerd. Immers, als er nog geen sys.runs tabel bestaat moet deze eerst door het pyelt framework worden aangemaakt. Gezien het bovenstaande valt de eerste initialisatie van de database buiten luigi.
   
   - **logging van detail stappen**: Logging gaat momenteel in txt files. Dit wordt gedaan door pyelt. Globale logging per task wordt gedaan door luigi. Een aanpassing aan het pyelt framework die moet gebeuren is dat iedere pipe een eigen log krijgt, in plaats van een global log.
-  
   De sql log en ddl-log mogen wel globaal blijven, mits dat niet bots met parrallelle processen.
-  
-  luigi-taskId meegeven aan pyelt-log zou mooi zijn (indien mogelijk nice to have)
+  Luigi-taskId meegeven aan pyelt-log zou mooi zijn (indien mogelijk nice to have)
 
 - **parrallel processen**: parallelle processen start je op door meerdere entries in crontab te zetten. Afhankelijkheden onderling regelt luigi zelf al shet goed is. 
 Database locks zullen in de sor laag niet optreden omdat iedere sorlaag een eigen schema krijgt en de parallelle processen nooit over dezelfde sorlaag zullen gaan.
@@ -132,18 +127,20 @@ Ieder stuk moet zelf zijn op te starten; ieder stuk moet eigen logging krijgen.
 
 Je kunt in luigi helaas geen objecten als parameter doorgeven van de ene aan de andere taak. Hierom moeten we het pipeline object (het object dat de verbinding naar de database bevat en de andere globale instellingen, zoals global config en globale logging) telkens opnieuw aanmaken bij iedere taak.
 
+
 Bekende tekortkomingen van luigi
 --------------------------------
 
 Zoals eerder genoemd zullen we indeze eerste sprint geen aanpassingen doen aan luigi zelf. Hierom is het onzeker of onderstaande bevindingen zullen zijn opgelost. Ik heb namelijk ondervonden dat goede documentatie moeilijk is te vinden.
 
-History van taken wordt standaard niet getoond. Je bent na een dag de history weer kwijt. En ook na herstarten van de server.
-Onzeker of de run-duur van een taak kan worden weergegeven.
-Luigi biedt geen inzicht in detail stappen, soms bestaat een taak namelijk uit 10 stappen waarbij er meerdere tabellen worden gevuld en geupdate. Je krijgt dus geen inzicht in hoelang het vullen/wijzigen van een specifieke tabel duurt.
-Je kunt in luigi geen taken disablen, omdat ze bijvoorbeeld niet gerund hoeven worden. Deze taken kun je alleen maar uitsluiten en dan zie je deze taak niet in het diagram.
+  - History van taken wordt standaard niet getoond. Je bent na een dag de history weer kwijt. En ook na herstarten van de server.
+  - Onzeker of de run-duur van een taak kan worden weergegeven.
+  - Luigi biedt geen inzicht in detail stappen, soms bestaat een taak namelijk uit 10 stappen waarbij er meerdere tabellen worden gevuld en geupdate. Je krijgt dus geen inzicht in hoelang het vullen/wijzigen van een specifieke tabel duurt.
+  - Je kunt in luigi geen taken disablen, omdat ze bijvoorbeeld niet gerund hoeven worden. Deze taken kun je alleen maar uitsluiten en dan zie je deze taak niet in het diagram.
+  - zie verder ontdekkingsfase voor andere tekortkomingen.
 
 
-Om bovenstaande features wel te implementeren moeten we mogelijk overgaan op een ander framework dan luigi of zelfbouw.
+Om bovenstaande features wel te implementeren moeten we mogelijk overgaan op een ander framework dan luigi of zelfbouw. Vooral omdat documentatie beperkt is als het gaat om specifieke features.
 
 
 
