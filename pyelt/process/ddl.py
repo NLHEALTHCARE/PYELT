@@ -31,19 +31,19 @@ class Ddl(BaseProcess):
         old_version_number = dwh.get_layer_version(layer_name)  # Type: float
         new_version_number = dwh.increase_layer_version(layer_name)
         self.sql_logger.log_simple("""
-        --DDL aanpassing aan {}: {} --> {}
-        --===========================
+--DDL aanpassing aan {0}: {1:.2f} --> {2:.2f}
+--===========================
         """.format(layer_name, old_version_number, new_version_number))
 
     def init_logger(self) -> None:
         self.sql_logger = Logger.create_logger(LoggerTypes.DDL, self.pipeline.runid, self.pipeline.config, to_console=False)
 
     def __log_sql(self, log_message, sql, rowcount = 0):
-        msg = """{}
+        msg = """  -- {}
 
 {}
 
-rows: {}
+  -- rows: {}
 --------------------------
 """.format(log_message, sql, rowcount)
         self.sql_logger.log_simple(msg)
@@ -54,18 +54,22 @@ rows: {}
         while '  ' in sql:
             sql = sql.replace('\t', ' ').replace('  ', ' ')
         sql = sql.replace('\n ', '\n').replace('\n', '\n    ')
-        self.sql_logger.log_simple(sql + '\r\n')
+        # self.sql_logger.log_simple(sql + '\r\n')
         try:
             rowcount = self.dwh.execute(sql, log_message)
             if log_message and self.logger:
                 self.logger.log(log_message, rowcount=rowcount, indent_level=4)
                 self.__log_sql(log_message, sql, rowcount)
+            elif self.logger:
+                self.sql_logger.log_simple(sql + '\r\n')
             self.layer.is_reflected = False
         except Exception as err:
             if self.logger:
                 self.logger.log_error(log_message, sql, err.args[0])
                 # even wachten, want anders raakt error-msg verward met sql
             time.sleep(0.1)
+            if 'on_errors' in self.pipeline.config and self.pipeline.config['on_errors'] == 'throw':
+                raise Exception(err, sql, log_message)
             # raise Exception(err)
 
     def confirm_execute(self, sql: str, log_message: str) -> None:
@@ -271,7 +275,7 @@ class DdlSor(Ddl):
         return params
 
     #####################################
-    # SOR
+    # PIPE
     #####################################
     def create_or_alter_sor(self, mappings: SourceToSorMapping) -> None:
         sor = self.pipe.sor
@@ -625,7 +629,7 @@ CREATE OR REPLACE VIEW {dv_schema}.{view_name} AS
         self.execute(sql, '<darkcyan>{}</>'.format(sql_ensemblename))
 
 
-    def create_or_alter_table_valueset(self, dv_schema):
+    def create_or_alter_table_valueset_old(self, dv_schema):
         #maak reftable
 
         if not dv_schema.is_reflected:

@@ -485,6 +485,12 @@ class SorToValueSetMapping(BaseTableMapping):
         self.sor_table = source
         self.valueset = target
 
+    def map_field(self, source: Union[str, 'ConstantValue'], target: 'Column', transform_func: 'FieldTransformation'=None, ref: str = '') -> None:
+        # automatisch cast naar type toevoegen
+        if target.type.lower() != 'text' and isinstance(source, str) and not '(' in source and not ')' in source and not '::' in source:
+            source += '::' + target.type
+        super().map_field(source, target, transform_func, ref = ref)
+
     def get_source_fields(self, alias: str = '')-> str:
         if not alias: alias = 'hstg'
         fields = ''  # type: List[str]

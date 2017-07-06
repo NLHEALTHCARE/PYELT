@@ -25,7 +25,7 @@ class DwhLayerTypes():
     De dwh kan meerdere dm lagen bevatten: per bedrijfsonderdeel kan er een eigen dm laag worden gemaakt.
     Er is altijd maar 1 sys laag
     """
-    SOR = 'SOR' #type: str
+    SOR = 'PIPE' #type: str
     DV = 'DV' #type: str
     VALSET = 'VALSET'  # type: str
     DM = 'DM' #type: str

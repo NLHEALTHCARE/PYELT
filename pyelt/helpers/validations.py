@@ -123,7 +123,7 @@ class DomainValidator:
 class MappingsValidator:
     """Helper om domein classes te valideren (entities, hubs, sats en links). Wordt aangeroepen voordat run start in pipeline.pipe"""
 
-    def validate_before_ddl(self, mappings_list: List[BaseTableMapping]) -> str:
+    def validate_before_sor_ddl(self, mappings_list: List[BaseTableMapping]) -> str:
         validation_msg = ''
         for mappings in mappings_list:
             if isinstance(mappings, SourceToSorMapping):
@@ -152,9 +152,11 @@ class MappingsValidator:
     def validate_source_to_sor_mappings_before_ddl(self, mappings):
         validation_msg = ''
         source = mappings.source
+        if not source.key_names:
+            validation_msg += 'Mapping <red>{}</> is niet geldig. Geen geldige key opgegeven. Voorbeeld: source_file.set_primary_key([])\r\n'.format(mappings.name)
         for key_name in source.key_names:
             if not key_name:
-                validation_msg += 'Mapping <red>{}</> is niet geldig. Geen geldige key opgegeven.\r\n'.format(mappings.name)
+                validation_msg += 'Mapping <red>{}</> is niet geldig. Geen geldige key opgegeven. Voorbeeld: source_file.set_primary_key([])\r\n'.format(mappings.name)
 
         col_names = ''
         for field_map in mappings.field_mappings:

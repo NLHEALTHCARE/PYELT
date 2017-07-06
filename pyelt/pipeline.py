@@ -2,7 +2,7 @@ import datetime
 import inspect
 import math
 from collections import OrderedDict
-from typing import List
+from typing import List, Tuple
 
 # from main import get_root_path
 # from sample_domains import _ensemble_views
@@ -103,6 +103,24 @@ Voorbeeld::
             self.pipes[source_system] = pipe
         return self.pipes[source_system]
 
+    def pre_init(self):
+        self.send_start_mail()
+        self.dwh.create_schemas_if_not_exists('sys')
+        for schema in self.dwh.schemas.values():
+            if schema.schema_type == DwhLayerTypes.SYS:
+                self.create_sys_tables(schema)
+
+    def init_loggers(self, runid, config):
+        self.logger = Logger.create_logger(LoggerTypes.MAIN, runid, config)
+        self.sql_logger = Logger.create_logger(LoggerTypes.SQL, runid, config, to_console=False)
+
+
+    def validate_mappings_before_sor(self):
+        pass
+
+    def validate_mappings_after_sor(self):
+        pass
+
     def run(self, parts=['sor', 'valuesets', 'hubs', 'links', 'views', 'viewlinks']) -> None:
         """
         Deze functie start de run van de pipeline. Er wordt ddl uitgevoerd, een logbestand aangemaakt, een sql_logbestand en de etl per pipe wordt uitgevoerd..
@@ -144,7 +162,7 @@ Voorbeeld::
         for pipe in self.pipes.values():
             self.logger.log('DDL PIPE ' + pipe.source_system, indent_level=1)
             self.dwh.create_schemas_if_not_exists(pipe.sor.name)
-            pipe.create_sor_from_mappings()
+            pipe.run_sor_dll()
 
             pipe.run_extra_sql()
             pipe.create_db_functions()
@@ -204,18 +222,18 @@ Voorbeeld::
         :return: Boolean
         """
 
-        self.logger.log('PRE-RUN VALIDATE DOMAINS')
+        self.logger.log('VALIDATE DOMAINS')
         validation_msg = ''
         validator = DomainValidator()
         for domain_module in self.domain_modules.values():
             validation_msg += validator.validate(domain_module)
+            self.logger.log('Domain {}'.format(domain_module.__name__), indent_level=1)
 
         if validation_msg:
             self.logger.log(validation_msg, indent_level=1)
             return False
         else:
-            self.logger.log('<green>Domains zijn OK.</>', indent_level=1)
-        self.logger.log('')
+            self.logger.log('<green>Domains zijn OK.</>', indent_level=1, newline=True)
         return True
 
     def validate_mappings_before_ddl(self) -> bool:
@@ -228,7 +246,7 @@ Voorbeeld::
         self.logger.log('VALIDATE MAPPINGS BEFORE DDL')
         validation_msg = ''
         for pipe in self.pipes.values():
-            validation_msg += pipe.validate_mappings_before_ddl()
+            validation_msg += pipe.validate_mappings_before_sor_ddl()
         if validation_msg:
             self.logger.log('  ' + validation_msg)
             return False
@@ -256,15 +274,7 @@ Voorbeeld::
         self.logger.log('')
         return True
 
-    def create_new_runid(self) -> float:
-        """
-        Maakt een nieuw *runid* aan. De runid wordt met 0,01 verhoogd voor iedere volgende run op dezelfde dag. De eerste run op een dag krijgt het eerste gehele getal volgend op de maximale aanwezige *runid* in de tabel.
-
-        Runid wordt bewaard in de database in het sys-schema
-
-        :return: self.runid
-        """
-
+    def get_last_runid(self) -> Tuple[float]:
         sql = 'SELECT max(runid) as max_runid, max(rundate) as max_rundate from sys.runs'
         rows = self.dwh.execute_read(sql, 'get max run id')
         if len(rows) > 0 and rows[0][0]:
@@ -273,7 +283,19 @@ Voorbeeld::
             max_rundate = row[1]
         else:
             max_runid = 0
-            max_rundate = datetime.datetime(1900,1,1, 0, 0, 0)
+            max_rundate = datetime.datetime(1900, 1, 1, 0, 0, 0)
+        return max_runid, max_rundate
+
+    def create_new_runid(self) -> float:
+        """
+        Maakt een nieuw *runid* aan. De runid wordt met 0,01 verhoogd voor iedere volgende run op dezelfde dag. De eerste run op een dag krijgt het eerste gehele getal volgend op de maximale aanwezige *runid* in de tabel.
+
+        Runid wordt bewaard in de database in het sys-schema
+
+        :return: self.runid
+        """
+        max_runid, max_rundate = self.get_last_runid()
+
         if max_rundate.date() == datetime.date.today():
             self.runid = round(max_runid + 0.01, 2)
         else:
@@ -370,8 +392,8 @@ Voorbeeld::
         """
 
         module_name = "{}.{}".format(schema_name, module.__name__)
-        self.domain_modules[module_name] = module
-        self.dwh.set_schema(schema_name, DwhLayerTypes.DV)
+        __class__._instance.domain_modules[module_name] = module
+        __class__._instance.dwh.set_schema(schema_name, DwhLayerTypes.DV)
         # init module
         for name, cls in inspect.getmembers(module,  inspect.isclass):
             if HubEntity in cls.__mro__:
@@ -431,7 +453,7 @@ Voorbeeld::
         Voert ddl uit van de dv laag. Maakt eventuele nieuwe tabellen aan (hubs, sats en links) gebaseerd op de gedefiniëerde domeinen.
 
         """
-        self.logger.log('START CREATE VALSET'.format(self.runid), indent_level=2)
+        self.logger.log('START CREATE VALSET'.format(self.runid), indent_level=0)
         ddl = DdlValset(self, schema)
 
         ddl.create_or_alter_table_exceptions(schema)
@@ -558,6 +580,11 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         self.run_before_sor = []
         self.run_after_sor = []
 
+        self.logger = Logger.create_logger(LoggerTypes.PIPE, pipeline.runid, pipeline.config, filename_suffix = self.source_system)
+        # self.sor_etl_logger = Logger.create_logger(LoggerTypes.SOR_ETL, pipeline.runid, pipeline.config, filename_suffix=self.source_system)
+
+
+
 
     @property
     def runid(self):
@@ -566,6 +593,12 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         :return: self.pipeline.runid
         """
         return self.pipeline.runid
+
+    def set_luigi_task(self, task_id, task_family, task_params):
+        self.task_id = task_id
+        self.logger.log('START LUIGI TASK {}'.format(task_family))
+        self.logger.log_simple('  task_id: {}'.format(task_id))
+        self.logger.log_simple('  params: {}'.format(task_params))
 
     def register_domain(self, module, schema_name = 'dv'):
         """
@@ -628,18 +661,21 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         """
         self.run_after_sor.append(func)
 
-    def create_sor_from_mappings(self):
+    def run_sor_ddl(self):
         """
         Voert ddl uit van de sor-laag. Maakt eventuele nieuwe sor-tabellen aan aan de hand van de gedefiniëerde mappings zoals bijvoorbeeld in "timeff_mappings_old.py".
 
         """
-        self.pipeline.logger.log('START CREATE SOR'.format(self.pipeline.runid), indent_level=2)
+        self.logger.log('START CREATE PIPE {}'.format(self.source_system), indent_level=0)
+        self.pipeline.dwh.create_schemas_if_not_exists(self.config['sor_schema'])
         ddl = DdlSor(self)
         ddl.create_or_alter_table_exceptions(self.sor)
+        self.logger.log('create or alter table exceptions', indent_level=1)
         for mapping in self.mappings:
             if isinstance(mapping, SourceToSorMapping):
                 ddl.create_or_alter_sor(mapping)
-        self.pipeline.logger.log('FINISH CREATE SOR'.format(self.pipeline.runid), indent_level=2)
+                self.logger.log('create or alter sor {}'.format(mapping.target), indent_level=1)
+        self.logger.log('FINISH CREATE PIPE', indent_level=0, newline=True)
 
     def create_db_functions(self):
         """
@@ -658,6 +694,44 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             if sql[0]:
                 ddl.execute(sql[1], "EXTRA SQL STATEMENT")
 
+    def run_before_sor(self):
+        for func in self.run_before_sor:
+            func(self)
+
+    def run_sor_etl(self):
+        etl = EtlSourceToSor(self)
+        self.logger.log('START FROM SOURCE TO PIPE {}'.format(self.source_system), indent_level=0)
+
+        for mapping in self.mappings:
+            if isinstance(mapping, SourceToSorMapping):
+                self.logger.log('START <blue>{}</>'.format(mapping), indent_level=1)
+                etl.source_to_sor(mapping)
+                etl.validate_duplicate_keys(mapping, self.sor)
+                self.logger.log('FINISH <blue>{}</>'.format(mapping), indent_level=1)
+        self.logger.log('END FROM SOURCE TO PIPE', indent_level=0, newline=True)
+
+    def run_valset_etl(self):
+        etl = EtlSourceToSor(self)
+        self.logger.log('START FROM PIPE TO VALSET {}'.format(self.source_system), indent_level=0)
+        etl = EtlSorToDv(self)
+        # DV refs
+        for mapping in self.mappings:
+            if isinstance(mapping, SorToValueSetMapping):
+                etl.sor_to_valuesets(mapping)
+        self.logger.log('FINISH FROM PIPE TO VALSET', newline=True, indent_level=0)
+
+    def validate_sor(self):
+        etl = EtlSourceToSor(self)
+        self.pipeline.logger.log('START VALIDATION PIPE', indent_level=1)
+        for validation in self.validations:
+            if isinstance(validation, SorValidation):
+                etl.validate_sor(validation)
+
+    def run_after_sor_etl(self):
+        for func in self.run_after_sor:
+            func(self)
+
+
     def run(self, parts = ['sor', 'valuesets', 'hubs', 'links', 'views', 'viewlinks']):
         """
         :param parts: lijst van keywords. De eventuele aanwezigheid van een keyword in deze lijst bepaald of het log bestand dat hoort bij dit keyword gemaakt wordt en of de bijhorende DDL uitgevoerd wordt.
@@ -668,9 +742,9 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             func(self)
 
         if 'sor' in parts:
-            #SOR
+            #PIPE
             etl = EtlSourceToSor(self)
-            self.pipeline.logger.log('START FROM SOURCE TO SOR', indent_level=1)
+            self.pipeline.logger.log('START FROM SOURCE TO PIPE', indent_level=1)
 
             for mapping in self.mappings:
                 if isinstance(mapping, SourceToSorMapping):
@@ -685,22 +759,22 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             for func in self.run_after_sor:
                 func(self)
 
-            self.pipeline.logger.log('FINISH FROM SOURCE TO SOR', newline=True, indent_level=1)
+            self.pipeline.logger.log('FINISH FROM SOURCE TO PIPE', newline=True, indent_level=1)
 
         #DV
         ddl = DdlDv(self)
         etl = EtlSorToDv(self)
         if 'valuesets' in parts:
-            self.pipeline.logger.log('START FROM SOR TO VALUESETS', indent_level=1)
+            self.pipeline.logger.log('START FROM PIPE TO VALUESETS', indent_level=1)
             #DV refs
             for mapping in self.mappings:
                 if isinstance(mapping, SorToValueSetMapping):
                     etl.sor_to_valuesets(mapping)
-            self.pipeline.logger.log('FINISH FROM SOR TO REFS', newline=True, indent_level=1)
+            self.pipeline.logger.log('FINISH FROM PIPE TO REFS', newline=True, indent_level=1)
 
         # DV Entities (Hubs en Sats)
         if 'hubs' in parts:
-            self.pipeline.logger.log('START FROM SOR TO HUBS', indent_level=1)
+            self.pipeline.logger.log('START FROM PIPE TO HUBS', indent_level=1)
             for mapping in self.mappings:
                 if type(mapping) == SorToEntityMapping:
                     if not isinstance(mapping.source, SorQuery):
@@ -709,7 +783,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
             for validation in self.validations:
                 if isinstance(validation, DvValidation):
                     etl.validate_dv(validation)
-            self.pipeline.logger.log('FINISH FROM SOR TO HUBS', newline=True, indent_level=1)
+            self.pipeline.logger.log('FINISH FROM PIPE TO HUBS', newline=True, indent_level=1)
 
         if 'views' in parts:
             self.pipeline.logger.log('START FROM HUBS TO HUBS', indent_level=1)
@@ -722,12 +796,12 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
 
         #DV Links
         if 'links' in parts:
-            self.pipeline.logger.log('START FROM SOR TO LINKS', indent_level=1)
+            self.pipeline.logger.log('START FROM PIPE TO LINKS', indent_level=1)
             for mapping in self.mappings:
                 if type(mapping) == SorToLinkMapping:
                     DdlSor(self).try_add_fk_sor_link(mapping)
                     etl.sor_to_link(mapping)
-            self.pipeline.logger.log('FINISH FROM SOR TO LINKS', newline=True, indent_level=1)
+            self.pipeline.logger.log('FINISH FROM PIPE TO LINKS', newline=True, indent_level=1)
 
         if 'viewlinks' in parts:
             self.pipeline.logger.log('START FROM HUBS TO LINKS', indent_level=1)
@@ -757,7 +831,7 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
         validation_msg += self.validate_mappings_after_ddl()
         return validation_msg
 
-    def validate_mappings_before_ddl(self):
+    def validate_mappings_before_sor_ddl(self):
         """
         Valideert of de gebruikte mappings correcte domein classes gebruikt (entities, hubs, sats en links).
 
@@ -765,8 +839,12 @@ Bijvoorbeeld, we maken een pipe aan met de naam 'timeff', met als bronsysteem ee
 
         :return: validation_msg
         """
+        self.logger.log('START VALIDATION', indent_level=0)
         validator = MappingsValidator()
-        validation_msg = validator.validate_before_ddl(self.mappings)
+        validation_msg = validator.validate_before_sor_ddl(self.mappings)
+        if validation_msg == '':
+            self.logger.log(' Mappings zijn OK', indent_level=1)
+        self.logger.log('END VALIDATION', indent_level=0, newline=True)
         return validation_msg
 
     def validate_mappings_after_ddl(self):

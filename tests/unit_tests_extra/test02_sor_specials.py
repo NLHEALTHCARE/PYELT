@@ -56,7 +56,7 @@ class TestCase_RunSor(unittest.TestCase):
         # run
         self.pipeline.run()
         for pipe in self.pipeline.pipes.values():
-            validation_msg = pipe.validate_mappings_before_ddl()
+            validation_msg = pipe.validate_mappings_before_sor_ddl()
             validation_msg += pipe.validate_mappings_after_ddl()
         self.assertIn('Mapping <red>handelingen -> handeling_no_auto_map_hstage</> is niet geldig. Auto_map moet aan staan bij SourceToSorMapping.', validation_msg)
 
@@ -79,7 +79,7 @@ class TestCase_RunSor(unittest.TestCase):
         # run
         self.pipeline.run()
         for pipe in self.pipeline.pipes.values():
-            validation_msg = pipe.validate_mappings_before_ddl()
+            validation_msg = pipe.validate_mappings_before_sor_ddl()
             validation_msg += pipe.validate_mappings_after_ddl()
         self.assertIn('Mapping <red>handelingen -> handeling_no_key_hstage</> is niet geldig. Geen geldige key opgegeven.', validation_msg)
 
