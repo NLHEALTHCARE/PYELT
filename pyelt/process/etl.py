@@ -209,7 +209,7 @@ class EtlSourceToSor(BaseEtl):
             if isinstance(mappings.source, SourceTable):
                 file_name = mappings.source.to_csv(md5_only=True, filter=mappings.filter, ignore_fields=mappings.ignore_fields, debug=debug)
                 params['file_name'] = file_name
-            # self.logger.log_simple('    source hash to csv'.format(mappings))
+            self.logger.log('    source hash to csv {}'.format(mappings))
 
             # STAP 2
             sql = "TRUNCATE TABLE {sor}.{temp_table}_hash;".format(**params)
@@ -282,7 +282,7 @@ class EtlSourceToSor(BaseEtl):
             if isinstance(mappings.source, SourceTable):
                 file_name = mappings.source.to_csv(md5_only=False, filter=filter, ignore_fields=mappings.ignore_fields, debug=debug)
                 params['file_name'] = file_name
-            # self.logger.log_simple('    source complete to csv'.format(mappings))
+            self.logger.log('    source complete to csv'.format(mappings))
 
 
 
@@ -297,12 +297,26 @@ class EtlSourceToSor(BaseEtl):
             sql = "UPDATE {sor}.{temp_table} tmp set _hash = tmp_hash._hash FROM {sor}.{temp_table}_hash tmp_hash WHERE  {keys_compare};".format(**params)
             self.execute(sql, 'update _hash in temp')
 
+            # tijdelijke code voor testen
+            sql = """DROP INDEX sor_performance_tests.ix_random_data_hstage_key;
+            DROP INDEX sor_performance_tests.ix_random_data_hstage_hash;
+            --DROP INDEX sor_performance_tests.ix_random_data_hstage_runid;"""
+            self.execute(sql, 'drop indexes')
+
             # STAP 8  insert into sor
             sql = """INSERT INTO {sor}.{sor_table}(_runid, _source_system, _insert_date, _hash, {fields})
                 SELECT {runid},'{source_system}', now(), tmp._hash, {tmp_fields}
                 FROM {sor}.{temp_table} tmp
                  --JOIN {sor}.{temp_table}_hash tmp_hash ON {keys_compare};""".format(**params)
             self.execute(sql, 'insert new into sor')
+
+            sql = """CREATE INDEX ix_random_data_hstage_key
+   ON sor_performance_tests.random_data_hstage USING btree (uid ASC NULLS LAST);
+CREATE INDEX ix_random_data_hstage_hash
+   ON sor_performance_tests.random_data_hstage USING btree (_hash ASC NULLS LAST);
+--CREATE INDEX ix_random_data_hstage_runid
+ --  ON sor_performance_tests.random_data_hstage USING btree (_runid ASC NULLS LAST);"""
+            self.execute(sql, 'drop indexes')
 
             params['keys_compare'] = mappings.get_keys_compare(source_alias='previous', target_alias='current')
 

@@ -162,7 +162,7 @@ Voorbeeld::
         for pipe in self.pipes.values():
             self.logger.log('DDL PIPE ' + pipe.source_system, indent_level=1)
             self.dwh.create_schemas_if_not_exists(pipe.sor.name)
-            pipe.run_sor_dll()
+            pipe.run_sor_ddl()
 
             pipe.run_extra_sql()
             pipe.create_db_functions()

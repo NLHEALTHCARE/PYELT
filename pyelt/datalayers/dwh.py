@@ -152,7 +152,7 @@ class Dwh(Database):
         if len(rows) > 0:
             return float(rows[0][0])
         else:
-            return None
+            return 0.00
 
     def increase_layer_version(self, layer_name) -> None:
         old_version_number = self.get_layer_version(layer_name)
@@ -161,7 +161,7 @@ class Dwh(Database):
             sql = """UPDATE sys.currentversion SET version = {} WHERE schemaname = '{}'""".format(new_version_number, layer_name)
             self.execute(sql, 'update version')
         else:
-            new_version_number = 1.0
+            new_version_number = 1.00
             sql = """INSERT INTO sys.currentversion (schemaname, version, date) VALUES ('{}', 1, now());""".format(layer_name)
             self.execute(sql, 'insert version')
         return new_version_number

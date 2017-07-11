@@ -78,6 +78,7 @@ class Logger:
         log_obj.to_console = to_console
         if 'log_to_console' in configs:
             log_obj.to_console = configs['log_to_console']
+        log_obj.path = path
         log_obj.filename = filename
         log_obj.config = configs
         return log_obj
