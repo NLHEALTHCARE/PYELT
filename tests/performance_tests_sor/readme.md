@@ -5,7 +5,7 @@ Performance tests SOR
 
 Een aantal tests uitgevoerd. Op locaal systeem, bron database was een andere postgres db.
 
- - [tests1] (/results/tests1.md): diversie vaste indexes op verschillende velden met 100.000 rijen en telkens 10.000 rijen geupdate voor een volgende run.
+ - [tests1](results/tests1.md): diversie vaste indexes op verschillende velden met 100.000 rijen en telkens 10.000 rijen geupdate voor een volgende run.
  De velden die een index betroffen zijn _hash, {sleutelveld} en _runid.
  - [results/tests2.md]: als test 1 maar nu met 500.000 rijen en een guid ipv een volgnummer
  - [results/tests3.md]: als test 2 maar indexes voor insert eerst verwijderen en hierna wee aanmaken.
